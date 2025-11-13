@@ -27,7 +27,6 @@ public class McpSseClient {
                 .defaultHeader("x-api-key", apiKey)
                 .build();
     }
-
     /**
      * 发送一行 JSON-RPC 并取第一条结果
      */
@@ -52,7 +51,6 @@ public class McpSseClient {
 
         WebClient.RequestHeadersSpec<?> request = client.post()
                 .bodyValue(frame);               // ② 整行发
-                
         // 添加额外的请求头
         if (additionalHeaders != null) {
             additionalHeaders.forEach(request::header);
@@ -113,7 +111,7 @@ public class McpSseClient {
                 List<?> content = (List<?>) body.get("content");
                 return (String) ((Map<?, ?>) content.get(0)).get("text");
             }
-            
+
             // 如果没有content字段，直接返回整个JSON字符串
             return json;
         } catch (Exception e) {

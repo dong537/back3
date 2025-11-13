@@ -3,6 +3,7 @@ package com.example.demo.dto.response;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -509,37 +510,257 @@ public class FormattedBaziResponse {
     /**
      * 从原始响应转换
      */
+    @SuppressWarnings("unchecked")
     public static FormattedBaziResponse fromMcpResponse(McpBaziResponse mcpResponse) {
         if (mcpResponse == null || mcpResponse.getBaziData() == null) {
             return null;
         }
 
-        FormattedBaziResponse response = new FormattedBaziResponse();
-        Map<String, Object> data = mcpResponse.getBaziData();
+        try {
+            FormattedBaziResponse response = new FormattedBaziResponse();
+            Map<String, Object> data = mcpResponse.getBaziData();
 
-        // 基本信息
-        response.setGender((String) data.get("性别"));
-        response.setSolarDate((String) data.get("阳历"));
-        response.setLunarDate((String) data.get("农历"));
-        response.setBazi((String) data.get("八字"));
-        response.setZodiac((String) data.get("生肖"));
-        response.setDayMaster((String) data.get("日主"));
+            // 基本信息
+            response.setGender(safeGetString(data, "性别"));
+            response.setSolarDate(safeGetString(data, "阳历"));
+            response.setLunarDate(safeGetString(data, "农历"));
+            response.setBazi(safeGetString(data, "八字"));
+            response.setZodiac(safeGetString(data, "生肖"));
+            response.setDayMaster(safeGetString(data, "日主"));
+
+            // 其他信息
+            response.setTaiyuan(safeGetString(data, "胎元"));
+            response.setTaixi(safeGetString(data, "胎息"));
+            response.setMinggong(safeGetString(data, "命宫"));
+            response.setShengong(safeGetString(data, "身宫"));
+
+            // 四柱信息 - 完整解析（使用try-catch确保单个柱解析失败不影响其他）
+            try {
+                Map<String, Object> yearPillarMap = safeGetMap(data, "年柱");
+                if (yearPillarMap != null && !yearPillarMap.isEmpty()) {
+                    response.setYearPillar(parsePillar(yearPillarMap));
+                }
+            } catch (Exception e) {
+                System.err.println("解析年柱失败: " + e.getMessage());
+                e.printStackTrace();
+            }
+            try {
+                Map<String, Object> monthPillarMap = safeGetMap(data, "月柱");
+                if (monthPillarMap != null && !monthPillarMap.isEmpty()) {
+                    response.setMonthPillar(parsePillar(monthPillarMap));
+                }
+            } catch (Exception e) {
+                System.err.println("解析月柱失败: " + e.getMessage());
+                e.printStackTrace();
+            }
+            try {
+                Map<String, Object> dayPillarMap = safeGetMap(data, "日柱");
+                if (dayPillarMap != null && !dayPillarMap.isEmpty()) {
+                    response.setDayPillar(parsePillar(dayPillarMap));
+                } else {
+                    System.err.println("警告: 日柱数据为空或不存在");
+                }
+            } catch (Exception e) {
+                System.err.println("解析日柱失败: " + e.getMessage());
+                e.printStackTrace();
+            }
+            try {
+                Map<String, Object> hourPillarMap = safeGetMap(data, "时柱");
+                if (hourPillarMap != null && !hourPillarMap.isEmpty()) {
+                    response.setHourPillar(parsePillar(hourPillarMap));
+                } else {
+                    System.err.println("警告: 时柱数据为空或不存在");
+                }
+            } catch (Exception e) {
+                System.err.println("解析时柱失败: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            // 大运信息
+            try {
+                response.setDayun(parseDayun(safeGetMap(data, "大运")));
+            } catch (Exception e) {
+                // 记录错误但继续处理
+            }
+
+            // 神煞
+            try {
+                response.setShensha((Map<String, List<String>>) data.get("神煞"));
+            } catch (Exception e) {
+                // 记录错误但继续处理
+            }
+
+            // 刑冲合会
+            try {
+                response.setXingChongHeHui((Map<String, Object>) data.get("刑冲合会"));
+            } catch (Exception e) {
+                // 记录错误但继续处理
+            }
+
+            return response;
+        } catch (Exception e) {
+            // 如果整体转换失败，返回null
+            return null;
+        }
+    }
+
+    /**
+     * 安全获取字符串值
+     */
+    private static String safeGetString(Map<String, Object> map, String key) {
+        if (map == null || key == null) {
+            return null;
+        }
+        Object value = map.get(key);
+        return value != null ? value.toString() : null;
+    }
+
+    /**
+     * 安全获取Map值
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> safeGetMap(Map<String, Object> map, String key) {
+        if (map == null || key == null) {
+            return null;
+        }
+        Object value = map.get(key);
+        if (value instanceof Map) {
+            return (Map<String, Object>) value;
+        }
+        return null;
+    }
+
+    /**
+     * 解析柱信息
+     */
+    @SuppressWarnings("unchecked")
+    private static PillarInfo parsePillar(Map<String, Object> pillarMap) {
+        if (pillarMap == null || pillarMap.isEmpty()) {
+            return null;
+        }
+
+        PillarInfo pillar = new PillarInfo();
+
+        // 天干信息
+        Map<String, Object> tianganMap = (Map<String, Object>) pillarMap.get("天干");
+        if (tianganMap != null) {
+            TianganInfo tiangan = new TianganInfo();
+            tiangan.setTiangan((String) tianganMap.get("天干"));
+            tiangan.setWuxing((String) tianganMap.get("五行"));
+            tiangan.setYinyang((String) tianganMap.get("阴阳"));
+            tiangan.setShishen((String) tianganMap.get("十神"));
+            pillar.setTiangan(tiangan);
+        }
+
+        // 地支信息
+        Map<String, Object> dizhiMap = (Map<String, Object>) pillarMap.get("地支");
+        if (dizhiMap != null) {
+            DizhiInfo dizhi = new DizhiInfo();
+            dizhi.setDizhi((String) dizhiMap.get("地支"));
+            dizhi.setWuxing((String) dizhiMap.get("五行"));
+            dizhi.setYinyang((String) dizhiMap.get("阴阳"));
+
+            // 藏干信息
+            Map<String, Object> cangganMap = (Map<String, Object>) dizhiMap.get("藏干");
+            if (cangganMap != null) {
+                CangganInfo canggan = new CangganInfo();
+                canggan.setZhuqi(parseGanInfo((Map<String, Object>) cangganMap.get("主气")));
+                canggan.setZhongqi(parseGanInfo((Map<String, Object>) cangganMap.get("中气")));
+                canggan.setYuqi(parseGanInfo((Map<String, Object>) cangganMap.get("余气")));
+                dizhi.setCanggan(canggan);
+            }
+
+            pillar.setDizhi(dizhi);
+        }
 
         // 其他信息
-        response.setTaiyuan((String) data.get("胎元"));
-        response.setTaixi((String) data.get("胎息"));
-        response.setMinggong((String) data.get("命宫"));
-        response.setShengong((String) data.get("身宫"));
+        pillar.setNayin((String) pillarMap.get("纳音"));
+        pillar.setXun((String) pillarMap.get("旬"));
+        pillar.setKongwang((String) pillarMap.get("空亡"));
+        pillar.setXingyun((String) pillarMap.get("星运"));
+        pillar.setZizuo((String) pillarMap.get("自坐"));
 
-        // 四柱信息（可以进一步解析，这里先保留简化版本）
-        // TODO: 如果需要完整的四柱解析，需要添加更多转换逻辑
+        return pillar;
+    }
 
-        // 神煞
-        response.setShensha((Map<String, List<String>>) data.get("神煞"));
+    /**
+     * 解析干信息（藏干中的单个干）
+     */
+    private static GanInfo parseGanInfo(Map<String, Object> ganMap) {
+        if (ganMap == null || ganMap.isEmpty()) {
+            return null;
+        }
 
-        // 刑冲合会
-        response.setXingChongHeHui((Map<String, Object>) data.get("刑冲合会"));
+        GanInfo gan = new GanInfo();
+        gan.setTiangan((String) ganMap.get("天干"));
+        gan.setShishen((String) ganMap.get("十神"));
+        return gan;
+    }
 
-        return response;
+    /**
+     * 解析大运信息
+     */
+    @SuppressWarnings("unchecked")
+    private static DayunInfo parseDayun(Map<String, Object> dayunMap) {
+        if (dayunMap == null || dayunMap.isEmpty()) {
+            return null;
+        }
+
+        DayunInfo dayun = new DayunInfo();
+        dayun.setQiyunDate((String) dayunMap.get("起运日期"));
+        
+        Object qiyunAgeObj = dayunMap.get("起运年龄");
+        if (qiyunAgeObj instanceof Integer) {
+            dayun.setQiyunAge((Integer) qiyunAgeObj);
+        } else if (qiyunAgeObj instanceof Number) {
+            dayun.setQiyunAge(((Number) qiyunAgeObj).intValue());
+        }
+
+        // 解析大运周期列表
+        List<Map<String, Object>> periodsList = (List<Map<String, Object>>) dayunMap.get("大运");
+        if (periodsList != null && !periodsList.isEmpty()) {
+            List<DayunPeriod> periods = new ArrayList<>();
+            for (Map<String, Object> periodMap : periodsList) {
+                DayunPeriod period = new DayunPeriod();
+                period.setGanzhi((String) periodMap.get("干支"));
+                
+                Object startYearObj = periodMap.get("开始年份");
+                if (startYearObj instanceof Integer) {
+                    period.setStartYear((Integer) startYearObj);
+                } else if (startYearObj instanceof Number) {
+                    period.setStartYear(((Number) startYearObj).intValue());
+                }
+                
+                Object endYearObj = periodMap.get("结束");
+                if (endYearObj instanceof Integer) {
+                    period.setEndYear((Integer) endYearObj);
+                } else if (endYearObj instanceof Number) {
+                    period.setEndYear(((Number) endYearObj).intValue());
+                }
+                
+                period.setTianganShishen((String) periodMap.get("天干十神"));
+                period.setDizhiShishen((List<String>) periodMap.get("地支十神"));
+                period.setDizhiCanggan((List<String>) periodMap.get("地支藏干"));
+                
+                Object startAgeObj = periodMap.get("开始年龄");
+                if (startAgeObj instanceof Integer) {
+                    period.setStartAge((Integer) startAgeObj);
+                } else if (startAgeObj instanceof Number) {
+                    period.setStartAge(((Number) startAgeObj).intValue());
+                }
+                
+                Object endAgeObj = periodMap.get("结束年龄");
+                if (endAgeObj instanceof Integer) {
+                    period.setEndAge((Integer) endAgeObj);
+                } else if (endAgeObj instanceof Number) {
+                    period.setEndAge(((Number) endAgeObj).intValue());
+                }
+                
+                periods.add(period);
+            }
+            dayun.setPeriods(periods);
+        }
+
+        return dayun;
     }
 }

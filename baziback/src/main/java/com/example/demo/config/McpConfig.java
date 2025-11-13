@@ -17,13 +17,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 @Configuration
 public class McpConfig {
 
-    // 紫微斗数MCP配置
-    @Value("${mcp.ziwei.api.endpoint}")
-    private String ziweiEndpoint;
-
-    @Value("${mcp.ziwei.api.api-key}")
-    private String ziweiApiKey;
-
     // 八字MCP配置
     @Value("${mcp.bazi.api.endpoint}")
     private String baziEndpoint;
@@ -38,19 +31,6 @@ public class McpConfig {
         return WebClient.builder()
                 .baseUrl(baziEndpoint)
                 .defaultHeader("x-api-key", baziApiKey)
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .filter(logRequest())
-                .filter(logResponse())
-                .build();
-    }
-
-    // 紫微斗数专属WebClient，标记@Qualifier
-    @Bean
-    @Qualifier("ziweiWebClient")
-    public WebClient ziweiWebClient() {
-        return WebClient.builder()
-                .baseUrl(ziweiEndpoint)
-                .defaultHeader("x-api-key", ziweiApiKey)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .filter(logRequest())
                 .filter(logResponse())

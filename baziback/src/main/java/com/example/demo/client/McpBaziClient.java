@@ -1,6 +1,6 @@
 package com.example.demo.client;
 
-import com.example.demo.dto.request.McpBaziRequest;
+import com.example.demo.dto.request.bazi.McpBaziRequest;
 import com.example.demo.dto.response.McpBaziResponse;
 import com.example.demo.exception.McpApiException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -32,6 +32,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 @Slf4j
+/**
+ *这个类用于调用MCP服务，获取八字相关的工具列表、执行八字计算等。
+ * 封装了MCP服务API的调用逻辑，并返回结果。
+ * 执行顺序： 初始化会话 -> 执行八字计算
+ * */
 public class McpBaziClient {
     // 公共常量
     private static final String MCP_PROTOCOL_VERSION = "2025-03-26";
@@ -400,7 +405,8 @@ public class McpBaziClient {
     private void setInitRequestHeaders(HttpHeaders headers) {
         setBaseHeaders(headers);
         headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-        headers.set(HttpHeaders.ACCEPT, "application/json");
+        // MCP API要求同时接受 application/json 和 text/event-stream
+        headers.set(HttpHeaders.ACCEPT, "application/json, text/event-stream");
         headers.set("x-api-key", apiKey);
     }
 
@@ -416,6 +422,8 @@ public class McpBaziClient {
                     .headers(headers -> {
                         setBaseHeaders(headers);
                         headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                        // MCP API要求同时接受 application/json 和 text/event-stream
+                        headers.set(HttpHeaders.ACCEPT, "application/json, text/event-stream");
                         headers.set("mcp-session-id", sessionId);
                     })
                     .body(BodyInserters.fromValue(body))
