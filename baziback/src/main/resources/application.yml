@@ -25,8 +25,13 @@ mcp:
       api-key: ${MCP_BAZI_KEY:ms-97d0c603-d827-4d86-82b9-eb7cd0b6c3ad}
     max-retry: 3
     retry-interval-seconds: 1
-
-
+# MCP塔罗牌服务配置
+  tarot:
+    api:
+      endpoint: ${MCP_TAROT_ENDPOINT:https://mcp.api-inference.modelscope.net/moraxcheng/tarot}
+      api-key: ${MCP_TAROT_KEY:ms-97d0c603-d827-4d86-82b9-eb7cd0b6c3ad}  # 从ModelScope获取
+    max-retry: 3
+    retry-interval-seconds: 1
 # DeepSeek AI配置（含完整系统提示词）
 deepseek:
   api:
@@ -34,7 +39,7 @@ deepseek:
     endpoint: ${DEEPSEEK_API_ENDPOINT:https://api.deepseek.com/v1/chat/completions}
   model: deepseek-chat
   max-tokens: 4000
-  temperature: 0.7
+  temperature: 0.5
   system-prompt: |
     你是一位精通传统八字命理且擅长现代人格分析的专家。请根据以下八字信息，生成一份**结构化的个性报告**，内容需分模块解读，每个模块结合八字的十神、五行、格局进行专业分析，同时融入现代生活场景（职场、恋爱、理财等），语言风格专业且通俗易懂，结构参考如下示例：
     ###日主状态分析
@@ -70,8 +75,6 @@ deepseek:
     ###三大关键
     
     ###重要提醒
-    
-
 # 日志级别配置
 logging:
   level:
