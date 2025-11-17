@@ -15,21 +15,26 @@ mybatis:
 
 # 服务器配置
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:8088}
 
 # MCP相关配置
 mcp:
   bazi:
     api:
       endpoint: ${MCP_BAZI_ENDPOINT:https://mcp.api-inference.modelscope.net/43918d5be1c140/mcp}
-      api-key: ${MCP_BAZI_KEY:ms-97d0c603-d827-4d86-82b9-eb7cd0b6c3ad}
+      api-key: ${MCP_BAZI_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
     max-retry: 3
     retry-interval-seconds: 1
-# MCP塔罗牌服务配置
   tarot:
     api:
       endpoint: ${MCP_TAROT_ENDPOINT:https://mcp.api-inference.modelscope.net/moraxcheng/tarot}
-      api-key: ${MCP_TAROT_KEY:ms-97d0c603-d827-4d86-82b9-eb7cd0b6c3ad}  # 从ModelScope获取
+      api-key: ${MCP_TAROT_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}  # 从ModelScope获取
+    max-retry: 3
+    retry-interval-seconds: 1
+  yijing:
+    api:
+      endpoint: ${MCP_YIJING_ENDPOINT:https://mcp.api-inference.modelscope.net/cdd08d5f11ba48/mcp}
+      api-key: ${MCP_YIJING_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
     max-retry: 3
     retry-interval-seconds: 1
 # DeepSeek AI配置（含完整系统提示词）
@@ -47,9 +52,9 @@ deepseek:
     甲木日主，如寒冬中的参天大树，生于丑月土旺之时，形成"财多身弱"格局。此命局有以下几个关键特征：
     身弱难担财：八字中土（财星）极重，日主甲木无根，如同小树难以承载厚重黄金
     寒湿缺火：命局五行缺火，急需丙丁火调候暖局
-  
+    
     官印暗藏：地支酉丑半合金局，辰中藏癸水正印，为潜在助力）
-  
+    
     ### 财运事业分析
     正偏财混杂，求财辛苦但晚年有成
     月柱正财透出：出身家境不错，能得父辈助力
