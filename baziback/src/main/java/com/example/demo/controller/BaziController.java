@@ -29,26 +29,6 @@ public class BaziController {
     public String listTools() {
         return mcpBaziClient.listAvailableTools();
     }
-
-    /**
-     * 获取八字详情（原始格式）
-     * POST http://localhost:8080/api/bazi/detail
-     */
-    @PostMapping("/detail")
-    public McpBaziResponse getBaziDetail(@RequestBody McpBaziRequest request) {
-        return mcpBaziClient.getBaziDetail(request);
-    }
-
-    /**
-     * 获取八字详情（仅返回结构化数据，不含原始响应）
-     * POST http://localhost:8080/api/bazi/structured
-     */
-    @PostMapping("/structured")
-    public Map<String, Object> getBaziStructured(@RequestBody McpBaziRequest request) {
-        McpBaziResponse response = mcpBaziClient.getBaziDetail(request);
-        return response.getBaziData();
-    }
-
     /**
      * 获取八字详情（格式化的响应，前端友好）
      * POST http://localhost:8080/api/bazi/formatted
@@ -82,5 +62,4 @@ public class BaziController {
             throw e;
         }
     }
-
 }

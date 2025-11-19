@@ -32,7 +32,6 @@ public class DeepSeekController {
     public ResponseEntity<String> generateReport(@RequestBody String rawPrompt) throws Exception {
         return ResponseEntity.ok(deepSeekService.generateBaziReport(rawPrompt));
     }
-
     /**
      * 使用 DeepSeek 解读卦象
      */
@@ -40,4 +39,6 @@ public class DeepSeekController {
     public ResponseEntity<String> interpretHexagram(@RequestBody String request) throws Exception {
         return ResponseEntity.ok(deepSeekService.interpretHexagram(request));
     }
+
+
 }

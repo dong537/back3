@@ -32,7 +32,6 @@ public class UserController {
         log.info("收到注册请求: username={}", request.getUsername());
         return userService.register(request);
     }
-
     /**
      * 用户登录
      * POST http://localhost:8080/api/user/login
@@ -55,7 +54,6 @@ public class UserController {
         }
         return userService.getUserInfo(token);
     }
-
     /**
      * 获取客户端IP地址
      */

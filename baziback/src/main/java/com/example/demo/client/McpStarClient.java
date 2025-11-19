@@ -105,36 +105,6 @@ public class McpStarClient {
         return callTool("zodiac_list", Collections.emptyMap(), new TypeReference<>() {});
     }
 
-    /**
-     * 获取可用工具列表
-     */
-    public String listAvailableTools() {
-        initializeSessionIfNeeded();
-        String requestBody = buildListToolsRequestBody();
-        log.debug("查询Star工具列表请求: {}", requestBody);
-
-        try {
-            String sseResponse = mcpWebClient.post()
-                    .headers(headers -> setCommonRequestHeaders(headers, mcpSessionId.get()))
-                    .body(BodyInserters.fromValue(Objects.requireNonNull(requestBody)))
-                    .retrieve()
-                    .onStatus(status -> !status.is2xxSuccessful(), res ->
-                            res.bodyToMono(String.class)
-                                    .flatMap(err -> handleErrorResponse(res.statusCode().value(), err, "查询工具列表"))
-                    )
-                    .bodyToFlux(String.class)
-                    .take(1)
-                    .single()
-                    .retryWhen(buildRetrySpec("查询工具列表"))
-                    .block();
-
-            return parseToolsListResponse(sseResponse);
-        } catch (Exception e) {
-            log.error("查询可用工具列表异常", e);
-            throw new McpApiException("获取可用工具列表失败: " + e.getMessage(), e);
-        }
-    }
-
     // ===================== 私有工具方法 =====================
 
     private <R> R callTool(String toolName, Map<String, Object> arguments, TypeReference<R> responseType) {
@@ -159,15 +129,6 @@ public class McpStarClient {
         return parseToolResponse(toolName, sseResponse, responseType);
     }
 
-    // ========== 请求体构建 ==========
-
-    private String buildListToolsRequestBody() {
-        int requestId = requestIdCounter.incrementAndGet();
-        return String.format(
-                "{\"jsonrpc\":\"2.0\",\"id\":%d,\"method\":\"tools/list\",\"params\":{\"_meta\":{\"progressToken\":0}}}",
-                requestId
-        );
-    }
 
     private String buildToolCallRequest(String toolName, Map<String, Object> arguments) {
         int id = requestIdCounter.incrementAndGet();
@@ -217,30 +178,6 @@ public class McpStarClient {
     }
 
     @SuppressWarnings("unchecked")
-    private String parseToolsListResponse(String sse) {
-        try {
-            if (!StringUtils.hasText(sse)) {
-                throw new McpApiException("工具列表响应为空");
-            }
-
-            String json = sse.startsWith("data:") ? sse.substring(5).trim() : sse.trim();
-            Map<String, Object> root = objectMapper.readValue(json, new TypeReference<>() {});
-
-            if (root.containsKey("error")) {
-                throw new McpApiException("MCP返回错误: " + root.get("error"));
-            }
-
-            Map<String, Object> result = (Map<String, Object>) root.get("result");
-            if (result == null) {
-                throw new McpApiException("工具列表响应缺少result字段");
-            }
-
-            List<Map<String, Object>> tools = (List<Map<String, Object>>) result.getOrDefault("tools", Collections.emptyList());
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(tools);
-        } catch (Exception e) {
-            throw new McpApiException("解析工具列表响应失败", e);
-        }
-    }
 
     // ========== 会话管理 ==========
 

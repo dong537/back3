@@ -142,7 +142,6 @@ public class YijingController {
     public ResponseEntity<Map<String, Object>> forecastBazi(@RequestBody @Validated YijingBaziForecastRequest request) {
         return ResponseEntity.ok(toResponse(yijingService.forecastBazi(request)));
     }
-
     /**
      * 易经八字综合分析
      * 结合八字和卦象进行双重命理分析
