@@ -2,13 +2,13 @@ package com.example.demo.dto.request.yijing;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,10 +22,12 @@ public class YijingCaseStudyRequest {
     /**
      * yijing / bazi / combined
      */
+    @NotBlank(message = "system 不能为空")
     private String system;
 
     private String category;
 
     @JsonProperty("analysis_focus")
     private List<String> analysisFocus;
+
 }

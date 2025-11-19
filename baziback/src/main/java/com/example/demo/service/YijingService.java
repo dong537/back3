@@ -12,20 +12,12 @@ public class YijingService {
 
     private final McpYijingClient mcpYijingClient;
 
-    public String listTools() {
+    public McpCallResult listTools() {
         return mcpYijingClient.listAvailableTools();
     }
 
     public McpCallResult generateHexagram(YijingGenerateHexagramRequest request) {
         return mcpYijingClient.generateHexagram(request);
-    }
-
-    public McpCallResult interpretHexagram(YijingInterpretRequest request) {
-        return mcpYijingClient.interpretHexagram(request);
-    }
-
-    public McpCallResult advise(YijingAdviseRequest request) {
-        return mcpYijingClient.advise(request);
     }
 
     public McpCallResult generateBaziChart(YijingBaziGenerateChartRequest request) {

@@ -36,7 +36,7 @@ public class YijingController {
      * @return 工具列表JSON字符串
      */
     @GetMapping("/tools")
-    public ResponseEntity<String> listTools() {
+    public ResponseEntity<McpCallResult> listTools() {
         return ResponseEntity.ok(yijingService.listTools());
     }
 
@@ -63,60 +63,6 @@ public class YijingController {
     public ResponseEntity<Map<String, Object>> generateHexagram(@RequestBody @Validated YijingGenerateHexagramRequest request) {
         return ResponseEntity.ok(toResponse(yijingService.generateHexagram(request)));
     }
-
-    /**
-     * 解读卦象含义
-     * 对生成的卦象进行多维度解读分析
-     *
-     * 请求参数：
-     * - hexagram: 卦象数据对象（包含本卦和变卦）
-     * - focus: 解读焦点 (overall/specific_line/changing)
-     * - line_number: 关注的爻位1-6（当focus为specific_line时必需）
-     * - context: 应用场景 (general/career/relationship/health/finance)
-     * - detail_level: 详细程度 (brief/standard/detailed)
-     *
-     * 示例请求：
-     * {
-     *   "hexagram": {"name": "乾", "lines": [1,1,1,1,1,1]},
-     *   "focus": "overall",
-     *   "context": "career",
-     *   "detail_level": "detailed"
-     * }
-     *
-     * @param request 卦象解读请求参数
-     * @return 解读结果数据
-     */
-    @PostMapping("/hexagram/interpret")
-    public ResponseEntity<Map<String, Object>> interpretHexagram(@RequestBody @Validated YijingInterpretRequest request) {
-        return ResponseEntity.ok(toResponse(yijingService.interpretHexagram(request)));
-    }
-
-    /**
-     * 卦象决策建议
-     * 基于卦象为用户提供行动建议
-     *
-     * 请求参数：
-     * - hexagram: 卦象数据对象
-     * - question: 用户的具体问题
-     * - options: 可选行动方案列表（可选）
-     * - time_frame: 决策时间框架 (immediate/short_term/long_term)
-     *
-     * 示例请求：
-     * {
-     *   "hexagram": {"name": "谦", "lines": [0,0,0,1,1,1]},
-     *   "question": "是否应该接受这份工作？",
-     *   "options": ["接受", "拒绝", "再考虑"],
-     *   "time_frame": "short_term"
-     * }
-     *
-     * @param request 决策建议请求参数
-     * @return 建议方案数据
-     */
-    @PostMapping("/hexagram/advise")
-    public ResponseEntity<Map<String, Object>> advise(@RequestBody @Validated YijingAdviseRequest request) {
-        return ResponseEntity.ok(toResponse(yijingService.advise(request)));
-    }
-
     /**
      * 生成八字命盘
      * 根据出生信息生成四柱八字命盘

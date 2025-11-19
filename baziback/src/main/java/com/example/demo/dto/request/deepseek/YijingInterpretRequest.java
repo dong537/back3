@@ -1,4 +1,4 @@
-package com.example.demo.dto.request.yijing;
+package com.example.demo.dto.request.deepseek;
 
 
 import com.fasterxml.jackson.annotation.JsonInclude;

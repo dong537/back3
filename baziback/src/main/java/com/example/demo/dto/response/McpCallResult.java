@@ -15,7 +15,10 @@ import java.util.Map;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class McpCallResult {
     private boolean success;
-    private Map<String, Object> data;
+    private Object data;
     private String raw;
+    private String errorMsg;
+    private String context;
+    private String content;
 }
 

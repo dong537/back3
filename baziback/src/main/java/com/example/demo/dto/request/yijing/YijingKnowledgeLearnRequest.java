@@ -1,6 +1,7 @@
 package com.example.demo.dto.request.yijing;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,9 +18,6 @@ public class YijingKnowledgeLearnRequest {
     @NotBlank(message = "topic 不能为空")
     private String topic;
 
-    /**
-     * yijing / bazi / both
-     */
     @NotBlank(message = "system 不能为空")
     private String system;
 
@@ -29,9 +27,10 @@ public class YijingKnowledgeLearnRequest {
     @NotBlank(message = "level 不能为空")
     private String level;
 
-    /**
-     * text / interactive / visual
-     */
+    @NotBlank(message = "learning_type 不能为空")
+    @JsonProperty("learning_type")
+    private String learningType;
+
     private String format;
 }
 

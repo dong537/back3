@@ -24,13 +24,10 @@ public class YijingGenerateHexagramRequest {
     private String method;
 
     /**
-     * 可选的种子或附加信息
+     * 起卦种子（可选）
      */
     private String seed;
 
-    /**
-     * 额外上下文，用于提示当前处境
-     */
     private String context;
 }
 

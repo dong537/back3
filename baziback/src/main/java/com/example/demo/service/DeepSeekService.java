@@ -1,6 +1,9 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.model.yijing.YijingHexagramPayload;
+import com.example.demo.dto.request.yijing.YijingInterpretRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,6 +21,7 @@ import java.util.*;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class DeepSeekService {
 
     @Value("${deepseek.api.key:}")
@@ -29,15 +33,11 @@ public class DeepSeekService {
     @Value("${deepseek.system-prompt:}")
     private String systemPrompt; // 注入系统提示词
 
-    private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
-    public DeepSeekService() {
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(30))
-                .build();
-        this.objectMapper = new ObjectMapper();
-    }
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(100))
+            .build();
 
     /**
      * 生成八字命理报告：整合系统提示词 + 用户原始数据
@@ -51,44 +51,82 @@ public class DeepSeekService {
         }
 
         log.info("开始调用DeepSeek生成八字报告（含系统提示词）");
-        return callDeepSeekAPI(userData);
+        return BaziReport(userData);
     }
 
     /**
-     * 调用DeepSeek API核心逻辑：构建多角色消息体
+     * 使用 DeepSeek 解读卦象（不使用系统提示词）
      */
-    private String callDeepSeekAPI(String userData) throws Exception {
+ public String interpretHexagram(String request) throws  Exception {
+     return callDeepSeekAPIWithoutSystemPrompt(request);
+    }
+    /**
+     * 调用DeepSeek API核心逻辑：构建多角色消息体（含系统提示词）
+     */
+    private String BaziReport(String userContent) throws Exception {
         // 校验API密钥
         if (apiKey == null || apiKey.isEmpty()) {
             throw new Exception("DeepSeek API Key未配置，请在 application.yml 中设置 deepseek.api.key 或通过环境变量 DEEPSEEK_API_KEY 提供");
         }
-
         // 构建请求体（包含system提示词和user数据）
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", "deepseek-chat");
 
         List<Map<String, String>> messages = new ArrayList<>();
         // 1. 添加system角色提示词（定义AI规则）
-        if (StringUtils.hasText(systemPrompt)) {
-            messages.add(Map.of(
-                    "role", "system",
-                    "content", systemPrompt
-            ));
-        }
-        // 2. 添加user角色数据（用户八字信息）
+        String sysPrompt = StringUtils.hasText(systemPrompt) ? systemPrompt : "你是一位精通《周易》、六爻预测与命理学的专家。";
+        messages.add(Map.of(
+                "role", "system",
+                "content", sysPrompt
+        ));
+        // 2. 添加user角色数据
         messages.add(Map.of(
                 "role", "user",
-                "content", userData
+                "content", userContent
+        ));
+        requestBody.put("messages", messages);
+        requestBody.put("max_tokens", 4000);
+        requestBody.put("temperature", 0.7);
+        requestBody.put("stream", false);
+
+
+        return executeDeepSeekRequest(requestBody);
+    }
+    /**
+     * 调用DeepSeek API核心逻辑：仅包含用户内容（无系统提示词）
+     */
+    private String callDeepSeekAPIWithoutSystemPrompt(String userContent) throws Exception {
+        // 校验API密钥
+        if (apiKey == null || apiKey.isEmpty()) {
+            throw new Exception("DeepSeek API Key未配置，请在 application.yml 中设置 deepseek.api.key 或通过环境变量 DEEPSEEK_API_KEY 提供");
+        }
+
+        // 构建请求体（仅包含user数据，无system提示词）
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", "deepseek-chat");
+
+        List<Map<String, String>> messages = new ArrayList<>();
+        // 仅添加user角色数据
+        messages.add(Map.of(
+                "role", "user",
+                "content", userContent
         ));
 
         requestBody.put("messages", messages);
         requestBody.put("max_tokens", 4000);
-        requestBody.put("temperature", 0.5);
+        requestBody.put("temperature", 0.7);
         requestBody.put("stream", false);
 
+        return executeDeepSeekRequest(requestBody);
+    }
+
+    /**
+     * 执行DeepSeek API请求的公共逻辑
+     */
+    private String executeDeepSeekRequest(Map<String, Object> requestBody) throws Exception {
         String requestBodyJson = objectMapper.writeValueAsString(requestBody);
 
-        // 打印**完整请求体JSON**（便于调试接口参数）
+        // 打印完整请求体JSON（便于调试）
         log.info("发送给DeepSeek的完整请求体：\n{}", requestBodyJson);
 
         // 发送HTTP请求
@@ -96,11 +134,11 @@ public class DeepSeekService {
                 .uri(URI.create(apiEndpoint))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKey)
-                .timeout(Duration.ofSeconds(60))
+                .timeout(Duration.ofSeconds(100))
                 .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
                 .build();
 
-        log.info("发送DeepSeek请求 | 用户数据长度: {}", userData.length());
+        log.info("发送DeepSeek请求 | 内容长度: {}", requestBodyJson.length());
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 

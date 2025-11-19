@@ -213,7 +213,11 @@ public class UserService {
         userVO.put("phone", user.getPhone());
         userVO.put("nickname", user.getNickname());
         userVO.put("avatar", user.getAvatar());
-        userVO.put("createTime", user.getCreateTime());
+        if (user.getCreateTime() != null) {
+            userVO.put("createTime", user.getCreateTime().toString());
+        } else {
+            userVO.put("createTime", null);
+        }
         return userVO;
     }
 }

@@ -30,6 +30,7 @@ public class YijingBaziForecastRequest {
     @JsonProperty("end_date")
     private String endDate;
 
+    @NotEmpty(message = "aspects 不能为空")
     private List<String> aspects;
 
     private String resolution;

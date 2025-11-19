@@ -25,12 +25,8 @@ public class YijingBaziGenerateChartRequest {
     /**
      * male / female
      */
+    @NotBlank(message = "gender 不能为空")
     private String gender;
-
-    @JsonProperty("use_true_solar_time")
-    private Boolean useTrueSolarTime;
-
-    private String timezone;
 
     @JsonProperty("birth_location")
     private BirthLocation birthLocation;

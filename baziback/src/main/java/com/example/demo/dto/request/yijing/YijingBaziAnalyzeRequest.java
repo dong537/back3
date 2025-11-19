@@ -24,6 +24,7 @@ public class YijingBaziAnalyzeRequest {
     @NotEmpty(message = "chart 不能为空")
     private Map<String, Object> chart;
 
+    @NotEmpty(message = "analysis_type 不能为空")
     @JsonProperty("analysis_type")
     private List<String> analysisType;
 

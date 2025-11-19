@@ -9,57 +9,75 @@ spring:
     password: ${DB_PASSWORD:123456}
   messages:
     encoding: UTF-8
+
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
+
+jackson:
+  serialization:
+    write-dates-as-timestamps: false
+  deserialization:
+    adjust-dates-to-context-time-zone: false
+  time-zone: Asia/Shanghai
+  date-format: yyyy-MM-dd HH:mm:ss
 
 # 服务器配置
 server:
   port: ${SERVER_PORT:8088}
 
-# MCP相关配置
+# MCP相关配置（各模块端点与密钥）
 mcp:
   bazi:
     api:
       endpoint: ${MCP_BAZI_ENDPOINT:https://mcp.api-inference.modelscope.net/43918d5be1c140/mcp}
       api-key: ${MCP_BAZI_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
-    max-retry: 3
+    max-retry: 2
     retry-interval-seconds: 1
   tarot:
     api:
       endpoint: ${MCP_TAROT_ENDPOINT:https://mcp.api-inference.modelscope.net/moraxcheng/tarot}
-      api-key: ${MCP_TAROT_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}  # 从ModelScope获取
-    max-retry: 3
+      api-key: ${MCP_TAROT_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
+    max-retry: 2
     retry-interval-seconds: 1
   yijing:
     api:
-      endpoint: ${MCP_YIJING_ENDPOINT:https://mcp.api-inference.modelscope.net/cdd08d5f11ba48/mcp}
+      endpoint: ${MCP_YIJING_ENDPOINT:https://mcp.api-inference.modelscope.net/53410b27153b48/mcp}  # 已确认配置，解决启动报错
       api-key: ${MCP_YIJING_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
+    max-retry: 2
+    retry-interval-seconds: 1
+  ziwei:
+    api:
+      endpoint: ${MCP_ZIWEI_ENDPOINT:https://mcp.api-inference.modelscope.net/449d88faac0b4c/mcp}
+      api-key: ${MCP_ZIWEI_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
     max-retry: 3
     retry-interval-seconds: 1
-# DeepSeek AI配置（含完整系统提示词）
+  star:
+    api:
+      endpoint: ${MCP_STAR_ENDPOINT:https://mcp.api-inference.modelscope.net/61b95a7f8e5844/mcp}
+      api-key: ${STAR_MCP_API_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
+    max-retry: 3
+    retry-interval-seconds: 1
+
+# DeepSeek AI配置
 deepseek:
   api:
     key: ${DEEPSEEK_API_KEY:sk-4e61a90941564ab683ccab665308d56b}
     endpoint: ${DEEPSEEK_API_ENDPOINT:https://api.deepseek.com/v1/chat/completions}
   model: deepseek-chat
-  max-tokens: 4000
   temperature: 0.5
   system-prompt: |
     你是一位精通传统八字命理且擅长现代人格分析的专家。请根据以下八字信息，生成一份**结构化的个性报告**，内容需分模块解读，每个模块结合八字的十神、五行、格局进行专业分析，同时融入现代生活场景（职场、恋爱、理财等），语言风格专业且通俗易懂，结构参考如下示例：
-    ###日主状态分析
+    ### 日主状态分析
     - （如：
     甲木日主，如寒冬中的参天大树，生于丑月土旺之时，形成"财多身弱"格局。此命局有以下几个关键特征：
     身弱难担财：八字中土（财星）极重，日主甲木无根，如同小树难以承载厚重黄金
     寒湿缺火：命局五行缺火，急需丙丁火调候暖局
-    
     官印暗藏：地支酉丑半合金局，辰中藏癸水正印，为潜在助力）
-    
     ### 财运事业分析
     正偏财混杂，求财辛苦但晚年有成
     月柱正财透出：出身家境不错，能得父辈助力
-    时柱偏财当头：晚年有发财机会，但需防财来财去
-    
+    时柱偏财当头：晚年有发财机会，但需防财来财去   
     ### 感情分析
     如：夫妻宫为偏财，配偶务实但需经营
       配偶特征：对方注重实际，可能在家境或能力上优于您
@@ -67,28 +85,25 @@ deepseek:
       辰辰自刑，内心易有矛盾，需加强沟通
       财星为忌，易为感情物质问题烦恼
       晚婚更佳（28岁后），心智成熟后婚姻更稳定
-
     ### 人际关系
     （如  善用天乙贵人：关键时刻有贵人相助 ， 发挥十灵智慧：您天生悟性高，善用此优势 ，注意华盖星：虽有艺术天赋，但需防过于孤僻）
     ### 潜在MBTI性格
     根据八字性格特点，分析最接近的MBTI类型，并分维度（I/E、S/N、T/F、J/P）解释对应八字元素，最后总结该类型的特质。
-    
-    ###命理总结
+    ### 命理总结
     描述八字的吉凶、人生意义、人生状态、人生方向、人生建议
-    ###流年具体点拨
-    
-    ###三大关键
-    
-    ###重要提醒
-# 日志级别配置
+    ### 流年具体点拨
+    ### 三大关键
+    ### 重要提醒
+
+# 日志级别配置（适配项目实际包名）
 logging:
   level:
     com:
-      yourpackage:
-        service: INFO
+      example:
+        demo:
+          service: INFO  # 修正为项目实际包路径com.example.demo
     org:
       springframework:
         web: WARN
-  # 控制台日志编码（强制UTF-8）
   charset:
-    console: UTF-8
+    console: UTF-8  # 移除冗余文字，保持格式正确
