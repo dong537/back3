@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.dto.request.user.LoginRequest;
 import com.example.demo.dto.request.user.RegisterRequest;
+import com.example.demo.dto.response.Result;
 import com.example.demo.entity.User;
 import com.example.demo.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
@@ -28,25 +29,19 @@ public class UserService {
     /**
      * 用户注册
      */
-    public Map<String, Object> register(RegisterRequest request) {
-        Map<String, Object> result = new HashMap<>();
-        
+    public Result<Map<String, Object>> register(RegisterRequest request) {
         try {
             // 1. 检查用户名是否已存在
             User existUser = userMapper.findByUsername(request.getUsername());
             if (existUser != null) {
-                result.put("success", false);
-                result.put("message", "用户名已存在");
-                return result;
+                return Result.badRequest("用户名已存在");
             }
             
             // 2. 检查邮箱是否已存在
             if (request.getEmail() != null && !request.getEmail().isEmpty()) {
                 User emailUser = userMapper.findByEmail(request.getEmail());
                 if (emailUser != null) {
-                    result.put("success", false);
-                    result.put("message", "邮箱已被注册");
-                    return result;
+                    return Result.badRequest("邮箱已被注册");
                 }
             }
             
@@ -54,9 +49,7 @@ public class UserService {
             if (request.getPhone() != null && !request.getPhone().isEmpty()) {
                 User phoneUser = userMapper.findByPhone(request.getPhone());
                 if (phoneUser != null) {
-                    result.put("success", false);
-                    result.put("message", "手机号已被注册");
-                    return result;
+                    return Result.badRequest("手机号已被注册");
                 }
             }
             
@@ -73,50 +66,39 @@ public class UserService {
             int rows = userMapper.insert(user);
             if (rows > 0) {
                 log.info("用户注册成功: username={}, id={}", user.getUsername(), user.getId());
-                result.put("success", true);
-                result.put("message", "注册成功");
-                result.put("userId", user.getId());
+                Map<String, Object> data = new HashMap<>();
+                data.put("userId", user.getId());
+                data.put("username", user.getUsername());
+                return Result.success("注册成功", data);
             } else {
-                result.put("success", false);
-                result.put("message", "注册失败，请稍后重试");
+                return Result.error("注册失败，请稍后重试");
             }
             
         } catch (Exception e) {
             log.error("用户注册失败", e);
-            result.put("success", false);
-            result.put("message", "系统错误：" + e.getMessage());
+            return Result.error("系统错误，请稍后重试");
         }
-        
-        return result;
     }
     
     /**
      * 用户登录
      */
-    public Map<String, Object> login(LoginRequest request, String ip) {
-        Map<String, Object> result = new HashMap<>();
-        
+    public Result<Map<String, Object>> login(LoginRequest request, String ip) {
         try {
             // 1. 查询用户
             User user = userMapper.findByUsername(request.getUsername());
             if (user == null) {
-                result.put("success", false);
-                result.put("message", "用户名或密码错误");
-                return result;
+                return Result.badRequest("用户名或密码错误");
             }
             
             // 2. 检查用户状态
             if (user.getStatus() == 0) {
-                result.put("success", false);
-                result.put("message", "账号已被禁用，请联系管理员");
-                return result;
+                return Result.forbidden("账号已被禁用，请联系管理员");
             }
             
             // 3. 验证密码
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                result.put("success", false);
-                result.put("message", "用户名或密码错误");
-                return result;
+                return Result.badRequest("用户名或密码错误");
             }
             
             // 4. 生成token
@@ -129,52 +111,39 @@ public class UserService {
             
             // 6. 返回结果
             log.info("用户登录成功: username={}, ip={}", user.getUsername(), ip);
-            result.put("success", true);
-            result.put("message", "登录成功");
-            result.put("token", token);
-            result.put("user", buildUserVO(user));
+            Map<String, Object> data = new HashMap<>();
+            data.put("token", token);
+            data.put("id", user.getId());
+            data.put("username", user.getUsername());
+            data.put("name", user.getNickname());
+            return Result.success("登录成功", data);
             
         } catch (Exception e) {
             log.error("用户登录失败", e);
-            result.put("success", false);
-            result.put("message", "系统错误：" + e.getMessage());
+            return Result.error("系统错误，请稍后重试");
         }
-        
-        return result;
     }
     
     /**
-     * 根据token获取用户信息
+     * 根据userId获取用户信息
      */
-    public Map<String, Object> getUserInfo(String token) {
-        Map<String, Object> result = new HashMap<>();
-        
+    public Result<Map<String, Object>> getUserInfoById(Long userId) {
         try {
-            // 从token解析userId（简化版，实际应该用JWT）
-            Long userId = parseToken(token);
             if (userId == null) {
-                result.put("success", false);
-                result.put("message", "token无效");
-                return result;
+                return Result.badRequest("用户ID不能为空");
             }
             
             User user = userMapper.findById(userId);
             if (user == null) {
-                result.put("success", false);
-                result.put("message", "用户不存在");
-                return result;
+                return Result.badRequest("用户不存在");
             }
             
-            result.put("success", true);
-            result.put("user", buildUserVO(user));
+            return Result.success(buildUserVO(user));
             
         } catch (Exception e) {
             log.error("获取用户信息失败", e);
-            result.put("success", false);
-            result.put("message", "系统错误");
+            return Result.error("系统错误，请稍后重试");
         }
-        
-        return result;
     }
     
     /**

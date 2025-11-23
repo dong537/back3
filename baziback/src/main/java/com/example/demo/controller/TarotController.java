@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.annotation.RequireAuth;
 import com.example.demo.dto.request.tarot.*;
 import com.example.demo.dto.response.tarot.*;
 import com.example.demo.service.TarotService;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/tarot")
 @Slf4j
 @RequiredArgsConstructor
+@RequireAuth  // 需要登录
 public class TarotController {
 
     private final TarotService tarotService;

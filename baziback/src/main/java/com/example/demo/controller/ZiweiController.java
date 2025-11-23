@@ -1,6 +1,6 @@
 package com.example.demo.controller;
 
-
+import com.example.demo.annotation.RequireAuth;
 import com.example.demo.dto.request.ziwei.*;
 import com.example.demo.dto.response.ziwei.McpZiweiResponse;
 import com.example.demo.service.ZiweiService;
@@ -22,6 +22,7 @@ import java.util.Map;
 @Validated
 @RequestMapping("/api/ziwei")
 @RequiredArgsConstructor
+@RequireAuth  // 需要登录
 public class ZiweiController {
 
     private final ZiweiService ziweiService;

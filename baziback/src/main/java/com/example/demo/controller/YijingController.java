@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.example.demo.annotation.RateLimit;
+import com.example.demo.annotation.RequireAuth;
 import com.example.demo.dto.request.yijing.*;
 import com.example.demo.dto.response.McpCallResult;
 import com.example.demo.service.YijingService;
@@ -25,6 +27,7 @@ import java.util.Map;
 @Validated
 @RequestMapping("/api/yijing")
 @RequiredArgsConstructor
+@RequireAuth  // 需要登录
 public class YijingController {
 
     private final YijingService yijingService;
@@ -36,6 +39,7 @@ public class YijingController {
      * @return 工具列表JSON字符串
      */
     @GetMapping("/tools")
+    @RateLimit(timeWindow = 60, maxCount = 20, limitType = RateLimit.LimitType.USER)
     public ResponseEntity<McpCallResult> listTools() {
         return ResponseEntity.ok(yijingService.listTools());
     }

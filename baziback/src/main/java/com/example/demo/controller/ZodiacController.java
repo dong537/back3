@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.annotation.RequireAuth;
 import com.example.demo.dto.request.star.CompatibilityRequest;
 import com.example.demo.dto.request.star.DailyHoroscopeRequest;
 import com.example.demo.dto.request.star.ZodiacByDateRequest;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Slf4j
 @Validated
+@RequireAuth  // 需要登录
 public class ZodiacController {
 
     private final ZodiacService zodiacService;

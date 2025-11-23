@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.example.demo.annotation.RateLimit;
+import com.example.demo.annotation.RequireAuth;
 import com.example.demo.client.McpBaziClient;
 import com.example.demo.dto.request.bazi.McpBaziRequest;
 import com.example.demo.dto.response.FormattedBaziResponse;
@@ -13,9 +15,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@Slf4j
 @RequestMapping("/api/bazi")
 @RequiredArgsConstructor
+@Slf4j
+@RequireAuth  // 需要登录
 public class BaziController {
 
     private final McpBaziClient mcpBaziClient;
@@ -26,6 +29,7 @@ public class BaziController {
      * GET http://localhost:8080/api/bazi/tools
      */
     @GetMapping("/tools")
+    @RateLimit(timeWindow = 60, maxCount = 20, limitType = RateLimit.LimitType.USER)
     public String listTools() {
         return mcpBaziClient.listAvailableTools();
     }
@@ -34,6 +38,7 @@ public class BaziController {
      * POST http://localhost:8080/api/bazi/formatted
      */
     @PostMapping("/formatted")
+    @RateLimit(timeWindow = 60, maxCount = 10, limitType = RateLimit.LimitType.USER)
     public FormattedBaziResponse getBaziFormatted(@RequestBody McpBaziRequest request) {
         try {
             log.info("收到八字查询请求: gender={}, lunarDatetime={}, solarDatetime={}", 
