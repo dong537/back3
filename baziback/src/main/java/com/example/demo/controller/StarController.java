@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * 星座运势服务控制器
@@ -24,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Slf4j
 @Validated
-public class ZodiacController {
+public class StarController {
 
     private final ZodiacService zodiacService;
 
@@ -47,15 +49,14 @@ public class ZodiacController {
      * @return 星座详细信息
      */
     @PostMapping("/info")
-    public ResponseEntity<ZodiacInfoResponse> getZodiacInfo(@RequestBody ZodiacInfoRequest request) {
-        try {
-            log.info("查询星座信息: {}", request.getZodiac());
-            ZodiacInfoResponse response = zodiacService.getZodiacInfo(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("查询星座信息失败", e);
-            throw e;
-        }
+    public Mono<ResponseEntity<ZodiacInfoResponse>> getZodiacInfo(@RequestBody ZodiacInfoRequest request) {
+        return Mono.fromCallable(() -> {
+                    log.info("查询星座信息: {}", request.getZodiac());
+                    ZodiacInfoResponse response = zodiacService.getZodiacInfo(request);
+                    return ResponseEntity.ok(response);
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnError(e -> log.error("查询星座信息失败", e));
     }
 
     /**
@@ -81,16 +82,18 @@ public class ZodiacController {
      * @return 每日运势分析结果
      */
     @PostMapping("/daily-horoscope")
-    public ResponseEntity<DailyHoroscopeResponse> getDailyHoroscope(@RequestBody DailyHoroscopeRequest request) {
-        try {
-            DailyHoroscopeResponse response = zodiacService.getDailyHoroscope(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("查询每日运势失败", e);
-            throw e;
-        }
+    public Mono<ResponseEntity<DailyHoroscopeResponse>> getDailyHoroscope(@RequestBody DailyHoroscopeRequest request) {
+        return Mono.fromCallable(() -> {
+                    log.info("收到请求: zodiac={}, date={}, category={}",
+                            request.getZodiac(), request.getDate(), request.getCategory());
+                    return ResponseEntity.ok(zodiacService.getDailyHoroscope(request));
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .onErrorResume(throwable -> {
+                    log.error("请求处理失败", throwable);
+                    return Mono.error(throwable);
+                });
     }
-
     /**
      * 星座配对兼容性分析
      * 分析两个星座之间的配对指数和关系建议
@@ -114,15 +117,14 @@ public class ZodiacController {
      * @return 配对分析结果
      */
     @PostMapping("/compatibility")
-    public ResponseEntity<CompatibilityResponse> getCompatibility(@RequestBody CompatibilityRequest request) {
-        try {
-            log.info("星座配对分析: {} vs {}", request.getZodiac1(), request.getZodiac2());
-            CompatibilityResponse response = zodiacService.getCompatibility(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("星座配对分析失败", e);
-            throw e;
-        }
+    public Mono<ResponseEntity<CompatibilityResponse>> getCompatibility(@RequestBody CompatibilityRequest request) {
+        return Mono.fromCallable(() -> {
+                    log.info("星座配对分析: {} vs {}", request.getZodiac1(), request.getZodiac2());
+                    CompatibilityResponse response = zodiacService.getCompatibility(request);
+                    return ResponseEntity.ok(response);
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnError(e -> log.error("星座配对分析失败", e));
     }
 
     /**
@@ -146,15 +148,14 @@ public class ZodiacController {
      * @return 对应的星座信息
      */
     @PostMapping("/by-date")
-    public ResponseEntity<ZodiacByDateResponse> getZodiacByDate(@RequestBody ZodiacByDateRequest request) {
-        try {
-            log.info("根据日期查询星座: {}/{}", request.getMonth(), request.getDay());
-            ZodiacByDateResponse response = zodiacService.getZodiacByDate(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("根据日期查询星座失败", e);
-            throw e;
-        }
+    public Mono<ResponseEntity<ZodiacByDateResponse>> getZodiacByDate(@RequestBody ZodiacByDateRequest request) {
+        return Mono.fromCallable(() -> {
+                    log.info("根据日期查询星座: {}/{}", request.getMonth(), request.getDay());
+                    ZodiacByDateResponse response = zodiacService.getZodiacByDate(request);
+                    return ResponseEntity.ok(response);
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnError(e -> log.error("根据日期查询星座失败", e));
     }
     /**
      * 获取所有星座信息
@@ -169,14 +170,13 @@ public class ZodiacController {
      * @return 所有星座信息列表
      */
     @PostMapping("/all")
-    public ResponseEntity<AllZodiacsResponse> getAllZodiacs() {
-        try {
-            log.info("查询所有星座信息");
-            AllZodiacsResponse response = zodiacService.getAllZodiacs();
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("查询所有星座信息失败", e);
-            throw e;
-        }
+    public Mono<ResponseEntity<AllZodiacsResponse>> getAllZodiacs() {
+        return Mono.fromCallable(() -> {
+                    log.info("查询所有星座信息");
+                    AllZodiacsResponse response = zodiacService.getAllZodiacs();
+                    return ResponseEntity.ok(response);
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnError(e -> log.error("查询所有星座信息失败", e));
     }
 }

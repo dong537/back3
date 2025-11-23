@@ -1,6 +1,5 @@
 package com.example.demo.client;
 
-import com.example.demo.dto.model.yijing.YijingHexagramPayload;
 import com.example.demo.dto.request.yijing.*;
 import com.example.demo.dto.response.McpCallResult;
 import com.example.demo.exception.McpApiException;
@@ -20,6 +19,7 @@ import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.PrematureCloseException;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
@@ -74,6 +74,7 @@ public class McpYijingClient {
         log.info("【工具列表查询】请求体: {}", requestBody);
 
         try {
+            AtomicReference<String> firstChunk = new AtomicReference<>();
             String sseResponse = mcpWebClient.post()
                     .uri(mcpEndpoint)
                     .headers(headers -> setCommonRequestHeaders(headers, mcpSessionId.get()))
@@ -84,8 +85,16 @@ public class McpYijingClient {
                                     .flatMap(err -> handleErrorResponse(res.statusCode().value(), err, "查询工具列表"))
                     )
                     .bodyToFlux(String.class)
+                    .doOnNext(firstChunk::set)
                     .take(1)
                     .single()
+                    .onErrorResume(PrematureCloseException.class, e -> {
+                        if (firstChunk.get() != null) {
+                            log.warn("【工具列表查询】连接提前关闭，但已收到首个事件，使用缓存响应。");
+                            return Mono.just(firstChunk.get());
+                        }
+                        return Mono.error(e);
+                    })
                     .retryWhen(buildRetrySpec("查询工具列表"))
                     .block();
 
@@ -189,6 +198,7 @@ public class McpYijingClient {
                 toolName, mcpSessionId.get(), body);
 
         try {
+            AtomicReference<String> firstChunk = new AtomicReference<>();
             String sseResponse = mcpWebClient.post()
                     .uri(mcpEndpoint)
                     .headers(headers -> setCommonRequestHeaders(headers, mcpSessionId.get()))
@@ -203,8 +213,16 @@ public class McpYijingClient {
                                     ))
                     )
                     .bodyToFlux(String.class)
+                    .doOnNext(firstChunk::set)
                     .take(1)
                     .single()
+                    .onErrorResume(PrematureCloseException.class, e -> {
+                        if (firstChunk.get() != null) {
+                            log.warn("【调用工具】{} 连接提前关闭，但已收到首个事件，使用缓存响应。", toolName);
+                            return Mono.just(firstChunk.get());
+                        }
+                        return Mono.error(e);
+                    })
                     .retryWhen(buildRetrySpec("调用工具 " + toolName))
                     .block();
 
@@ -451,6 +469,8 @@ public class McpYijingClient {
                 .headers(headers -> {
                     headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                     headers.set(HttpHeaders.ACCEPT, "application/json, text/event-stream");
+                    headers.set(HttpHeaders.ACCEPT_ENCODING, "identity");
+                    headers.set(HttpHeaders.CONNECTION, "keep-alive");
                     headers.set("mcp-protocol-version", MCP_PROTOCOL_VERSION);
                     if (StringUtils.hasText(apiKey)) {
                         headers.set("x-api-key", apiKey);
@@ -598,6 +618,8 @@ public class McpYijingClient {
                     .headers(headers -> {
                         headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                         headers.set(HttpHeaders.ACCEPT, "application/json, text/event-stream");
+                        headers.set(HttpHeaders.ACCEPT_ENCODING, "identity");
+                        headers.set(HttpHeaders.CONNECTION, "keep-alive");
                         headers.set("mcp-session-id", sessionId);
                         if (StringUtils.hasText(apiKey)) {
                             headers.set("x-api-key", apiKey);
@@ -629,6 +651,8 @@ public class McpYijingClient {
     private void setCommonRequestHeaders(HttpHeaders headers, String sessionId) {
         headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         headers.set(HttpHeaders.ACCEPT, "application/json, text/event-stream");
+        headers.set(HttpHeaders.ACCEPT_ENCODING, "identity");
+        headers.set(HttpHeaders.CONNECTION, "keep-alive");
         headers.set("mcp-session-id", sessionId);
         headers.set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
         if (StringUtils.hasText(apiKey)) {

@@ -3,12 +3,15 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.request.ziwei.*;
 import com.example.demo.dto.response.ziwei.McpZiweiResponse;
+import com.example.demo.service.DeepSeekService;
 import com.example.demo.service.ZiweiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,6 +28,7 @@ import java.util.Map;
 public class ZiweiController {
 
     private final ZiweiService ziweiService;
+    private final DeepSeekService deepSeekService;
 
     /**
      * 获取可用工具列表
@@ -33,8 +37,8 @@ public class ZiweiController {
      * @return 工具列表JSON字符串
      */
     @GetMapping("/tools")
-    public ResponseEntity<String> listTools() {
-        return ResponseEntity.ok(ziweiService.listTools());
+    public Mono<ResponseEntity<String>> listTools() {
+        return asyncResponse("获取紫微工具列表", () -> ziweiService.listTools());
     }
     /**
      * 工具1：生成紫微斗数命盘
@@ -68,9 +72,8 @@ public class ZiweiController {
      * @return 包含chartId的命盘数据
      */
     @PostMapping("/chart/generate")
-    public ResponseEntity<Map<String, Object>> generateChart(@RequestBody @Validated ZiweiGenerateChartRequest request) {
-        McpZiweiResponse result = ziweiService.generateChart(request);
-        return ResponseEntity.ok(toMap(result));
+    public Mono<ResponseEntity<Map<String, Object>>> generateChart(@RequestBody @Validated ZiweiGenerateChartRequest request) {
+        return asyncResponse("生成紫微命盘", () -> toMap(ziweiService.generateChart(request)));
     }
 
     /**
@@ -93,9 +96,8 @@ public class ZiweiController {
      * @return 解读结果数据
      */
     @PostMapping("/chart/interpret")
-    public ResponseEntity<Map<String, Object>> interpretChart(@RequestBody @Validated ZiweiInterpretChartRequest request) {
-        McpZiweiResponse result = ziweiService.interpretChart(request);
-        return ResponseEntity.ok(toMap(result));
+    public Mono<ResponseEntity<Map<String, Object>>> interpretChart(@RequestBody @Validated ZiweiInterpretChartRequest request) {
+        return asyncResponse("解读紫微命盘", () -> toMap(ziweiService.interpretChart(request)));
     }
     /**
      * 工具3：运势分析
@@ -121,9 +123,8 @@ public class ZiweiController {
      * @return 运势预测数据
      */
     @PostMapping("/fortune/analyze")
-    public ResponseEntity<Map<String, Object>> analyzeFortune(@RequestBody @Validated ZiweiAnalyzeFortuneRequest request) {
-        McpZiweiResponse result = ziweiService.analyzeFortune(request);
-        return ResponseEntity.ok(toMap(result));
+    public Mono<ResponseEntity<Map<String, Object>>> analyzeFortune(@RequestBody @Validated ZiweiAnalyzeFortuneRequest request) {
+        return asyncResponse("紫微运势分析", () -> toMap(ziweiService.analyzeFortune(request)));
     }
 
     /**
@@ -148,9 +149,8 @@ public class ZiweiController {
      * @return 配对分析结果
      */
     @PostMapping("/compatibility/analyze")
-    public ResponseEntity<Map<String, Object>> analyzeCompatibility(@RequestBody @Validated ZiweiAnalyzeCompatibilityRequest request) {
-        McpZiweiResponse result = ziweiService.analyzeCompatibility(request);
-        return ResponseEntity.ok(toMap(result));
+    public Mono<ResponseEntity<Map<String, Object>>> analyzeCompatibility(@RequestBody @Validated ZiweiAnalyzeCompatibilityRequest request) {
+        return asyncResponse("紫微合婚分析", () -> toMap(ziweiService.analyzeCompatibility(request)));
     }
 
     /**
@@ -185,9 +185,8 @@ public class ZiweiController {
      * @return 推荐吉日列表
      */
     @PostMapping("/auspicious-date/select")
-    public ResponseEntity<Map<String, Object>> selectAuspiciousDate(@RequestBody @Validated ZiweiSelectAuspiciousDateRequest request) {
-        McpZiweiResponse result = ziweiService.selectAuspiciousDate(request);
-        return ResponseEntity.ok(toMap(result));
+    public Mono<ResponseEntity<Map<String, Object>>> selectAuspiciousDate(@RequestBody @Validated ZiweiSelectAuspiciousDateRequest request) {
+        return asyncResponse("紫微择日", () -> toMap(ziweiService.selectAuspiciousDate(request)));
     }
 
     /**
@@ -214,9 +213,8 @@ public class ZiweiController {
      * @return 图表URL或Base64数据
      */
     @PostMapping("/visualization/generate")
-    public ResponseEntity<Map<String, Object>> generateVisualization(@RequestBody @Validated ZiweiGenerateVisualizationRequest request) {
-        McpZiweiResponse result = ziweiService.generateVisualization(request);
-        return ResponseEntity.ok(toMap(result));
+    public Mono<ResponseEntity<Map<String, Object>>> generateVisualization(@RequestBody @Validated ZiweiGenerateVisualizationRequest request) {
+        return asyncResponse("紫微可视化生成", () -> toMap(ziweiService.generateVisualization(request)));
     }
 
     /**
@@ -234,5 +232,16 @@ public class ZiweiController {
         map.put("raw", response == null ? null : response.getRaw());
         map.put("message", response == null ? null : response.getMessage());
         return map;
+    }
+
+    private <T> Mono<ResponseEntity<T>> asyncResponse(String action, CheckedSupplier<T> supplier) {
+        return Mono.fromCallable(() -> ResponseEntity.ok(supplier.get()))
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnError(e -> log.error("{}失败", action, e));
+    }
+
+    @FunctionalInterface
+    private interface CheckedSupplier<T> {
+        T get() throws Exception;
     }
 }

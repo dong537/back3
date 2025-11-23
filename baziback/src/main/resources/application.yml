@@ -2,6 +2,8 @@
 spring:
   application:
     name: demo1
+  main:
+    web-application-type: reactive
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL:jdbc:mysql://localhost:3306/bazi?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
@@ -54,8 +56,8 @@ mcp:
     retry-interval-seconds: 1
   star:
     api:
-      endpoint: ${MCP_STAR_ENDPOINT:https://mcp.api-inference.modelscope.net/61b95a7f8e5844/mcp}
-      api-key: ${STAR_MCP_API_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
+      endpoint: ${MCP_STAR_ENDPOINT:https://mcp.api-inference.modelscope.net/8e403bb31c6c48/mcp}
+      api-key: ${MCP_STAR_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
     max-retry: 3
     retry-interval-seconds: 1
 

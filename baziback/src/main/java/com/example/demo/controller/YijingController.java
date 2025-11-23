@@ -12,9 +12,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * 易经八字MCP服务控制器
@@ -28,7 +31,6 @@ import java.util.Map;
 public class YijingController {
 
     private final YijingService yijingService;
-
     /**
      * 获取可用工具列表
      * 返回MCP服务器支持的所有工具定义
@@ -36,8 +38,8 @@ public class YijingController {
      * @return 工具列表JSON字符串
      */
     @GetMapping("/tools")
-    public ResponseEntity<McpCallResult> listTools() {
-        return ResponseEntity.ok(yijingService.listTools());
+    public Mono<ResponseEntity<McpCallResult>> listTools() {
+        return asyncResponse("获取易经工具列表", yijingService::listTools);
     }
 
     /**
@@ -60,8 +62,8 @@ public class YijingController {
      * @return 生成的卦象数据
      */
     @PostMapping("/hexagram/generate")
-    public ResponseEntity<Map<String, Object>> generateHexagram(@RequestBody @Validated YijingGenerateHexagramRequest request) {
-        return ResponseEntity.ok(toResponse(yijingService.generateHexagram(request)));
+    public Mono<ResponseEntity<Map<String, Object>>> generateHexagram(@RequestBody @Validated YijingGenerateHexagramRequest request) {
+        return asyncResponse("生成卦象", () -> toResponse(yijingService.generateHexagram(request)));
     }
     /**
      * 生成八字命盘
@@ -87,8 +89,8 @@ public class YijingController {
      * @return 八字命盘数据
      */
     @PostMapping("/bazi/chart/generate")
-    public ResponseEntity<Map<String, Object>> generateBaziChart(@RequestBody @Validated YijingBaziGenerateChartRequest request) {
-        return ResponseEntity.ok(toResponse(yijingService.generateBaziChart(request)));
+    public Mono<ResponseEntity<Map<String, Object>>> generateBaziChart(@RequestBody @Validated YijingBaziGenerateChartRequest request) {
+        return asyncResponse("生成八字命盘", () -> toResponse(yijingService.generateBaziChart(request)));
     }
 
     /**
@@ -111,8 +113,8 @@ public class YijingController {
      * @return 分析结果数据
      */
     @PostMapping("/bazi/analyze")
-    public ResponseEntity<Map<String, Object>> analyzeBazi(@RequestBody @Validated YijingBaziAnalyzeRequest request) {
-        return ResponseEntity.ok(toResponse(yijingService.analyzeBazi(request)));
+    public Mono<ResponseEntity<Map<String, Object>>> analyzeBazi(@RequestBody @Validated YijingBaziAnalyzeRequest request) {
+        return asyncResponse("分析八字命盘", () -> toResponse(yijingService.analyzeBazi(request)));
     }
 
     /**
@@ -139,8 +141,8 @@ public class YijingController {
      * @return 运程预测数据
      */
     @PostMapping("/bazi/forecast")
-    public ResponseEntity<Map<String, Object>> forecastBazi(@RequestBody @Validated YijingBaziForecastRequest request) {
-        return ResponseEntity.ok(toResponse(yijingService.forecastBazi(request)));
+    public Mono<ResponseEntity<Map<String, Object>>> forecastBazi(@RequestBody @Validated YijingBaziForecastRequest request) {
+        return asyncResponse("预测八字运势", () -> toResponse(yijingService.forecastBazi(request)));
     }
     /**
      * 易经八字综合分析
@@ -164,8 +166,8 @@ public class YijingController {
      * @return 综合分析结果
      */
     @PostMapping("/combined-analysis")
-    public ResponseEntity<Map<String, Object>> combinedAnalysis(@RequestBody YijingCombinedAnalysisRequest request) {
-        return ResponseEntity.ok(toResponse(yijingService.combinedAnalysis(request)));
+    public Mono<ResponseEntity<Map<String, Object>>> combinedAnalysis(@RequestBody YijingCombinedAnalysisRequest request) {
+        return asyncResponse("执行易经八字综合分析", () -> toResponse(yijingService.combinedAnalysis(request)));
     }
 
     /**
@@ -190,8 +192,8 @@ public class YijingController {
      * @return 咨询建议结果
      */
     @PostMapping("/destiny-consult")
-    public ResponseEntity<Map<String, Object>> destinyConsult(@RequestBody @Validated YijingDestinyConsultRequest request) {
-        return ResponseEntity.ok(toResponse(yijingService.destinyConsult(request)));
+    public Mono<ResponseEntity<Map<String, Object>>> destinyConsult(@RequestBody @Validated YijingDestinyConsultRequest request) {
+        return asyncResponse("命理咨询服务", () -> toResponse(yijingService.destinyConsult(request)));
     }
 
     /**
@@ -216,8 +218,8 @@ public class YijingController {
      * @return 学习内容和资料
      */
     @PostMapping("/knowledge/learn")
-    public ResponseEntity<Map<String, Object>> knowledgeLearn(@RequestBody @Validated YijingKnowledgeLearnRequest request) {
-        return ResponseEntity.ok(toResponse(yijingService.knowledgeLearn(request)));
+    public Mono<ResponseEntity<Map<String, Object>>> knowledgeLearn(@RequestBody @Validated YijingKnowledgeLearnRequest request) {
+        return asyncResponse("易经八字知识学习", () -> toResponse(yijingService.knowledgeLearn(request)));
     }
 
     /**
@@ -242,8 +244,8 @@ public class YijingController {
      * @return 案例详情或列表
      */
     @PostMapping("/case-study")
-    public ResponseEntity<Map<String, Object>> caseStudy(@RequestBody YijingCaseStudyRequest request) {
-        return ResponseEntity.ok(toResponse(yijingService.caseStudy(request)));
+    public Mono<ResponseEntity<Map<String, Object>>> caseStudy(@RequestBody YijingCaseStudyRequest request) {
+        return asyncResponse("命理案例分析", () -> toResponse(yijingService.caseStudy(request)));
     }
 
     /**
@@ -259,5 +261,11 @@ public class YijingController {
         map.put("data", result == null ? null : result.getData());
         map.put("raw", result == null ? null : result.getRaw());
         return map;
+    }
+
+    private <T> Mono<ResponseEntity<T>> asyncResponse(String action, Supplier<T> supplier) {
+        return Mono.fromCallable(() -> ResponseEntity.ok(supplier.get()))
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnError(e -> log.error("{}失败", action, e));
     }
 }

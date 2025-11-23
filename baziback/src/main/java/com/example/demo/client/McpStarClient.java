@@ -26,15 +26,22 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 @Slf4j
 public class McpStarClient {
 
     private static final String MCP_PROTOCOL_VERSION = "2025-03-26";
-    private static final int MAX_RETRY = 3; 
+    private static final int MAX_RETRY = 3;
     private static final long RETRY_INTERVAL_SECONDS = 1;
     private static final String INITIALIZING_MARKER = "INITIALIZING";
+    private static final String ORIGIN = "https://www.modelscope.cn";
+    private static final String REFERER = "https://www.modelscope.cn/";
+    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0";
+
+    private static final Pattern ZODIAC_HEADER_PATTERN = Pattern.compile("#\\s*(?:\\S+\\s+)?(?<name>[^()]+?)\\s*\\((?<english>[^)]+)\\)");
 
     private final WebClient mcpWebClient;
     private final ObjectMapper objectMapper;
@@ -65,7 +72,8 @@ public class McpStarClient {
     public ZodiacInfoResponse getZodiacInfo(ZodiacInfoRequest request) {
         Map<String, Object> args = new HashMap<>();
         args.put("zodiac", request.getZodiac());
-        return callTool("zodiac_info", args, new TypeReference<>() {});
+        String markdown = callToolForText("get_zodiac_info", args);
+        return parseZodiacInfoMarkdown(markdown);
     }
 
     /**
@@ -75,7 +83,7 @@ public class McpStarClient {
         Map<String, Object> args = new HashMap<>();
         args.put("zodiac", request.getZodiac());
         Optional.ofNullable(request.getCategory()).ifPresent(value -> args.put("category", value));
-        return callTool("daily_horoscope", args, new TypeReference<>() {});
+        return callTool("get_daily_horoscope", args, new TypeReference<>() {});
     }
 
     /**
@@ -85,7 +93,7 @@ public class McpStarClient {
         Map<String, Object> args = new HashMap<>();
         args.put("zodiac1", request.getZodiac1());
         args.put("zodiac2", request.getZodiac2());
-        return callTool("compatibility_analysis", args, new TypeReference<>() {});
+        return callTool("get_compatibility", args, new TypeReference<>() {});
     }
 
     /**
@@ -95,14 +103,15 @@ public class McpStarClient {
         Map<String, Object> args = new HashMap<>();
         args.put("month", request.getMonth());
         args.put("day", request.getDay());
-        return callTool("zodiac_by_date", args, new TypeReference<>() {});
+        return callTool("get_zodiac_by_date", args, new TypeReference<>() {});
     }
 
     /**
      * 获取全部星座列表
      */
     public AllZodiacsResponse getAllZodiacs() {
-        return callTool("zodiac_list", Collections.emptyMap(), new TypeReference<>() {});
+        String text = callToolForText("get_all_zodiacs", Collections.emptyMap());
+        return parseAllZodiacsText(text);
     }
 
     // ===================== 私有工具方法 =====================
@@ -129,29 +138,86 @@ public class McpStarClient {
         return parseToolResponse(toolName, sseResponse, responseType);
     }
 
+    private String callToolForText(String toolName, Map<String, Object> arguments) {
+        initializeSessionIfNeeded();
+        String body = buildToolCallRequest(toolName, arguments);
+        log.debug("调用Star工具[{}] (文本模式) 请求体: {}", toolName, body);
+
+        String sseResponse = mcpWebClient.post()
+                .headers(headers -> setCommonRequestHeaders(headers, mcpSessionId.get()))
+                .body(BodyInserters.fromValue(Objects.requireNonNull(body)))
+                .retrieve()
+                .onStatus(status -> !status.is2xxSuccessful(), res ->
+                        res.bodyToMono(String.class)
+                                .flatMap(err -> handleErrorResponse(res.statusCode().value(), err, "调用工具[" + toolName + "]"))
+                )
+                .bodyToFlux(String.class)
+                .take(1)
+                .single()
+                .retryWhen(buildRetrySpec("调用工具 " + toolName))
+                .block();
+
+        return extractTextContent(toolName, sseResponse);
+    }
+
 
     private String buildToolCallRequest(String toolName, Map<String, Object> arguments) {
         int id = requestIdCounter.incrementAndGet();
-        String argsJson;
+        Map<String, Object> request = new HashMap<>();
+        request.put("jsonrpc", "2.0");
+        request.put("id", id);
+        request.put("method", "tools/call");
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("name", toolName);
+        params.put("arguments", arguments == null ? Collections.emptyMap() : arguments);
+
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("progressToken", 0);
+        meta.put("responseFormat", "json");
+        meta.put("response_format", "json");
+        params.put("_meta", meta);
+
+        request.put("params", params);
         try {
-            argsJson = objectMapper.writeValueAsString(arguments == null ? Collections.emptyMap() : arguments);
+            return objectMapper.writeValueAsString(request);
         } catch (JsonProcessingException e) {
-            throw new McpApiException("序列化工具[" + toolName + "]参数失败", e);
+            throw new McpApiException("构建工具请求体失败: " + toolName, e);
         }
-        return "{\"jsonrpc\":\"2.0\",\"id\":" + id +
-                ",\"method\":\"tools/call\",\"params\":{\"name\":\"" + toolName +
-                "\",\"arguments\":" + argsJson + ",\"_meta\":{\"progressToken\":0}}}";
     }
 
     // ========== 响应解析 ==========
 
-    @SuppressWarnings("unchecked")
     private <R> R parseToolResponse(String toolName, String sse, TypeReference<R> responseType) {
         try {
-            if (!StringUtils.hasText(sse)) {
-                throw new McpApiException("MCP响应为空");
+            List<Map<String, Object>> content = extractContentChunks(toolName, sse);
+            for (Map<String, Object> chunk : content) {
+                String type = ((String) chunk.getOrDefault("type", "text")).toLowerCase(Locale.ROOT);
+                if ("json".equals(type) && chunk.get("json") != null) {
+                    return objectMapper.convertValue(chunk.get("json"), responseType);
+                }
+                if (chunk.get("text") instanceof String text) {
+                    String trimmed = text.trim();
+                    if (looksLikeJson(trimmed)) {
+                        return objectMapper.readValue(trimmed, responseType);
+                    }
+                    throw new McpApiException("Star MCP工具[" + toolName + "] 返回错误: " + trimmed);
+                }
             }
+            throw new McpApiException("MCP响应缺少可解析内容");
+        } catch (McpApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new McpApiException("解析MCP工具[" + toolName + "]响应失败", e);
+        }
+    }
 
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractContentChunks(String toolName, String sse) {
+        if (!StringUtils.hasText(sse)) {
+            throw new McpApiException("MCP响应为空");
+        }
+        try {
             String json = sse.startsWith("data:") ? sse.substring(5).trim() : sse.trim();
             Map<String, Object> root = objectMapper.readValue(json, new TypeReference<>() {});
 
@@ -168,16 +234,157 @@ public class McpStarClient {
             if (content == null || content.isEmpty()) {
                 throw new McpApiException("响应缺少content");
             }
-
-            String responseText = (String) content.get(0).get("text");
-            return objectMapper.readValue(responseText, responseType);
-
+            return content;
+        } catch (McpApiException e) {
+            throw e;
         } catch (Exception e) {
             throw new McpApiException("解析MCP工具[" + toolName + "]响应失败", e);
         }
     }
 
-    @SuppressWarnings("unchecked")
+    private String extractTextContent(String toolName, String sse) {
+        List<Map<String, Object>> content = extractContentChunks(toolName, sse);
+        for (Map<String, Object> chunk : content) {
+            if (chunk.get("text") instanceof String text) {
+                return text.trim();
+            }
+            if (chunk.get("json") != null) {
+                try {
+                    return objectMapper.writeValueAsString(chunk.get("json"));
+                } catch (JsonProcessingException e) {
+                    throw new McpApiException("序列化Star MCP响应失败", e);
+                }
+            }
+        }
+        throw new McpApiException("MCP响应缺少可解析文本内容");
+    }
+
+    private ZodiacInfoResponse parseZodiacInfoMarkdown(String markdown) {
+        if (!StringUtils.hasText(markdown)) {
+            throw new McpApiException("Star MCP未返回星座信息内容");
+        }
+
+        String[] lines = markdown.split("\\r?\\n");
+        String name = null;
+        String englishName = null;
+        String dateRange = null;
+        List<String> personalities = new ArrayList<>();
+        StringBuilder descriptionBuilder = new StringBuilder();
+
+        boolean capturingPersonality = false;
+        boolean capturingDescription = false;
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (!StringUtils.hasText(trimmed)) {
+                if (capturingPersonality) {
+                    capturingPersonality = false;
+                }
+                continue;
+            }
+
+            if (trimmed.startsWith("#") && name == null) {
+                Matcher matcher = ZODIAC_HEADER_PATTERN.matcher(trimmed);
+                if (matcher.find()) {
+                    name = matcher.group("name").trim();
+                    englishName = matcher.group("english").trim();
+                }
+                continue;
+            }
+
+            if (trimmed.contains("日期范围")) {
+                dateRange = extractValueAfterColon(trimmed);
+                continue;
+            }
+
+            if (trimmed.startsWith("**性格特征")) {
+                capturingPersonality = true;
+                capturingDescription = false;
+                continue;
+            }
+
+            if (trimmed.startsWith("**描述")) {
+                capturingDescription = true;
+                capturingPersonality = false;
+                continue;
+            }
+
+            if (trimmed.startsWith("**") && (capturingPersonality || capturingDescription)) {
+                capturingPersonality = false;
+                capturingDescription = false;
+                continue;
+            }
+
+            if (capturingPersonality && trimmed.startsWith("-")) {
+                personalities.add(trimmed.substring(1).trim());
+                continue;
+            }
+
+            if (capturingDescription) {
+                descriptionBuilder.append(trimmed).append("\n");
+            }
+        }
+
+        return ZodiacInfoResponse.builder()
+                .name(name)
+                .englishName(englishName)
+                .dateRange(dateRange)
+                .personality(personalities.isEmpty() ? null : String.join("，", personalities))
+                .description(descriptionBuilder.length() == 0 ? null : descriptionBuilder.toString().trim())
+                .rawContent(markdown)
+                .build();
+    }
+
+    private String extractValueAfterColon(String line) {
+        int idx = line.indexOf(':');
+        if (idx < 0) {
+            idx = line.indexOf('：');
+        }
+        if (idx < 0) {
+            return line;
+        }
+        return line.substring(idx + 1).trim();
+    }
+
+    private AllZodiacsResponse parseAllZodiacsText(String text) {
+        if (!StringUtils.hasText(text)) {
+            throw new McpApiException("Star MCP未返回星座列表内容");
+        }
+        String[] lines = text.split("\\r?\\n");
+        List<AllZodiacsResponse.ZodiacSimple> list = new ArrayList<>();
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (!StringUtils.hasText(trimmed) || trimmed.startsWith("#") || trimmed.startsWith("**")) {
+                continue;
+            }
+            if (!trimmed.startsWith("♈") && !trimmed.startsWith("♉") && !trimmed.startsWith("♊")
+                    && !trimmed.startsWith("♋") && !trimmed.startsWith("♌") && !trimmed.startsWith("♍")
+                    && !trimmed.startsWith("♎") && !trimmed.startsWith("♏") && !trimmed.startsWith("♐")
+                    && !trimmed.startsWith("♑") && !trimmed.startsWith("♒") && !trimmed.startsWith("♓")) {
+                continue;
+            }
+            // 格式：♈ 白羊座 (Aries) - 3月21日-4月19日
+            String content = trimmed.substring(1).trim();
+            int nameEnd = content.indexOf('(');
+            int rightParen = content.indexOf(')');
+            int dashIndex = content.indexOf('-');
+            if (nameEnd < 0 || rightParen < 0 || dashIndex < 0) {
+                continue;
+            }
+            String name = content.substring(0, nameEnd).trim();
+            String englishName = content.substring(nameEnd + 1, rightParen).trim();
+            String dateRange = content.substring(content.indexOf('-', rightParen) + 1).trim();
+            list.add(AllZodiacsResponse.ZodiacSimple.builder()
+                    .name(name)
+                    .englishName(englishName)
+                    .dateRange(dateRange)
+                    .build());
+        }
+        if (list.isEmpty()) {
+            throw new McpApiException("未能从Star MCP响应中解析星座列表");
+        }
+        return AllZodiacsResponse.builder().zodiacs(list).build();
+    }
 
     // ========== 会话管理 ==========
 
@@ -230,6 +437,7 @@ public class McpStarClient {
 
         return mcpWebClient.post()
                 .headers(headers -> {
+                    setBaseHeaders(headers);
                     headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                     headers.set(HttpHeaders.ACCEPT, "application/json, text/event-stream");
                     headers.set("mcp-protocol-version", MCP_PROTOCOL_VERSION);
@@ -288,6 +496,12 @@ public class McpStarClient {
                         log.debug("原始响应内容: {}", responseBody);
                         if (!StringUtils.hasText(responseBody)) {
                             return Mono.error(new McpApiException("服务端返回空响应"));
+                        }
+                        if (!looksLikeJson(responseBody)) {
+                            return Mono.error(new McpApiException(
+                                    "Star MCP初始化失败：收到非JSON响应，请核对 endpoint 与 API Key 是否正确。响应示例: " +
+                                            responseBody.substring(0, Math.min(200, responseBody.length()))
+                            ));
                         }
                         JsonNode rootNode = objectMapper.readTree(responseBody);
                         String bodySessionId = rootNode.path("result").path("sessionId").asText(null);
@@ -378,6 +592,7 @@ public class McpStarClient {
         try {
             mcpWebClient.post()
                     .headers(headers -> {
+                        setBaseHeaders(headers);
                         headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
                         headers.set(HttpHeaders.ACCEPT, "application/json, text/event-stream");
                         headers.set("mcp-session-id", sessionId);
@@ -408,6 +623,7 @@ public class McpStarClient {
     }
 
     private void setCommonRequestHeaders(HttpHeaders headers, @Nullable String sessionId) {
+        setBaseHeaders(headers);
         headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         headers.set(HttpHeaders.ACCEPT, "application/json, text/event-stream");
         headers.set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
@@ -417,5 +633,20 @@ public class McpStarClient {
         if (StringUtils.hasText(apiKey)) {
             headers.set("x-api-key", apiKey);
         }
+    }
+
+    private void setBaseHeaders(HttpHeaders headers) {
+        headers.set("Origin", ORIGIN);
+        headers.set("Referer", REFERER);
+        headers.set("User-Agent", USER_AGENT);
+    }
+
+    private boolean looksLikeJson(String payload) {
+        if (!StringUtils.hasText(payload)) {
+            return false;
+        }
+        String trimmed = payload.trim();
+        return (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+                (trimmed.startsWith("[") && trimmed.endsWith("]"));
     }
 }

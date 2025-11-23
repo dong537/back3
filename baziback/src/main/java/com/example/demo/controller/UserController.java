@@ -5,10 +5,11 @@ import com.example.demo.dto.request.user.RegisterRequest;
 import com.example.demo.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Map;
 
@@ -37,8 +38,9 @@ public class UserController {
      * POST http://localhost:8080/api/user/login
      */
     @PostMapping("/login")
-    public Map<String, Object> login(@Validated @RequestBody LoginRequest request) {
-        String ip = getClientIP();
+    public Map<String, Object> login(@Validated @RequestBody LoginRequest request,
+                                     ServerHttpRequest serverHttpRequest) {
+        String ip = getClientIP(serverHttpRequest);
         log.info("收到登录请求: username={}, ip={}", request.getUsername(), ip);
         return userService.login(request, ip);
     }
@@ -57,21 +59,26 @@ public class UserController {
     /**
      * 获取客户端IP地址
      */
-    private String getClientIP() {
-        try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes != null && attributes.getRequest() != null) {
-                String ip = attributes.getRequest().getHeader("X-Forwarded-For");
-                if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                    ip = attributes.getRequest().getHeader("X-Real-IP");
-                }
-                if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                    ip = attributes.getRequest().getRemoteAddr();
-                }
-                return ip;
+    private String getClientIP(ServerHttpRequest request) {
+        if (request == null) {
+            return "unknown";
+        }
+        HttpHeaders headers = request.getHeaders();
+        String forwardedIp = headers.getFirst("X-Forwarded-For");
+        if (forwardedIp != null) {
+            String trimmed = forwardedIp.trim();
+            if (!trimmed.isEmpty()) {
+                int commaIndex = trimmed.indexOf(',');
+                return commaIndex > 0 ? trimmed.substring(0, commaIndex).trim() : trimmed;
             }
-        } catch (Exception e) {
-            log.warn("获取客户端IP失败", e);
+        }
+        String realIp = headers.getFirst("X-Real-IP");
+        if (StringUtils.hasText(realIp)) {
+            return realIp;
+        }
+        var remoteAddress = request.getRemoteAddress();
+        if (remoteAddress != null && remoteAddress.getAddress() != null) {
+            return remoteAddress.getAddress().getHostAddress();
         }
         return "unknown";
     }

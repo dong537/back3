@@ -1,13 +1,17 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.request.yijing.YijingInterpretRequest;
+import com.example.demo.dto.request.ziwei.ZiweiDeepSeekInterpretRequest;
 import com.example.demo.service.DeepSeekService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +32,7 @@ public class DeepSeekController {
      * 前端/内部调用：通过POST提交完整的提示词或JSON
      * 兼容旧路径 /api/bazi/generate-report (如果前端未改)
      */
-    @PostMapping({"/generate-report", "/bazi/generate-report"})
+    @PostMapping("/generate-report")
     public ResponseEntity<String> generateReport(@RequestBody String rawPrompt) throws Exception {
         return ResponseEntity.ok(deepSeekService.generateBaziReport(rawPrompt));
     }
@@ -39,6 +43,8 @@ public class DeepSeekController {
     public ResponseEntity<String> interpretHexagram(@RequestBody String request) throws Exception {
         return ResponseEntity.ok(deepSeekService.interpretHexagram(request));
     }
-
-
+    @PostMapping("/chart/deepseek-interpret")
+    public ResponseEntity<String>interpretChartByDeepSeek(@RequestBody String request) throws Exception{
+        return ResponseEntity.ok(deepSeekService.interpretZiweiChart(request));
+    }
 }

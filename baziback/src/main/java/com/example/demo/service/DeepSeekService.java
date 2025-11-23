@@ -1,8 +1,8 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.model.yijing.YijingHexagramPayload;
-import com.example.demo.dto.request.yijing.YijingInterpretRequest;
+import com.example.demo.dto.request.ziwei.ZiweiDeepSeekInterpretRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,8 +57,14 @@ public class DeepSeekService {
     /**
      * 使用 DeepSeek 解读卦象（不使用系统提示词）
      */
- public String interpretHexagram(String request) throws  Exception {
-     return callDeepSeekAPIWithoutSystemPrompt(request);
+    public String interpretHexagram(String request) throws Exception {
+        return callDeepSeekAPIWithoutSystemPrompt(request);
+    }
+    /**
+     * 使用 DeepSeek 解读紫微命盘（仅携带用户内容）
+     */
+    public String interpretZiweiChart(String request) throws Exception {
+        return callDeepSeekAPIWithoutSystemPrompt(request);
     }
     /**
      * 调用DeepSeek API核心逻辑：构建多角色消息体（含系统提示词）
@@ -123,6 +129,7 @@ public class DeepSeekService {
     /**
      * 执行DeepSeek API请求的公共逻辑
      */
+    @SuppressWarnings("unchecked")
     private String executeDeepSeekRequest(Map<String, Object> requestBody) throws Exception {
         String requestBodyJson = objectMapper.writeValueAsString(requestBody);
 
