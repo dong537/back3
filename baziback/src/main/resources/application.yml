@@ -9,6 +9,20 @@ spring:
     password: ${DB_PASSWORD:123456}
   messages:
     encoding: UTF-8
+  # Redis配置
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6381}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
 
 mybatis:
   configuration:
@@ -121,6 +135,28 @@ management:
   health:
     defaults:
       enabled: true
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:cantian-ai-bazi-secret-key-2025-very-long-secret-key-for-security}
+  expiration: 86400000  # 24小时（毫秒）
+  refresh-expiration: 604800000  # 7天（毫秒）
+
+# 阿里云短信配置
+aliyun:
+  sms:
+    access-key-id: ${ALIYUN_SMS_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIYUN_SMS_ACCESS_KEY_SECRET:}
+    region-id: ${ALIYUN_SMS_REGION_ID:cn-hangzhou}
+    endpoint: ${ALIYUN_SMS_ENDPOINT:dysmsapi.aliyuncs.com}
+    sign-name: ${ALIYUN_SMS_SIGN_NAME:真的科技}
+    template-code: ${ALIYUN_SMS_TEMPLATE_CODE:SMS_492590686}
+
+# 短信验证码配置
+sms:
+  code:
+    expire: 300  # 验证码有效期（秒）
+    length: 6    # 验证码长度
 
 # 支付宝支付配置
 alipay:

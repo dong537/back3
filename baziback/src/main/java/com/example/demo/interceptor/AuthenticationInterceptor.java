@@ -96,20 +96,17 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         return true;
     }
     
+    private final com.example.demo.util.JwtUtil jwtUtil;
+    
     /**
-     * 解析token获取userId（简化版，与UserService中的方法一致）
+     * 解析token获取userId
      */
     private Long parseToken(String token) {
         try {
-            if (token != null && token.startsWith("CT_")) {
-                String[] parts = token.split("_");
-                if (parts.length >= 2) {
-                    return Long.parseLong(parts[1]);
-                }
-            }
+            return jwtUtil.getUserIdFromToken(token);
         } catch (Exception e) {
             log.warn("解析token失败: {}", token);
+            return null;
         }
-        return null;
     }
 }

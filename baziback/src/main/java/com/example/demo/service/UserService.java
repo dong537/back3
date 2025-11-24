@@ -5,6 +5,7 @@ import com.example.demo.dto.request.user.RegisterRequest;
 import com.example.demo.dto.response.Result;
 import com.example.demo.entity.User;
 import com.example.demo.mapper.UserMapper;
+import com.example.demo.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * 用户服务类
@@ -24,6 +24,7 @@ import java.util.UUID;
 public class UserService {
     
     private final UserMapper userMapper;
+    private final JwtUtil jwtUtil;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     
     /**
@@ -102,7 +103,8 @@ public class UserService {
             }
             
             // 4. 生成token
-            String token = generateToken(user.getId());
+            String accessToken = jwtUtil.generateToken(user.getId(), user.getUsername());
+            String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getUsername());
             
             // 5. 更新最后登录信息
             user.setLastLoginTime(LocalDateTime.now());
@@ -112,7 +114,10 @@ public class UserService {
             // 6. 返回结果
             log.info("用户登录成功: username={}, ip={}", user.getUsername(), ip);
             Map<String, Object> data = new HashMap<>();
-            data.put("token", token);
+            data.put("accessToken", accessToken);
+            data.put("refreshToken", refreshToken);
+            data.put("tokenType", "Bearer");
+            data.put("expiresIn", 86400);  // 24小时
             data.put("id", user.getId());
             data.put("username", user.getUsername());
             data.put("name", user.getNickname());
@@ -146,29 +151,17 @@ public class UserService {
         }
     }
     
-    /**
-     * 生成token（简化版，生产环境建议使用JWT）
-     */
-    private String generateToken(Long userId) {
-        String uuid = UUID.randomUUID().toString().replace("-", "");
-        return "CT_" + userId + "_" + uuid;
-    }
     
     /**
-     * 解析token获取userId（简化版）
+     * 解析token获取userId
      */
     private Long parseToken(String token) {
         try {
-            if (token != null && token.startsWith("CT_")) {
-                String[] parts = token.split("_");
-                if (parts.length >= 2) {
-                    return Long.parseLong(parts[1]);
-                }
-            }
+            return jwtUtil.getUserIdFromToken(token);
         } catch (Exception e) {
             log.warn("解析token失败: {}", token);
+            return null;
         }
-        return null;
     }
     
     /**

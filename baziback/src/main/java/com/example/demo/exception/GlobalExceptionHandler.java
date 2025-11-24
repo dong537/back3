@@ -63,6 +63,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 处理业务异常
+     */
+    @ExceptionHandler(BusinessException.class)
+    public Result<Void> handleBusinessException(BusinessException ex) {
+        log.warn("业务异常: code={}, message={}", ex.getCode(), ex.getMessage());
+        return Result.error(ex.getCode(), ex.getMessage());
+    }
+
+    /**
      * 处理参数错误
      */
     @ExceptionHandler(IllegalArgumentException.class)

@@ -57,9 +57,111 @@ public class DeepSeekService {
     /**
      * 使用 DeepSeek 解读卦象（不使用系统提示词）
      */
- public String interpretHexagram(String request) throws  Exception {
-     return callDeepSeekAPIWithoutSystemPrompt(request);
+    public String interpretHexagram(String request) throws Exception {
+        return callDeepSeekAPIWithoutSystemPrompt(request);
     }
+
+    /**
+     * 简单的对话接口
+     */
+    public String chat(String userMessage) throws Exception {
+        return callDeepSeekAPIWithoutSystemPrompt(userMessage);
+    }
+
+    /**
+     * 生成深度分析报告（根据报告类型定制提示词）
+     */
+    public String generateDetailedReport(String baziData, String reportType) throws Exception {
+        log.info("开始生成深度分析报告，类型：{}", reportType);
+
+        String customPrompt = buildReportPrompt(reportType);
+        String userContent = buildUserContent(baziData, reportType);
+
+        return callDeepSeekAPIWithCustomPrompt(customPrompt, userContent);
+    }
+
+    /**
+     * 根据报告类型构建自定义提示词
+     */
+    private String buildReportPrompt(String reportType) {
+        String basePrompt = "你是一位精通传统八字命理且擅长现代人格分析的专家。";
+
+        switch (reportType) {
+            case "comprehensive":
+                return basePrompt + "请生成一份全面的八字综合分析报告，包括性格、事业、感情、健康、财运等各个方面。";
+            case "career":
+                return basePrompt + "请专注于事业运势分析，包括职业方向、事业发展、适合的行业、晋升机会等。";
+            case "love":
+                return basePrompt + "请专注于感情运势分析，包括婚恋状况、配偶特征、感情发展、婚姻建议等。";
+            case "health":
+                return basePrompt + "请专注于健康运势分析，包括体质特点、易患疾病、养生建议、健康注意事项等。";
+            case "wealth":
+                return basePrompt + "请专注于财运分析，包括财富来源、理财建议、投资方向、财运走势等。";
+            default:
+                return systemPrompt;
+        }
+    }
+
+    /**
+     * 构建用户内容
+     */
+    private String buildUserContent(String baziData, String reportType) {
+        StringBuilder content = new StringBuilder();
+        content.append("请根据以下八字信息生成详细的").append(getReportTypeName(reportType)).append("报告：\n\n");
+        content.append(baziData);
+        content.append("\n\n请按照以下结构生成报告：\n");
+        content.append("1. 概述\n");
+        content.append("2. 详细分析\n");
+        content.append("3. 具体建议\n");
+        content.append("4. 注意事项\n");
+        content.append("5. 总结\n");
+
+        return content.toString();
+    }
+
+    /**
+     * 获取报告类型名称
+     */
+    private String getReportTypeName(String reportType) {
+        switch (reportType) {
+            case "comprehensive":
+                return "综合";
+            case "career":
+                return "事业";
+            case "love":
+                return "感情";
+            case "health":
+                return "健康";
+            case "wealth":
+                return "财运";
+            default:
+                return "综合";
+        }
+    }
+
+    /**
+     * 使用自定义提示词调用DeepSeek API
+     */
+    private String callDeepSeekAPIWithCustomPrompt(String customPrompt, String userContent) throws Exception {
+        if (apiKey == null || apiKey.isEmpty()) {
+            throw new Exception("DeepSeek API Key未配置");
+        }
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", "deepseek-chat");
+
+        List<Map<String, String>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", customPrompt));
+        messages.add(Map.of("role", "user", "content", userContent));
+
+        requestBody.put("messages", messages);
+        requestBody.put("max_tokens", 4000);
+        requestBody.put("temperature", 0.7);
+        requestBody.put("stream", false);
+
+        return executeDeepSeekRequest(requestBody);
+    }
+
     /**
      * 调用DeepSeek API核心逻辑：构建多角色消息体（含系统提示词）
      */

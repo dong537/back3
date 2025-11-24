@@ -47,4 +47,13 @@ public interface UserMapper {
      */
     @Select("SELECT * FROM tb_user WHERE id = #{id}")
     User findById(Long id);
+    
+    /**
+     * 更新用户信息
+     */
+    @Update("UPDATE tb_user SET username = #{username}, email = #{email}, phone = #{phone}, " +
+            "nickname = #{nickname}, avatar = #{avatar}, status = #{status}, " +
+            "last_login_time = #{lastLoginTime}, last_login_ip = #{lastLoginIp}, " +
+            "update_time = #{updateTime} WHERE id = #{id}")
+    int updateUser(User user);
 }

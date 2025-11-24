@@ -1,5 +1,6 @@
 package com.example.demo.dto.response;
 
+import com.example.demo.enums.ErrorCode;
 import lombok.Data;
 
 /**
@@ -89,5 +90,26 @@ public class Result<T> {
      */
     public static <T> Result<T> forbidden(String msg) {
         return new Result<>(403, msg, null);
+    }
+    
+    /**
+     * 通过错误码枚举构造失败响应
+     */
+    public static <T> Result<T> error(ErrorCode errorCode) {
+        return new Result<>(errorCode.getCode(), errorCode.getMessage(), null);
+    }
+    
+    /**
+     * 通过错误码枚举和自定义消息构造失败响应
+     */
+    public static <T> Result<T> error(ErrorCode errorCode, String customMessage) {
+        return new Result<>(errorCode.getCode(), customMessage, null);
+    }
+    
+    /**
+     * 通过错误码枚举构造成功响应
+     */
+    public static <T> Result<T> success(ErrorCode errorCode, T data) {
+        return new Result<>(errorCode.getCode(), errorCode.getMessage(), data);
     }
 }
