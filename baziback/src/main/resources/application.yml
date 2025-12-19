@@ -3,7 +3,7 @@ spring:
   application:
     name: demo1
   main:
-    web-application-type: reactive
+    web-application-type: servlet
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL:jdbc:mysql://localhost:3306/bazi?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
@@ -28,24 +28,17 @@ jackson:
 server:
   port: ${SERVER_PORT:8088}
 
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-at-least-256-bits-long-for-hs256-algorithm-security}
+  expiration: ${JWT_EXPIRATION:86400000}
+
 # MCP相关配置（各模块端点与密钥）
 mcp:
   bazi:
     api:
       endpoint: ${MCP_BAZI_ENDPOINT:https://mcp.api-inference.modelscope.net/43918d5be1c140/mcp}
       api-key: ${MCP_BAZI_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
-    max-retry: 2
-    retry-interval-seconds: 1
-  tarot:
-    api:
-      endpoint: ${MCP_TAROT_ENDPOINT:https://mcp.api-inference.modelscope.net/moraxcheng/tarot}
-      api-key: ${MCP_TAROT_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
-    max-retry: 2
-    retry-interval-seconds: 1
-  yijing:
-    api:
-      endpoint: ${MCP_YIJING_ENDPOINT:https://mcp.api-inference.modelscope.net/53410b27153b48/mcp}  # 已确认配置，解决启动报错
-      api-key: ${MCP_YIJING_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
     max-retry: 2
     retry-interval-seconds: 1
   ziwei:

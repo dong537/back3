@@ -1,50 +1,50 @@
 package com.example.demo.service;
 
-import com.example.demo.client.McpYijingClient;
 import com.example.demo.dto.request.yijing.*;
-import com.example.demo.dto.response.McpCallResult;
+import com.example.demo.yijing.service.StandaloneYijingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class YijingService {
 
-    private final McpYijingClient mcpYijingClient;
+    private final StandaloneYijingService standaloneYijingService;
 
-    public McpCallResult listTools() {
-        return mcpYijingClient.listAvailableTools();
+    public Map<String, Object> generateHexagram(YijingGenerateHexagramRequest request) {
+        return standaloneYijingService.generateHexagram(request);
     }
 
-    public McpCallResult generateHexagram(YijingGenerateHexagramRequest request) {
-        return mcpYijingClient.generateHexagram(request);
+    public Map<String, Object> interpretHexagram(YijingInterpretRequest request) {
+        return standaloneYijingService.interpretHexagram(request);
     }
 
-    public McpCallResult generateBaziChart(YijingBaziGenerateChartRequest request) {
-        return mcpYijingClient.generateBaziChart(request);
+    public Map<String, Object> listAllHexagrams() {
+        return Map.of(
+                "success", true,
+                "message", "获取成功",
+                "data", Map.of(
+                        "hexagrams", standaloneYijingService.listAllHexagrams(),
+                        "total", 64
+                )
+        );
     }
 
-    public McpCallResult analyzeBazi(YijingBaziAnalyzeRequest request) {
-        return mcpYijingClient.analyzeBazi(request);
-    }
-
-    public McpCallResult forecastBazi(YijingBaziForecastRequest request) {
-        return mcpYijingClient.forecastBazi(request);
-    }
-
-    public McpCallResult combinedAnalysis(YijingCombinedAnalysisRequest request) {
-        return mcpYijingClient.combinedAnalysis(request);
-    }
-
-    public McpCallResult destinyConsult(YijingDestinyConsultRequest request) {
-        return mcpYijingClient.destinyConsult(request);
-    }
-
-    public McpCallResult knowledgeLearn(YijingKnowledgeLearnRequest request) {
-        return mcpYijingClient.knowledgeLearn(request);
-    }
-
-    public McpCallResult caseStudy(YijingCaseStudyRequest request) {
-        return mcpYijingClient.caseStudy(request);
+    public Map<String, Object> getHexagramInfo(Integer id) {
+        Map<String, Object> hexagram = standaloneYijingService.getHexagramInfo(id);
+        if (hexagram != null) {
+            return Map.of(
+                    "success", true,
+                    "message", "获取成功",
+                    "data", hexagram
+            );
+        } else {
+            return Map.of(
+                    "success", false,
+                    "message", "未找到该卦象"
+            );
+        }
     }
 }

@@ -1,0 +1,75 @@
+# Spring Boot 配置示例文件
+# 请复制此文件为 application.yml 并填入实际配置值
+
+spring:
+  application:
+    name: bazi-backend
+  
+  # 数据源配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/your_database?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: your_username
+    password: your_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  
+  # 缓存配置
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=30m
+
+# JWT配置
+jwt:
+  secret: your-secret-key-at-least-256-bits-long-please-change-this-in-production
+  expiration: 86400000  # 24小时（毫秒）
+
+# DeepSeek API配置
+deepseek:
+  api:
+    key: ${DEEPSEEK_API_KEY:your-deepseek-api-key}
+    endpoint: https://api.deepseek.com/v1/chat/completions
+  system-prompt: |
+    你是一位精通《周易》、六爻预测与命理学的专家。
+    请根据用户提供的八字信息，进行详细的命理分析。
+
+# MCP服务配置
+mcp:
+  protocol-version: 2025-03-26
+  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+  origin: https://www.modelscope.cn
+  referer: https://www.modelscope.cn/
+  max-retry: 3
+  retry-interval-seconds: 1
+  session-init-timeout-seconds: 30
+  
+  # 八字服务配置
+  bazi:
+    api:
+      endpoint: ${MCP_BAZI_ENDPOINT:https://your-mcp-endpoint}
+      api-key: ${MCP_BAZI_API_KEY:your-mcp-api-key}
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.example.demo: DEBUG
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

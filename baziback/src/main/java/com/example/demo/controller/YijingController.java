@@ -1,13 +1,13 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.request.yijing.*;
-import com.example.demo.dto.response.McpCallResult;
 import com.example.demo.service.YijingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -32,30 +31,18 @@ public class YijingController {
 
     private final YijingService yijingService;
     /**
-     * 获取可用工具列表
-     * 返回MCP服务器支持的所有工具定义
-     *
-     * @return 工具列表JSON字符串
-     */
-    @GetMapping("/tools")
-    public Mono<ResponseEntity<McpCallResult>> listTools() {
-        return asyncResponse("获取易经工具列表", yijingService::listTools);
-    }
-
-    /**
      * 生成六爻卦象
      * 根据指定方法生成易经卦象
      *
      * 请求参数：
-     * - method: 起卦方式 (number/time/plum_blossom/random)
+     * - method: 起卦方式 (number/time/plum_blossom/random/coin)
      * - question: 求卦意图/问题描述
      * - seed: 起卦种子信息（可选）
      *
      * 示例请求：
      * {
-     *   "method": "number",
-     *   "question": "今天的运势如何？",
-     *   "seed": "123"
+     *   "method": "time",
+     *   "question": "今天的运势如何？"
      * }
      *
      * @param request 起卦请求参数
@@ -63,204 +50,40 @@ public class YijingController {
      */
     @PostMapping("/hexagram/generate")
     public Mono<ResponseEntity<Map<String, Object>>> generateHexagram(@RequestBody @Validated YijingGenerateHexagramRequest request) {
-        return asyncResponse("生成卦象", () -> toResponse(yijingService.generateHexagram(request)));
-    }
-    /**
-     * 生成八字命盘
-     * 根据出生信息生成四柱八字命盘
-     *
-     * 请求参数：
-     * - birth_time: 出生时间（阳历，ISO格式）
-     * - is_lunar: 是否为农历日期（可选）
-     * - gender: 性别 (male/female)
-     * - birth_location: 出生地经纬度（可选，用于真太阳时校正）
-     *   - longitude: 经度
-     *   - latitude: 纬度
-     *
-     * 示例请求：
-     * {
-     *   "birth_time": "1990-01-01T08:30:00",
-     *   "gender": "male",
-     *   "is_lunar": false,
-     *   "birth_location": {"longitude": 116.4, "latitude": 39.9}
-     * }
-     *
-     * @param request 八字排盘请求参数
-     * @return 八字命盘数据
-     */
-    @PostMapping("/bazi/chart/generate")
-    public Mono<ResponseEntity<Map<String, Object>>> generateBaziChart(@RequestBody @Validated YijingBaziGenerateChartRequest request) {
-        return asyncResponse("生成八字命盘", () -> toResponse(yijingService.generateBaziChart(request)));
+        return asyncResponse("生成卦象", () -> yijingService.generateHexagram(request));
     }
 
     /**
-     * 分析八字命盘
-     * 对八字命盘进行多维度命理分析
+     * 解读卦象
+     * 对已生成的卦象进行详细解读
      *
-     * 请求参数：
-     * - chart: 八字命盘数据对象
-     * - analysis_type: 分析类型数组 [personality/career/wealth/relationship/health]
-     * - detail_level: 详细程度 (brief/standard/detailed)
-     *
-     * 示例请求：
-     * {
-     *   "chart": {"year": "庚午", "month": "戊子", "day": "甲寅", "hour": "乙亥"},
-     *   "analysis_type": ["personality", "career"],
-     *   "detail_level": "detailed"
-     * }
-     *
-     * @param request 八字分析请求参数
-     * @return 分析结果数据
+     * @param request 解读请求参数
+     * @return 卦象解读结果
      */
-    @PostMapping("/bazi/analyze")
-    public Mono<ResponseEntity<Map<String, Object>>> analyzeBazi(@RequestBody @Validated YijingBaziAnalyzeRequest request) {
-        return asyncResponse("分析八字命盘", () -> toResponse(yijingService.analyzeBazi(request)));
+    @PostMapping("/hexagram/interpret")
+    public Mono<ResponseEntity<Map<String, Object>>> interpretHexagram(@RequestBody @Validated YijingInterpretRequest request) {
+        return asyncResponse("解读卦象", () -> yijingService.interpretHexagram(request));
     }
 
     /**
-     * 预测未来运势
-     * 基于八字命盘进行运程预测
+     * 获取所有卦象列表
      *
-     * 请求参数：
-     * - chart: 八字命盘数据对象
-     * - start_date: 预测起始日期（ISO格式）
-     * - end_date: 预测结束日期（ISO格式）
-     * - aspects: 预测方面数组 [overall/career/wealth/relationship/health]
-     * - resolution: 预测精度 (year/month/day)
-     *
-     * 示例请求：
-     * {
-     *   "chart": {"year": "庚午", "month": "戊子", "day": "甲寅", "hour": "乙亥"},
-     *   "start_date": "2025-01-01",
-     *   "end_date": "2025-12-31",
-     *   "aspects": ["career", "wealth"],
-     *   "resolution": "month"
-     * }
-     *
-     * @param request 运势预测请求参数
-     * @return 运程预测数据
+     * @return 64卦列表
      */
-    @PostMapping("/bazi/forecast")
-    public Mono<ResponseEntity<Map<String, Object>>> forecastBazi(@RequestBody @Validated YijingBaziForecastRequest request) {
-        return asyncResponse("预测八字运势", () -> toResponse(yijingService.forecastBazi(request)));
-    }
-    /**
-     * 易经八字综合分析
-     * 结合八字和卦象进行双重命理分析
-     *
-     * 请求参数：
-     * - bazi_chart: 八字命盘数据对象
-     * - hexagram: 卦象数据（可选，不提供则从八字自动生成）
-     * - question: 用户的具体问题
-     * - analysis_aspects: 分析重点数组
-     *
-     * 示例请求：
-     * {
-     *   "bazi_chart": {"year": "庚午", "month": "戊子", "day": "甲寅", "hour": "乙亥"},
-     *   "question": "适合创业吗？",
-     *   "analysis_aspects": ["career", "wealth", "timing"],
-     *   "hexagram": {"name": "屯", "lines": [1,0,0,0,1,0]}
-     * }
-     *
-     * @param request 综合分析请求参数
-     * @return 综合分析结果
-     */
-    @PostMapping("/combined-analysis")
-    public Mono<ResponseEntity<Map<String, Object>>> combinedAnalysis(@RequestBody YijingCombinedAnalysisRequest request) {
-        return asyncResponse("执行易经八字综合分析", () -> toResponse(yijingService.combinedAnalysis(request)));
+    @GetMapping("/hexagrams")
+    public Mono<ResponseEntity<Map<String, Object>>> listAllHexagrams() {
+        return asyncResponse("获取卦象列表", yijingService::listAllHexagrams);
     }
 
     /**
-     * 命理咨询服务
-     * 提供个性化的命理咨询和建议
+     * 获取指定卦象详情
      *
-     * 请求参数：
-     * - user_profile: 用户基本信息对象（包含八字等命理数据）
-     * - question: 咨询问题描述
-     * - context: 历史咨询上下文（可选）
-     * - consultation_type: 咨询类型 (guidance/analysis/prediction/suggestion)
-     *
-     * 示例请求：
-     * {
-     *   "user_profile": {"name": "张三", "bazi": {"year": "庚午", "month": "戊子", "day": "甲寅"}},
-     *   "question": "最近感情困扰，不知道如何选择？",
-     *   "consultation_type": "guidance",
-     *   "context": [{"previous_question": "...", "answer": "..."}]
-     * }
-     *
-     * @param request 咨询请求参数
-     * @return 咨询建议结果
+     * @param id 卦象ID (1-64)
+     * @return 卦象详细信息
      */
-    @PostMapping("/destiny-consult")
-    public Mono<ResponseEntity<Map<String, Object>>> destinyConsult(@RequestBody @Validated YijingDestinyConsultRequest request) {
-        return asyncResponse("命理咨询服务", () -> toResponse(yijingService.destinyConsult(request)));
-    }
-
-    /**
-     * 易经八字知识学习
-     * 提供体系化的命理知识学习服务
-     *
-     * 请求参数：
-     * - topic: 学习主题（如"五行相生相克"、"六爻基础"等）
-     * - system: 知识体系 (yijing/bazi/both)
-     * - level: 学习级别 (beginner/intermediate/advanced)
-     * - format: 内容格式 (text/interactive/visual)
-     *
-     * 示例请求：
-     * {
-     *   "topic": "五行相生相克",
-     *   "system": "both",
-     *   "level": "beginner",
-     *   "format": "interactive"
-     * }
-     *
-     * @param request 学习请求参数
-     * @return 学习内容和资料
-     */
-    @PostMapping("/knowledge/learn")
-    public Mono<ResponseEntity<Map<String, Object>>> knowledgeLearn(@RequestBody @Validated YijingKnowledgeLearnRequest request) {
-        return asyncResponse("易经八字知识学习", () -> toResponse(yijingService.knowledgeLearn(request)));
-    }
-
-    /**
-     * 命理案例分析
-     * 提供历史或现代命理案例研究
-     *
-     * 请求参数：
-     * - system: 案例类型 (yijing/bazi/combined)
-     * - case_id: 特定案例ID（可选，不提供则返回案例列表）
-     * - category: 案例分类（如"历史人物"、"现代名人"等，可选）
-     * - analysis_focus: 分析重点数组（可选）
-     *
-     * 示例请求：
-     * {
-     *   "system": "bazi",
-     *   "category": "历史人物",
-     *   "analysis_focus": ["格局分析", "大运走势"],
-     *   "case_id": "case_001"
-     * }
-     *
-     * @param request 案例研究请求参数
-     * @return 案例详情或列表
-     */
-    @PostMapping("/case-study")
-    public Mono<ResponseEntity<Map<String, Object>>> caseStudy(@RequestBody YijingCaseStudyRequest request) {
-        return asyncResponse("命理案例分析", () -> toResponse(yijingService.caseStudy(request)));
-    }
-
-    /**
-     * 统一响应格式转换
-     * 将MCP调用结果转换为标准响应格式
-     *
-     * @param result MCP服务调用结果
-     * @return 包含success、data、raw的标准响应Map
-     */
-    private Map<String, Object> toResponse(McpCallResult result) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("success", result != null && result.isSuccess());
-        map.put("data", result == null ? null : result.getData());
-        map.put("raw", result == null ? null : result.getRaw());
-        return map;
+    @GetMapping("/hexagram/{id}")
+    public Mono<ResponseEntity<Map<String, Object>>> getHexagramById(@PathVariable Integer id) {
+        return asyncResponse("获取卦象详情", () -> yijingService.getHexagramInfo(id));
     }
 
     private <T> Mono<ResponseEntity<T>> asyncResponse(String action, Supplier<T> supplier) {
