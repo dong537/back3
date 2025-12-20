@@ -15,6 +15,10 @@ logs/
 *.tar.gz
 *.rar
 
+# MCP build output
+mcp-dist/
+node_modules/
+
 # IDE files
 .idea/
 *.iml
