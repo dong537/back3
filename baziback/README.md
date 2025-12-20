@@ -547,29 +547,56 @@ MCP (Model Context Protocol) 是一种让 AI 助手调用外部工具的标准�
 | `yijing_list_hexagrams` | 获取64卦列表 |
 | `yijing_quick_divination` | 快速占卜（一键起卦+解读） |
 
-### MCP 服务部署
+### 本地部署完整指南
 
-**1. 安装依赖**
+#### 步骤一：启动后端服务
+
 ```bash
-cd mcp-server
+# 1. 进入项目目录
+cd baziback
+
+# 2. 编译项目
+mvn clean package -DskipTests
+
+# 3. 启动后端
+java -jar target/bazi-0.0.1-SNAPSHOT.jar
+```
+
+验证后端运行：
+```bash
+curl http://localhost:8088/api/yijing/hexagrams
+```
+
+#### 步骤二：构建 MCP 服务
+
+```bash
+# 1. 进入 MCP 目录
+cd mcp-src
+# 或使用根目录的 MCP 配置
+cd ..
+
+# 2. 安装依赖
 npm install
+
+# 3. 编译 TypeScript
 npm run build
 ```
 
-**2. 配置环境变量**
-```bash
-export YIJING_BACKEND_URL=http://localhost:8088
-```
+#### 步骤三：配置 AI 工具
 
-**3. Claude Desktop 配置**
+**Claude Desktop 配置**
 
-编辑 `claude_desktop_config.json`:
+找到配置文件：
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+添加以下内容：
 ```json
 {
   "mcpServers": {
-    "yijing-divination": {
+    "yijing-tarot": {
       "command": "node",
-      "args": ["/path/to/mcp-server/dist/index.js"],
+      "args": ["C:/Users/Lenovo/Desktop/n8n/back3/baziback/mcp-dist/index.js"],
       "env": {
         "YIJING_BACKEND_URL": "http://localhost:8088"
       }
@@ -578,22 +605,75 @@ export YIJING_BACKEND_URL=http://localhost:8088
 }
 ```
 
-**4. Cursor 配置**
+**Cursor 配置**
 
-在 Cursor 设置中添加 MCP 服务器:
+在 Cursor 设置 → MCP Servers 中添加：
 ```json
 {
-  "name": "yijing-divination",
-  "command": "node /path/to/mcp-server/dist/index.js"
+  "yijing-tarot": {
+    "command": "node",
+    "args": ["C:/Users/Lenovo/Desktop/n8n/back3/baziback/mcp-dist/index.js"],
+    "env": {
+      "YIJING_BACKEND_URL": "http://localhost:8088"
+    }
+  }
 }
 ```
 
-### SSE 远程服务（云端部署）
+**Windsurf 配置**
 
-如果后端部署在云服务器，MCP 服务可通过 SSE URL 访问：
-
+编辑 `~/.codeium/windsurf/mcp_config.json`：
+```json
+{
+  "mcpServers": {
+    "yijing-tarot": {
+      "command": "node",
+      "args": ["C:/Users/Lenovo/Desktop/n8n/back3/baziback/mcp-dist/index.js"],
+      "env": {
+        "YIJING_BACKEND_URL": "http://localhost:8088"
+      }
+    }
+  }
+}
 ```
-SSE URL: http://your-server:8088/api/mcp/sse
+
+#### 步骤四：验证 MCP 服务
+
+重启你的 AI 工具（Claude/Cursor/Windsurf），然后尝试：
+- "帮我用时间起卦法占卜今天运势"
+- "查看易经第一卦乾卦的详细信息"
+- "列出所有64卦"
+
+---
+
+### 云服务器部署
+
+如果后端部署在云服务器：
+
+```bash
+# 1. 克隆代码
+git clone https://github.com/dong537/back3.git
+cd back3/baziback
+
+# 2. 编译并启动后端
+mvn clean package -DskipTests
+nohup java -jar target/bazi-0.0.1-SNAPSHOT.jar &
+
+# 3. 安装 MCP
+npm install && npm run build
+
+# 4. 使用 PM2 管理（可选）
+npm install -g pm2
+pm2 start mcp-dist/index.js --name yijing-mcp
+```
+
+然后在本地 AI 工具中配置，将 `YIJING_BACKEND_URL` 改为你的服务器地址：
+```json
+{
+  "env": {
+    "YIJING_BACKEND_URL": "http://你的服务器IP:8088"
+  }
+}
 ```
 
 ---
