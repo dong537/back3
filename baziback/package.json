@@ -1,0 +1,45 @@
+{
+  "name": "yijing-tarot-mcp",
+  "version": "1.0.0",
+  "description": "易经占卜与塔罗牌 MCP 服务 - 支持64卦起卦、78张塔罗牌解读",
+  "main": "mcp-dist/index.js",
+  "bin": {
+    "yijing-tarot-mcp": "./mcp-dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.mcp.json",
+    "start": "node mcp-dist/index.js",
+    "dev": "tsc -p tsconfig.mcp.json --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "yijing",
+    "tarot",
+    "divination",
+    "易经",
+    "塔罗牌",
+    "占卜",
+    "ai-tools",
+    "modelcontextprotocol"
+  ],
+  "author": "lldong",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dong537/back3"
+  },
+  "homepage": "https://github.com/dong537/back3/tree/master/baziback",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
