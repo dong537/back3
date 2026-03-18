@@ -1,23 +1,14 @@
 package com.example.demo.exception;
 
-import lombok.Getter;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
-@Getter
+/**
+ * 业务异常：用于表示可预期的业务错误（例如：今天已打卡）
+ */
+@ResponseStatus(HttpStatus.BAD_REQUEST)
 public class BusinessException extends RuntimeException {
-    private final Integer code;
-
     public BusinessException(String message) {
         super(message);
-        this.code = 500;
-    }
-
-    public BusinessException(Integer code, String message) {
-        super(message);
-        this.code = code;
-    }
-
-    public BusinessException(String message, Throwable cause) {
-        super(message, cause);
-        this.code = 500;
     }
 }

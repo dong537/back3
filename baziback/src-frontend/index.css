@@ -1,0 +1,817 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 底部导航栏安全区域适配 */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .safe-area-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  /* 优化触摸目标大小 */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* 优化滚动性能 */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* 禁用文本选择（可选，根据需要调整） */
+  /* * {
+    -webkit-user-select: none;
+    user-select: none;
+  } */
+  
+  /* 优化字体渲染 */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* 优化输入框 */
+  input, textarea {
+    font-size: 16px; /* 防止iOS自动缩放 */
+  }
+}
+
+/* 移动端底部导航栏优化 */
+@media (max-width: 768px) {
+  /* 确保底部导航栏在移动端有足够的点击区域 */
+  nav[class*="fixed bottom-0"] {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}
+
+/* 防止移动端双击缩放 */
+* {
+  touch-action: manipulation;
+}
+
+/* 优化移动端滚动 */
+.scrollable {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 翻转动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@layer base {
+  :root, [data-theme='default'] {
+    --color-primary: #a855f7;
+    --color-secondary: #d8b4fe;
+    --color-gradient-from: #a855f7;
+    --color-gradient-to: #581c87;
+  }
+
+/* ===== 塔罗牌专属组件样式 ===== */
+@layer components {
+  /* 衬线标题 */
+  .font-serif-title {
+    font-family: "Cinzel", "Times New Roman", serif;
+    letter-spacing: 0.02em;
+  }
+
+  /* 鎏金边框容器 */
+  .gilded-border {
+    position: relative;
+  }
+  .gilded-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--color-primary);
+    border-radius: 12px;
+    pointer-events: none;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: xor;
+  }
+
+  /* 塔罗牌背面 */
+  .tarot-card-back {
+    @apply flex items-center justify-center rounded-xl text-[44px] text-[var(--color-primary)] gilded-border;
+    background: radial-gradient(circle at center, rgba(197,163,90,0.15) 0%, transparent 60%),
+                var(--color-bg-deep-purple);
+    transition: transform 0.6s ease;
+    transform-style: preserve-3d;
+  }
+
+  /* 塔罗牌正面 */
+  .tarot-card-front {
+    @apply rounded-xl gilded-border overflow-hidden;
+    background: rgba(0,0,0,0.4);
+    transition: transform 0.6s ease;
+    transform-style: preserve-3d;
+  }
+
+  .tarot-card-wrapper {
+    perspective: 1000px;
+  }
+  .tarot-card-wrapper.flipped .tarot-card-front {
+    transform: rotateY(0deg);
+  }
+  .tarot-card-wrapper.flipped .tarot-card-back {
+    transform: rotateY(180deg);
+  }
+
+  /* 复制按钮 */
+  .copy-button {
+    @apply inline-flex items-center gap-2 text-xs px-3 py-1 rounded-lg bg-white/10 text-gray-300 hover:text-white hover:bg-white/15 transition;
+  }
+
+  /* 卦象生成动画 */
+  .hexagram-animation-container {
+    @apply relative;
+  }
+
+  .hexagram-generating {
+    @apply flex flex-col items-center justify-center py-12;
+    min-height: 300px;
+  }
+
+  .hexagram-lines-preview {
+    @apply flex flex-col-reverse items-center space-y-2 mb-6;
+  }
+
+  .hexagram-line {
+    @apply relative flex items-center justify-center;
+    animation: lineAppear 0.5s ease-out forwards;
+    opacity: 0;
+  }
+
+  .hexagram-line.yang {
+    @apply text-skin-primary;
+  }
+
+  .hexagram-line.yin {
+    @apply text-skin-secondary;
+  }
+
+  .hexagram-line.changing {
+    animation: lineAppear 0.5s ease-out forwards, pulse 1s ease-in-out infinite;
+  }
+
+  .yang-line {
+    @apply text-2xl font-bold;
+    font-family: monospace;
+    letter-spacing: 0.1em;
+  }
+
+  .yin-line {
+    @apply text-2xl font-bold;
+    font-family: monospace;
+    letter-spacing: 0.1em;
+  }
+
+  .changing-indicator {
+    @apply absolute -right-6 text-skin-primary;
+    animation: spin 1s linear infinite;
+    font-size: 0.8rem;
+  }
+
+  .hexagram-loading-dots {
+    @apply flex items-center space-x-2 mt-4;
+  }
+
+  .hexagram-loading-dots span {
+    @apply w-2 h-2 rounded-full bg-skin-primary;
+    animation: dotPulse 1.4s ease-in-out infinite;
+  }
+
+  .hexagram-loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .hexagram-loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  .hexagram-revealing {
+    @apply relative flex items-center justify-center py-12;
+    min-height: 300px;
+  }
+
+  .hexagram-glow {
+    @apply absolute inset-0 rounded-xl;
+    background: radial-gradient(circle at center, 
+      rgba(79, 70, 229, 0.3) 0%, 
+      rgba(79, 70, 229, 0.1) 50%, 
+      transparent 100%);
+    animation: glowPulse 1s ease-in-out;
+  }
+
+  .hexagram-complete {
+    animation: fadeInUp 0.8s ease-out;
+  }
+
+  .hexagram-result-card {
+    animation: fadeInUp 0.8s ease-out, slideIn 0.6s ease-out;
+  }
+
+  @keyframes lineAppear {
+    from {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes dotPulse {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+
+  @keyframes glowPulse {
+    0% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.2);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+}
+
+
+  [data-theme='yijing'] {
+    --color-primary: #4f46e5;
+    --color-secondary: #a5b4fc;
+    --color-gradient-from: #4f46e5;
+    --color-gradient-to: #312e81;
+  }
+
+  [data-theme='tarot'] {
+    --color-primary: #c5a35a;      /* 鎏金 (Gilded Gold) */
+    --color-secondary: #e5d4a8;   /* 亮金 (Light Gold) */
+    --color-gradient-from: #c5a35a;
+    --color-gradient-to: #a17d38;
+    --color-bg-deep-purple: #2a1f44; /* 深紫背景 */
+  }
+
+
+  [data-theme='zodiac'] {
+    --color-primary: #3b82f6;
+    --color-secondary: #93c5fd;
+    --color-gradient-from: #3b82f6;
+    --color-gradient-to: #1e3a8a;
+  }
+
+  [data-theme='bazi'] {
+    --color-primary: #f59e0b;
+    --color-secondary: #fcd34d;
+    --color-gradient-from: #f59e0b;
+    --color-gradient-to: #b45309;
+  }
+
+  [data-theme='ai'] {
+    --color-primary: #06b6d4;
+    --color-secondary: #67e8f9;
+    --color-gradient-from: #06b6d4;
+    --color-gradient-to: #0891b2;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  /* 避免依赖 Google Fonts，使用本地可用字体栈；同时保留八卦符号的字体兜底 */
+  font-family: "Noto Serif SC", "Noto Serif", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Songti SC", "SimSun", serif;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  min-height: 100vh;
+  color: #e2e8f0;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.7);
+}
+
+/* 玻璃态效果 */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 卡片悬浮效果 */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+}
+
+/* 发光按钮 */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-glow:hover::before {
+  left: 100%;
+}
+
+/* 思维链动画 */
+.thinking-dot {
+  animation: thinking 1.4s infinite ease-in-out both;
+}
+
+.thinking-dot:nth-child(1) { animation-delay: -0.32s; }
+.thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+.thinking-dot:nth-child(3) { animation-delay: 0; }
+
+@keyframes thinking {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+/* 八卦符号样式 */
+.bagua-symbol {
+  font-size: 4rem;
+  text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+}
+
+/* 流式文本动画 */
+.stream-text {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in;
+}
+
+.stream-text {
+  animation: fadeIn 0.2s ease-in;
+}
+
+/* 星座图标动画 */
+.zodiac-icon {
+  transition: all 0.3s ease;
+}
+
+.zodiac-icon:hover {
+  transform: scale(1.1) rotate(5deg);
+  filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.8));
+}
+
+/* 塔罗牌翻牌动画 */
+.tarot-card {
+  perspective: 1000px;
+  transition: transform 0.6s;
+}
+
+.tarot-card:hover {
+  transform: translateY(-10px);
+}
+
+.tarot-flip {
+  animation: flipCard 0.8s ease-in-out;
+}
+
+@keyframes flipCard {
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(90deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+/* 塔罗牌发光效果 */
+.tarot-glow {
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.4),
+              0 0 60px rgba(139, 92, 246, 0.2);
+}
+
+/* 漂浮动画 */
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* 缓慢脉动 */
+.animate-pulse-slow {
+  animation: pulseSlow 4s ease-in-out infinite;
+}
+
+@keyframes pulseSlow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+/* 神秘闪烁效果 */
+.mystic-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(139, 92, 246, 0.3),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* 滚动条隐藏 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 延迟动画 */
+.delay-75 {
+  animation-delay: 75ms;
+}
+
+.delay-150 {
+  animation-delay: 150ms;
+}
+
+/* 闪烁动画（用于流式文本光标） */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.stream-text {
+  animation: fadeIn 0.2s ease-in;
+}
+
+/* ============ 页面级统一外观（直接可用） ============ */
+@layer components {
+  .page-shell {
+    @apply min-h-screen px-4 py-10;
+    /* 移动端安全区域适配 */
+    padding-top: max(2.5rem, env(safe-area-inset-top));
+    padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  /* 顶部标题区：根据主题色自动渐变 */
+  .page-hero {
+    @apply relative mb-8 overflow-hidden rounded-3xl border border-white/10;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+
+  .page-hero::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: radial-gradient(600px circle at 20% 20%, color-mix(in srgb, var(--color-primary) 35%, transparent), transparent 60%),
+                radial-gradient(700px circle at 80% 30%, color-mix(in srgb, var(--color-secondary) 25%, transparent), transparent 55%);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  .page-hero-inner {
+    @apply relative z-10 mx-auto max-w-6xl px-6 py-10 text-center;
+  }
+
+  .page-badge {
+    @apply inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+
+  .page-title {
+    @apply mt-4 text-3xl font-bold md:text-4xl;
+  }
+
+  .page-subtitle {
+    @apply mt-2 text-sm text-slate-300 md:text-base;
+  }
+
+  .section-title {
+    @apply mb-3 flex items-center gap-2 text-lg font-semibold;
+  }
+
+  .panel {
+    @apply rounded-2xl border border-white/10;
+    background: rgba(255,255,255,0.04);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  .panel-soft {
+    @apply rounded-2xl border border-white/10;
+    background: rgba(0,0,0,0.18);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  .btn-primary-theme {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-medium text-white transition;
+    background: linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to));
+  }
+
+  .btn-primary-theme:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+  }
+
+  .text-theme {
+    color: var(--color-primary);
+  }
+
+  .ring-theme {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 45%, transparent);
+  }
+}
+
+/* ============ 移动端适配样式 ============ */
+@layer utilities {
+  /* 安全区域支持（刘海屏、底部安全区域） */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+    padding-top: constant(safe-area-inset-top); /* iOS 11.0-11.2 */
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: constant(safe-area-inset-bottom); /* iOS 11.0-11.2 */
+  }
+
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+    padding-left: constant(safe-area-inset-left);
+  }
+
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+    padding-right: constant(safe-area-inset-right);
+  }
+
+  /* 移动端触摸优化 */
+  .touch-action-none {
+    touch-action: none;
+  }
+
+  .touch-action-pan-x {
+    touch-action: pan-x;
+  }
+
+  .touch-action-pan-y {
+    touch-action: pan-y;
+  }
+
+  /* 移动端点击反馈 */
+  .tap-highlight {
+    -webkit-tap-highlight-color: rgba(168, 85, 247, 0.3);
+    tap-highlight-color: rgba(168, 85, 247, 0.3);
+  }
+
+  /* 移动端滚动优化 */
+  .scroll-smooth-mobile {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* 移动端字体大小优化 */
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px;
+    }
+    
+    .text-mobile-sm {
+      font-size: 0.75rem;
+    }
+    
+    .text-mobile-base {
+      font-size: 0.875rem;
+    }
+    
+    .text-mobile-lg {
+      font-size: 1rem;
+    }
+  }
+
+  /* 移动端按钮优化 */
+  @media (max-width: 640px) {
+    button, a {
+      min-height: 44px; /* iOS推荐的最小触摸目标 */
+      min-width: 44px;
+    }
+  }
+
+  /* 移动端卡片优化 */
+  @media (max-width: 640px) {
+    .panel {
+      @apply rounded-xl;
+      margin-left: env(safe-area-inset-left);
+      margin-right: env(safe-area-inset-right);
+    }
+
+    .page-shell {
+      @apply px-3 py-6;
+      padding-left: max(0.75rem, env(safe-area-inset-left));
+      padding-right: max(0.75rem, env(safe-area-inset-right));
+      padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    }
+  }
+
+  /* 移动端导航栏优化 */
+  @media (max-width: 768px) {
+    header {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
+
+  /* 移动端底部导航栏 */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: constant(safe-area-inset-bottom);
+    z-index: 50;
+  }
+
+  /* 移动端输入框优化 */
+  @media (max-width: 640px) {
+    input, textarea, select {
+      font-size: 16px; /* 防止iOS自动缩放 */
+    }
+  }
+
+  /* 移动端翻转卡片优化 */
+  @media (max-width: 640px) {
+    .tarot-card-flip-container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
+  }
+
+  /* 移动端手势优化 */
+  .swipeable {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 移动端性能优化 */
+  .will-change-transform {
+    will-change: transform;
+  }
+
+  .will-change-opacity {
+    will-change: opacity;
+  }
+
+  /* 移动端禁用文本选择（某些交互元素） */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+}

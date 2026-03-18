@@ -1,8 +1,8 @@
-# 玄学占卜系统 - API 文档
+# 易经占卜系统 - API 文档
 
 ## 📖 项目简介
 
-基于 Spring Boot 的综合玄学占卜系统，提供 **易经占卜** 和 **塔罗牌** 两大核心功能，支持 MCP 协议接入。
+基于 Spring Boot 的易经占卜系统，提供 **易经占卜** 和 **塔罗牌** 两大核心功能，支持 MCP 协议接入。
 
 ### 核心功能
 
@@ -492,27 +492,25 @@ export DEEPSEEK_API_KEY=your-api-key
 
 ### 项目结构
 
+详细的项目结构说明请查看：[PROJECT_STRUCTURE.md](./docs/PROJECT_STRUCTURE.md)
+
+**快速导航：**
+- 📂 [后端代码结构](./docs/PROJECT_STRUCTURE.md#1-后端代码)
+- 📂 [前端代码结构](./docs/PROJECT_STRUCTURE.md#2-前端代码)
+- 📂 [数据库脚本](./docs/PROJECT_STRUCTURE.md#3-数据库脚本)
+- 📂 [移动端代码](./docs/PROJECT_STRUCTURE.md#4-移动端)
+- 📂 [部署相关](./docs/PROJECT_STRUCTURE.md#5-部署相关)
+
+**核心目录：**
 ```
 baziback/
-├── src/main/java/com/example/demo/
-│   ├── yijing/                    # 易经模块
-│   │   ├── model/                 # 数据模型
-│   │   ├── repository/            # 64卦数据仓库
-│   │   └── service/               # 业务逻辑
-│   ├── tarot/                     # 塔罗牌模块
-│   │   ├── model/                 # TarotCard, SpreadType
-│   │   ├── repository/            # 78张牌数据仓库
-│   │   └── service/               # 牌阵服务
-│   ├── controller/                # REST API 控制器
-│   ├── service/                   # 服务层
-│   ├── config/                    # 配置类
-│   └── util/                      # 工具类
-├── mcp-server/                    # MCP 服务端（TypeScript）
-│   ├── src/index.ts               # MCP 入口
-│   └── package.json               # 依赖配置
-├── src/main/resources/
-│   └── application.yml            # 配置文件
-└── pom.xml                        # Maven 配置
+├── src/main/java/com/example/demo/  # 后端 Java 代码
+├── src-frontend/                     # 前端 React 代码
+├── database/                         # 数据库脚本
+├── deploy/                           # 部署相关
+├── android/                          # Android 应用
+├── ios/                              # iOS 应用
+└── docs/                             # 项目文档
 ```
 
 ### 核心类说明

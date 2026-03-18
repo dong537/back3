@@ -1,8 +1,6 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.request.ziwei.ZiweiDeepSeekInterpretRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

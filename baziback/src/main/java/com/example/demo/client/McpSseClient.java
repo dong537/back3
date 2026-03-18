@@ -2,71 +2,79 @@ package com.example.demo.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 @Component
 @Slf4j
 public class McpSseClient {
-    private final WebClient client;
+    private final String baseUrl;
+    private final String apiKey;
     private final ObjectMapper mapper = new ObjectMapper();
+    private final CloseableHttpClient httpClient = HttpClients.createDefault();
 
     public McpSseClient(@Value("${mcp.bazi.api.endpoint}") String baseUrl,
                         @Value("${mcp.bazi.api.api-key}") String apiKey) {
-        this.client = WebClient.builder()
-                .baseUrl(baseUrl)
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader(HttpHeaders.ACCEPT, "text/event-stream") // ① SSE
-                .defaultHeader("x-api-key", apiKey)
-                .build();
+        this.baseUrl = baseUrl;
+        this.apiKey = apiKey;
     }
     /**
      * 发送一行 JSON-RPC 并取第一条结果
      */
-    public Mono<String> call(String method, Object params) {
+    public String call(String method, Object params) throws IOException {
         return call(method, params, null);
     }
     
     /**
      * 发送一行 JSON-RPC 并取第一条结果，支持传递额外的请求头
      */
-    public Mono<String> call(String method, Object params, Map<String, String> additionalHeaders) {
+    public String call(String method, Object params, Map<String, String> additionalHeaders) throws IOException {
         return call(method, params, additionalHeaders, null);
     }
     
     /**
      * 发送一行 JSON-RPC 并取第一条结果，支持传递额外的请求头和自定义解析器
      */
-    public Mono<String> call(String method, Object params, Map<String, String> additionalHeaders, java.util.function.Function<String, String> customExtractor) {
+    public String call(String method, Object params, Map<String, String> additionalHeaders, java.util.function.Function<String, String> customExtractor) throws IOException {
         String frame = """
                 {"jsonrpc":"2.0","id":%d,"method":"%s","params":%s}
                 """.formatted(System.nanoTime(), method, toJson(params));
 
-        WebClient.RequestHeadersSpec<?> request = client.post()
-                .bodyValue(frame);               // ② 整行发
+        HttpPost request = new HttpPost(baseUrl);
+        request.setEntity(new StringEntity(frame, ContentType.APPLICATION_JSON));
+        request.addHeader("Accept", "text/event-stream");
+        request.addHeader("x-api-key", apiKey);
+        
         // 添加额外的请求头
         if (additionalHeaders != null) {
-            additionalHeaders.forEach(request::header);
+            additionalHeaders.forEach(request::addHeader);
         }
 
-        return request.retrieve()
-                .bodyToFlux(String.class)       // ③ 收 SSE
-                .take(1)
-                .single()
-                .map(customExtractor != null ? customExtractor : this::extractText);
+        @SuppressWarnings("deprecation")
+        var response = httpClient.execute(request);
+        try (response) {
+            var entity = response.getEntity();
+            if (entity != null) {
+                String responseBody = new String(entity.getContent().readAllBytes());
+                return customExtractor != null ? customExtractor.apply(responseBody) : extractText(responseBody);
+            }
+            return "No response body";
+        }
     }
     
     /**
      * 列出所有可用的工具
      */
-    public Mono<String> listTools(Map<String, String> additionalHeaders) {
+    public String listTools(Map<String, String> additionalHeaders) throws IOException {
         Map<String, Object> params = Map.of(); // tools/list通常不需要参数
         return call("tools/list", params, additionalHeaders, this::extractToolInfo);
     }
@@ -74,7 +82,7 @@ public class McpSseClient {
     /**
      * 获取工具信息
      */
-    public Mono<String> getToolInfo(String toolName, Map<String, String> additionalHeaders) {
+    public String getToolInfo(String toolName, Map<String, String> additionalHeaders) throws IOException {
         Map<String, Object> params = Map.of("name", toolName);
         return call("tools/get", params, additionalHeaders, this::extractToolInfo);
     }

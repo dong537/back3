@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
@@ -23,14 +22,9 @@ public class McpZiweiConfig extends BaseMcpConfig {
      */
     @Bean
     @Qualifier("ziweiWebClient")
-    public WebClient ziweiWebClient() {
-        return WebClient.builder()
-                .baseUrl(ziweiEndpoint)
-                .defaultHeader("x-api-key", ziweiApiKey)
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+    public WebClient ziweiWebClient(com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
+        return createWebClientBuilder(ziweiEndpoint, ziweiApiKey, objectMapper)
                 .defaultHeader(HttpHeaders.ACCEPT, "application/json, text/event-stream")
-                .filter(logRequest())   // 复用父类日志过滤器
-                .filter(logResponse())
                 .build();
     }
 }

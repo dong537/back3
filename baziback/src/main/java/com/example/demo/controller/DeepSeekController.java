@@ -1,23 +1,14 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.request.yijing.YijingInterpretRequest;
-import com.example.demo.dto.request.ziwei.ZiweiDeepSeekInterpretRequest;
+import com.example.demo.common.Result;
+import com.example.demo.exception.BusinessException;
 import com.example.demo.service.DeepSeekService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
- * 八字报告接口控制器（前端调用入口）
+ * DeepSeek 接口控制器（前端调用入口）
  */
 @RestController
 @RequestMapping("/api/deepseek")
@@ -26,25 +17,37 @@ import java.util.Map;
 public class DeepSeekController {
 
     private final DeepSeekService deepSeekService;
-    private final ObjectMapper objectMapper;
 
     /**
      * 前端/内部调用：通过POST提交完整的提示词或JSON
-     * 兼容旧路径 /api/bazi/generate-report (如果前端未改)
      */
     @PostMapping("/generate-report")
-    public ResponseEntity<String> generateReport(@RequestBody String rawPrompt) throws Exception {
-        return ResponseEntity.ok(deepSeekService.generateBaziReport(rawPrompt));
+    public Result<String> generateReport(@RequestBody String rawPrompt) throws Exception {
+        if (rawPrompt == null || rawPrompt.isBlank()) {
+            throw new BusinessException("请求内容不能为空");
+        }
+        return Result.success(deepSeekService.generateBaziReport(rawPrompt));
     }
+
     /**
      * 使用 DeepSeek 解读卦象
      */
     @PostMapping("/interpret-hexagram")
-    public ResponseEntity<String> interpretHexagram(@RequestBody String request) throws Exception {
-        return ResponseEntity.ok(deepSeekService.interpretHexagram(request));
+    public Result<String> interpretHexagram(@RequestBody String request) throws Exception {
+        if (request == null || request.isBlank()) {
+            throw new BusinessException("请求内容不能为空");
+        }
+        return Result.success(deepSeekService.interpretHexagram(request));
     }
+
+    /**
+     * 使用 DeepSeek 解读紫微命盘
+     */
     @PostMapping("/chart/deepseek-interpret")
-    public ResponseEntity<String>interpretChartByDeepSeek(@RequestBody String request) throws Exception{
-        return ResponseEntity.ok(deepSeekService.interpretZiweiChart(request));
+    public Result<String> interpretChartByDeepSeek(@RequestBody String request) throws Exception {
+        if (request == null || request.isBlank()) {
+            throw new BusinessException("请求内容不能为空");
+        }
+        return Result.success(deepSeekService.interpretZiweiChart(request));
     }
 }

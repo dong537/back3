@@ -1,0 +1,310 @@
+{
+  "app": {
+    "name": "Tianji Mingli",
+    "footerTitle": "Tianji Mingli · Yijing · Zodiac · Bazi",
+    "footerNote": "For entertainment only. Please be rational."
+  },
+  "nav": {
+    "home": "Home",
+    "yijing": "Yijing",
+    "tarot": "Tarot",
+    "zodiac": "Zodiac",
+    "bazi": "Bazi",
+    "ai": "AI",
+    "login": "Login",
+    "logout": "Logout",
+    "logoutFull": "Sign out",
+    "favorites": "Favorites",
+    "ask": "Ask",
+    "achievement": "Achievements",
+    "self": "Me"
+  },
+  "lang": {
+    "zh": "中文",
+    "en": "English"
+  },
+  "home": {
+    "badge": "AI-Powered Mystic Intelligence System",
+    "heroTitle": "Mystic Divination",
+    "heroSubtitle": "Combining traditional wisdom with modern AI technology to provide professional analysis and interpretation of Yijing, Zodiac, and Bazi",
+    "startDivination": "Start Divination",
+    "coreFeatures": "Core Features",
+    "experienceNow": "Experience Now",
+    "stats": {
+      "yijing": "Yijing Hexagrams",
+      "tarot": "Tarot Cards",
+      "zodiac": "Zodiac Signs",
+      "ai": "AI Analysis"
+    },
+    "features": {
+      "yijing": {
+        "title": "Yijing Divination",
+        "description": "64 Hexagrams · 5 Divination Methods · AI Interpretation",
+        "details": [
+          "Time Divination",
+          "Random Divination",
+          "Number Divination",
+          "Coin Divination",
+          "Plum Blossom Numerology"
+        ]
+      },
+      "tarot": {
+        "title": "Tarot Divination",
+        "description": "78 Cards · 12 Spreads · Upright & Reversed Reading",
+        "details": [
+          "Single Card",
+          "Past-Present-Future",
+          "Celtic Cross",
+          "AI Deep Reading"
+        ]
+      },
+      "zodiac": {
+        "title": "Zodiac Horoscope",
+        "description": "12 Signs · Daily Horoscope · Compatibility",
+        "details": [
+          "Sign Lookup",
+          "Today's Horoscope",
+          "Love Compatibility",
+          "Career Analysis"
+        ]
+      },
+      "bazi": {
+        "title": "Bazi Analysis",
+        "description": "Four Pillars · Fortune Cycles · Destiny Reading",
+        "details": [
+          "Bazi Chart",
+          "Five Elements Analysis",
+          "Fortune Prediction",
+          "Favorable Elements"
+        ]
+      },
+      "ai": {
+        "title": "AI Reasoning",
+        "description": "Chain of Thought · Streaming Reasoning · Deep Analysis",
+        "details": [
+          "Chain of Thought Display",
+          "Streaming Reasoning",
+          "Deep Analysis",
+          "Personalized Interpretation"
+        ]
+      }
+    }
+  },
+  "yijing": {
+    "title": "Yijing Divination",
+    "subtitle": "64 Hexagrams · 5 Divination Methods · AI Interpretation",
+    "selectMethod": "Select Divination Method",
+    "methodDesc": "Different methods suit different scenarios",
+    "methods": {
+      "time": { "label": "Time Divination", "desc": "Calculate based on current time" },
+      "random": { "label": "Random Divination", "desc": "Completely random generation" },
+      "number": { "label": "Number Divination", "desc": "Use number as seed" },
+      "coin": { "label": "Coin Divination", "desc": "Simulate three coins" },
+      "plum_blossom": { "label": "Plum Blossom Numerology", "desc": "Combine time and number" }
+    },
+    "inputQuestion": "Enter Your Question",
+    "questionDesc": "Sincerity brings results, focus on what you want to ask",
+    "questionPlaceholder": "Please enter your divination question, e.g., How will my career fortune be this year?",
+    "seedLabel": "Number Seed (Optional)",
+    "seedPlaceholder": "Enter a number, e.g., 168",
+    "startDivination": "Start Divination",
+    "result": "Divination Result",
+    "originalHexagram": "Original Hexagram",
+    "changedHexagram": "Changed Hexagram",
+    "judgment": "Judgment",
+    "image": "Image",
+    "meaning": "Meaning",
+    "changingLines": "Changing Lines",
+    "aiInterpret": "AI Deep Interpretation",
+    "remainingFree": "Remaining free uses today",
+    "loginPrompt": "to get 2 free uses per day",
+    "error": "Divination failed, please try again later",
+    "aiError": "AI interpretation failed, please try again later",
+    "aiPrompt": "I asked \"{{question}}\" and got hexagram {{hexagram}}, {{changingLines}}Please provide a detailed interpretation of this hexagram's meaning and advice.",
+    "changingLinesText": "Lines {{lines}} are changing, transforming to hexagram {{changedHexagram}}.",
+    "noChangingLines": "No changing lines."
+  },
+  "tarot": {
+    "title": "Tarot Divination",
+    "subtitle": "78 Mystical Cards · 12 Spreads · Upright & Reversed Reading",
+    "step1": "Step 1: Meditate",
+    "step1Desc": "Focus on what you want to know, write down your question.",
+    "step2": "Step 2: Choose Spread",
+    "step2Desc": "Different spreads suit different types of questions.",
+    "step3": "Step 3: Shuffle & Draw",
+    "questionPlaceholder": "e.g., How will my relationship with him/her develop?",
+    "shuffleDraw": "Shuffle & Draw Cards",
+    "result": "Divination Result",
+    "reveal": "Reveal Cards",
+    "redraw": "Redraw",
+    "upright": "Upright",
+    "reversed": "Reversed",
+    "aiInterpret": "AI Deep Reading",
+    "remainingFree": "Remaining free uses today",
+    "loginPrompt": "Login to get 2 free AI readings per day",
+    "copyResult": "Copy Result",
+    "copied": "Copied to clipboard!",
+    "copyFailed": "Copy failed!",
+    "disclaimer": "Disclaimer: This divination result is for entertainment only and does not constitute any decision-making basis. Please be rational and believe in science.",
+    "spreads": {
+      "SINGLE": { "label": "Single Card", "desc": "Quick guidance for simple questions" },
+      "PAST_PRESENT_FUTURE": { "label": "Past-Present-Future", "desc": "Past, present, and future" },
+      "LOVE_TRIAD": { "label": "Love Triad", "desc": "You, the other, relationship direction" },
+      "RELATIONSHIP_CROSS": { "label": "Relationship Cross", "desc": "Deep analysis of interpersonal relationships" },
+      "DECISION_MAKING": { "label": "Decision Making", "desc": "Choice A vs Choice B" },
+      "CAREER_PATH": { "label": "Career Path", "desc": "Comprehensive career development analysis" },
+      "HORSESHOE": { "label": "Horseshoe", "desc": "Overall fortune analysis" },
+      "CELTIC_CROSS": { "label": "Celtic Cross", "desc": "The most classic deep spread" }
+    },
+    "cardPosition": "Card {{position}}: {{name}} ({{positionType}})",
+    "aiPrompt": "I asked \"{{question}}\" using Tarot cards with the {{spread}} spread. The cards drawn are: {{cards}}. Please provide a detailed interpretation of this spread's meaning and advice."
+  },
+  "zodiac": {
+    "title": "Zodiac Horoscope",
+    "subtitle": "12 Signs · Daily Horoscope · Compatibility",
+    "selectZodiac": "Select Your Zodiac Sign",
+    "zodiacInfo": "Zodiac Information",
+    "todayHoroscope": "Today's Horoscope",
+    "selectCategory": "Select category to view details",
+    "viewHoroscope": "View Today's Horoscope",
+    "compatibility": "Zodiac Compatibility",
+    "compatibilityDesc": "Check compatibility between two zodiac signs",
+    "viewCompatibility": "View Compatibility Result",
+    "compatibilityScore": "Compatibility Score",
+    "dateRange": "Date Range",
+    "element": "Element",
+    "ruler": "Ruler",
+    "quality": "Quality",
+    "luckyNumbers": "Lucky Numbers",
+    "luckyColors": "Lucky Colors",
+    "categories": {
+      "overall": "Overall Fortune",
+      "love": "Love Fortune",
+      "career": "Career Fortune",
+      "health": "Health Fortune",
+      "finance": "Wealth Analysis"
+    },
+    "signs": {
+      "aries": "Aries",
+      "taurus": "Taurus",
+      "gemini": "Gemini",
+      "cancer": "Cancer",
+      "leo": "Leo",
+      "virgo": "Virgo",
+      "libra": "Libra",
+      "scorpio": "Scorpio",
+      "sagittarius": "Sagittarius",
+      "capricorn": "Capricorn",
+      "aquarius": "Aquarius",
+      "pisces": "Pisces"
+    },
+    "advice": "Advice"
+  },
+  "bazi": {
+    "title": "Bazi Analysis",
+    "subtitle": "Four Pillars · Fortune Cycles · AI Destiny Reading",
+    "inputInfo": "Enter Birth Information",
+    "inputDesc": "Please fill in solar calendar birth date and time",
+    "birthDate": "Birth Date",
+    "birthTime": "Birth Time",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "startAnalysis": "Start Analysis",
+    "fourPillars": "Four Pillars",
+    "bazi": "Bazi",
+    "zodiac": "Zodiac",
+    "yearPillar": "Year Pillar",
+    "monthPillar": "Month Pillar",
+    "dayPillar": "Day Pillar",
+    "hourPillar": "Hour Pillar",
+    "basicInfo": "Basic Information",
+    "mingGong": "Ming Gong Info",
+    "taiYuan": "Tai Yuan",
+    "shenGong": "Shen Gong",
+    "xingYun": "Xing Yun",
+    "kongWangNaYin": "Kong Wang & Na Yin",
+    "kongWang": "Kong Wang",
+    "naYin": "Na Yin",
+    "dayPillarLevel": "Day Pillar Level",
+    "wuxing": "Five Elements Analysis",
+    "wuxingDistribution": "Five Elements Distribution",
+    "xiYongShen": "Xi Yong Shen Analysis",
+    "shishen": "Ten Gods Pattern",
+    "caiXing": "Cai Xing",
+    "guanXing": "Guan Xing",
+    "dayun": "Fortune Cycles",
+    "dayunTrend": "Fortune Trend",
+    "age": " years old",
+    "shensha": "Shen Sha",
+    "generateReport": "Generate AI Destiny Report",
+    "error": "Analysis failed, please try again later",
+    "fillComplete": "Please fill in complete birth date and time"
+  },
+  "ai": {
+    "title": "AI Intelligent Reasoning",
+    "subtitle": "Chain of Thought Display · Streaming Reasoning",
+    "chat": "AI Chat",
+    "chatDesc": "Supports Yijing, Bazi, Ziwei and other mystic questions",
+    "clear": "Clear",
+    "startChat": "Start chatting with AI",
+    "startChatDesc": "You can ask about Bazi, hexagrams, Ziwei chart and other mystic questions",
+    "viewThinking": "View Thinking Process",
+    "thinking": "Thinking...",
+    "inputPlaceholder": "Enter your question, e.g., Please analyze the career fortune of Bazi Jiazi Dingchou Jiachen Xinwei...",
+    "send": "Send",
+    "stop": "Stop Generation",
+    "remainingFree": "Remaining free uses today",
+    "loginPrompt": "Login to get 2 free AI chats per day",
+    "features": {
+      "thinking": { "title": "Chain of Thought Display", "desc": "Real-time display of AI reasoning process" },
+      "streaming": { "title": "Streaming Output", "desc": "Character-by-character output for smoother experience" },
+      "modes": { "title": "Multiple Modes", "desc": "Supports Bazi, hexagrams, Ziwei, etc." }
+    },
+    "presets": {
+      "bazi": "Bazi Interpretation",
+      "yijing": "Hexagram Interpretation",
+      "tarot": "Tarot Interpretation",
+      "ziwei": "Ziwei Chart",
+      "custom": "Custom Question"
+    }
+  },
+  "login": {
+    "welcome": "Welcome Back",
+    "createAccount": "Create Account",
+    "loginDesc": "Login to save your divination records",
+    "registerDesc": "Register to start your mystic journey",
+    "login": "Login",
+    "register": "Register",
+    "username": "Username",
+    "email": "Email Address",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "rememberMe": "Remember Me",
+    "forgotPassword": "Forgot Password?",
+    "guestMode": "Guest Mode",
+    "terms": "By continuing, you agree to our",
+    "serviceTerms": "Terms of Service",
+    "and": "and",
+    "privacyPolicy": "Privacy Policy",
+    "usernameRequired": "Please enter username",
+    "passwordRequired": "Please enter password",
+    "passwordMismatch": "Passwords do not match",
+    "loginFailed": "Login failed, please check username and password",
+    "registerSuccess": "Registration successful! Please login with your account",
+    "registerFailed": "Registration failed, please try again later",
+    "networkError": "Network error, please check your connection",
+    "operationFailed": "Operation failed, please try again later"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "times": "times",
+    "question": "Question"
+  }
+}
+

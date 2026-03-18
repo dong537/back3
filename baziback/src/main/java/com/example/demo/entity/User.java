@@ -32,6 +32,9 @@ public class User {
     private String nickname;
     private String avatar;
     private Integer status;  // 0-禁用，1-正常
+    private Integer level;      // 用户等级
+    private Integer currentPoints;  // 当前积分余额
+    private Integer totalPoints;    // 累计获得积分
 
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)

@@ -4,8 +4,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
@@ -20,13 +18,11 @@ public class StarMcpConfig extends BaseMcpConfig {
 
     @Bean
     @Qualifier("starWebClient")
-    public WebClient starWebClient() {
-        return WebClient.builder()
-                .baseUrl(starEndpoint)
-                .defaultHeader("x-api-key", starApiKey)
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .filter(logRequest())  // 复用父类日志过滤器
-                .filter(logResponse())
+    public WebClient starWebClient(org.springframework.context.ApplicationContext ctx) {
+        // 复用 BaseMcpConfig 中已经配置了 JavaTimeModule 的 ObjectMapper + ExchangeStrategies
+        com.fasterxml.jackson.databind.ObjectMapper mapper = ctx.getBean(com.fasterxml.jackson.databind.ObjectMapper.class);
+
+        return createWebClientBuilder(starEndpoint, starApiKey, mapper)
                 .build();
     }
 }

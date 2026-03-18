@@ -23,6 +23,13 @@ public class Demo1Application implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        // 打印数据库连接URL
+        org.springframework.core.env.Environment environment = context.getEnvironment();
+        String datasourceUrl = environment.getProperty("spring.datasource.url");
+        System.out.println("\n\n==========================================================");
+        System.out.println("DATABASE CONNECTION URL: " + datasourceUrl);
+        System.out.println("==========================================================\n\n");
+
         // 打印所有 Controller Bean
         String[] controllers = context.getBeanNamesForAnnotation(RestController.class);
         System.out.println("=== 发现 " + controllers.length + " 个 Controller ===");
