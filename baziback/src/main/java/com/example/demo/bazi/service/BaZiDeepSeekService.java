@@ -25,8 +25,11 @@ public class BaZiDeepSeekService {
     @Value("${deepseek.api.key:}")
     private String apiKey;
 
-    @Value("${deepseek.api.endpoint:https://api.deepseek.com/v1/chat/completions}")
+    @Value("${deepseek.api.endpoint:https://gemini.agentpit.io/v1/chat/completions}")
     private String apiEndpoint;
+
+    @Value("${deepseek.model:gemini-2.0-flash}")
+    private String model;
 
     @Value("${deepseek.system-prompt:}")
     private String systemPrompt;
@@ -85,11 +88,11 @@ public class BaZiDeepSeekService {
      */
     private String callDeepSeekWithSystemPrompt(String userContent) throws Exception {
         if (apiKey == null || apiKey.isEmpty()) {
-            throw new Exception("DeepSeek API Key未配置，请在 application.yml 中设置 deepseek.api.key");
+            throw new Exception("AI API Key未配置，请在 application.yml 中设置 deepseek.api.key 或 ONE_API_KEY");
         }
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "deepseek-chat");
+        requestBody.put("model", model);
 
         List<Map<String, String>> messages = new ArrayList<>();
         
@@ -115,11 +118,11 @@ public class BaZiDeepSeekService {
      */
     public String callDeepSeekDirect(String userContent) throws Exception {
         if (apiKey == null || apiKey.isEmpty()) {
-            throw new Exception("DeepSeek API Key未配置");
+            throw new Exception("AI API Key未配置");
         }
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "deepseek-chat");
+        requestBody.put("model", model);
 
         List<Map<String, String>> messages = new ArrayList<>();
         messages.add(Map.of("role", "user", "content", userContent));
