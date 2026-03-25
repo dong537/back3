@@ -21,6 +21,7 @@ const BaziInterpretationDetailPage = lazy(
 const AIPage = lazy(() => import('./pages/AIPage'))
 const GeminiFacePage = lazy(() => import('./pages/GeminiFacePage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const SsoCallbackPage = lazy(() => import('./pages/SsoCallbackPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const SelfPage = lazy(() => import('./pages/SelfPage'))
 const ReferralPage = lazy(() => import('./pages/ReferralPage'))
@@ -149,6 +150,7 @@ function App() {
             <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="user-agreement" element={<UserAgreementPage />} />
             <Route path="login" element={<LoginPage />} />
+            <Route path="auth/sso/callback" element={<SsoCallbackPage />} />
           </Route>
         </Routes>
       </Suspense>

@@ -117,6 +117,17 @@ export default function LoginPage() {
   const [justLoggedIn, setJustLoggedIn] = useState(false)
   const [oauthLoading, setOauthLoading] = useState(false)
 
+  // 检查 SSO 重定向回来的错误信息
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const ssoError = params.get('sso_error')
+    if (ssoError) {
+      setError(decodeURIComponent(ssoError))
+      // 清除 URL 中的错误参数，避免刷新时重复显示
+      window.history.replaceState(null, '', '/login')
+    }
+  }, [location.search])
+
   const [formData, setFormData] = useState({
     username: '',
     password: '',

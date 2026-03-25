@@ -87,11 +87,22 @@ public class AgentpitOAuthService {
      * 构建 AgentPit 授权 URL
      */
     public String buildAuthorizeUrl() {
-        return authorizeUrl
+        return buildAuthorizeUrl(null);
+    }
+
+    /**
+     * 构建 AgentPit 授权 URL，支持 state 参数
+     */
+    public String buildAuthorizeUrl(String state) {
+        String url = authorizeUrl
                 + "?client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
                 + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
                 + "&response_type=code"
                 + "&scope=" + URLEncoder.encode(scope, StandardCharsets.UTF_8);
+        if (state != null && !state.isEmpty()) {
+            url += "&state=" + URLEncoder.encode(state, StandardCharsets.UTF_8);
+        }
+        return url;
     }
 
     /**
