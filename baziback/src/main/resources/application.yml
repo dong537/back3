@@ -108,6 +108,16 @@ scene-image:
   count: ${SCENE_IMAGE_COUNT:${IMAGE_COUNT:1}}
   chat-max-tokens: ${SCENE_IMAGE_CHAT_MAX_TOKENS:${IMAGE_CHAT_MAX_TOKENS:4096}}
 
+agentpit:
+  oauth:
+    client-id: ${AGENTPIT_OAUTH_CLIENT_ID:cmn5vk3l1001560777k8fb1vh}
+    client-secret: ${AGENTPIT_OAUTH_CLIENT_SECRET:cmn5vk3l100166077koz4m9ed}
+    redirect-uri: ${AGENTPIT_OAUTH_CALLBACK_URL:https://destiny.agentpit.io/api/auth/agentpit/callback}
+    authorize-url: ${AGENTPIT_OAUTH_AUTHORIZATION_URL:https://www.agentpit.io/api/oauth/authorize}
+    token-url: ${AGENTPIT_OAUTH_TOKEN_URL:https://www.agentpit.io/api/oauth/token}
+    userinfo-url: ${AGENTPIT_OAUTH_USERINFO_URL:https://www.agentpit.io/api/oauth/userinfo}
+    scope: ${AGENTPIT_OAUTH_SCOPE:profile}
+
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:5173,https://lldd.click}

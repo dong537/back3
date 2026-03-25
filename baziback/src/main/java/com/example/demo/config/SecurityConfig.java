@@ -30,6 +30,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_API_PATTERNS = {
             "/api/user/login",
             "/api/user/register",
+            "/api/auth/agentpit/**",
             "/api/gemini/probe/**",
             "/api/yijing/**",
             "/api/tarot/**",
@@ -44,6 +45,7 @@ public class SecurityConfig {
     private static final List<String> PUBLIC_API_PREFIXES = List.of(
             "/api/user/login",
             "/api/user/register",
+            "/api/auth/agentpit",
             "/api/gemini/probe/",
             "/api/yijing/",
             "/api/tarot/",

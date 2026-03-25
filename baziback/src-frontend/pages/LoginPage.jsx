@@ -9,6 +9,7 @@ import {
   LogIn,
   UserPlus,
   Sparkles,
+  ShieldCheck,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import Card, {
@@ -96,6 +97,11 @@ const LOGIN_COPY = {
   },
 }
 
+const AGENTPIT_OAUTH_EVENT = 'agentpit-oauth-result'
+const AGENTPIT_BUTTON_LABEL = 'agentpit 授权登陆'
+const AGENTPIT_POPUP_ERROR = '无法打开授权窗口，请允许浏览器弹窗后重试'
+const AGENTPIT_DEFAULT_ERROR = 'agentpit 授权失败，请稍后重试'
+
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -109,6 +115,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [justLoggedIn, setJustLoggedIn] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
 
   const [formData, setFormData] = useState({
     username: '',
@@ -128,6 +135,7 @@ export default function LoginPage() {
       logger.debug(copy.loginSuccessNavigate, from)
       navigate(from, { replace: true })
       setJustLoggedIn(false)
+      setOauthLoading(false)
     }
   }, [
     justLoggedIn,
@@ -138,6 +146,87 @@ export default function LoginPage() {
     from,
     copy,
   ])
+
+  useEffect(() => {
+    const handleAgentpitResult = (payload) => {
+      if (!payload || payload.type !== AGENTPIT_OAUTH_EVENT) {
+        return
+      }
+
+      setOauthLoading(false)
+
+      if (!payload.success) {
+        setError(payload.message || AGENTPIT_DEFAULT_ERROR)
+        return
+      }
+
+      const loginPayload = payload.data
+      const user = loginPayload?.user
+      const token = loginPayload?.token
+
+      if (!user || !token) {
+        setError(AGENTPIT_DEFAULT_ERROR)
+        return
+      }
+
+      const loginSuccess = auth.login(user, token)
+      if (loginSuccess) {
+        setJustLoggedIn(true)
+      } else {
+        setError(copy.loginStateUpdateFailed)
+      }
+    }
+
+    const onMessage = (event) => {
+      if (event.origin !== window.location.origin) {
+        return
+      }
+      handleAgentpitResult(event.data)
+    }
+
+    const onStorage = (event) => {
+      if (event.key !== AGENTPIT_OAUTH_EVENT || !event.newValue) {
+        return
+      }
+
+      try {
+        handleAgentpitResult(JSON.parse(event.newValue))
+      } catch (storageError) {
+        logger.error('Failed to parse AgentPit OAuth storage payload', storageError)
+      }
+    }
+
+    window.addEventListener('message', onMessage)
+    window.addEventListener('storage', onStorage)
+
+    return () => {
+      window.removeEventListener('message', onMessage)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [auth, copy.loginStateUpdateFailed])
+
+  const handleAgentpitOauth = () => {
+    setError('')
+    setOauthLoading(true)
+
+    const width = 520
+    const height = 720
+    const left = window.screenX + (window.outerWidth - width) / 2
+    const top = window.screenY + (window.outerHeight - height) / 2
+    const popup = window.open(
+      '/api/auth/agentpit',
+      'agentpit-oauth',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    )
+
+    if (!popup) {
+      setOauthLoading(false)
+      setError(AGENTPIT_POPUP_ERROR)
+      return
+    }
+
+    popup.focus()
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -391,6 +480,20 @@ export default function LoginPage() {
                 <Sparkles size={18} />
                 <span>{isLogin ? copy.submitLogin : copy.submitRegister}</span>
               </Button>
+
+              {isLogin && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  loading={oauthLoading}
+                  className="w-full"
+                  size="lg"
+                  onClick={handleAgentpitOauth}
+                >
+                  <ShieldCheck size={18} />
+                  <span>{AGENTPIT_BUTTON_LABEL}</span>
+                </Button>
+              )}
             </form>
 
             <div className="relative my-6">
