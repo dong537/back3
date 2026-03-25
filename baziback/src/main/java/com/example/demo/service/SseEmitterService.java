@@ -10,64 +10,56 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 基于 WebFlux 的 SSE 连接管理服务
- */
 @Service
 @Slf4j
 public class SseEmitterService {
 
-    /**
-     * 每个用户一个多播 Sink
-     */
-    private final Map<Long, Sinks.Many<ServerSentEvent<Map<String, Object>>>> userSinks = new ConcurrentHashMap<>();
+    private final Map<Long, Map<String, Sinks.Many<ServerSentEvent<Map<String, Object>>>>> userSinks =
+            new ConcurrentHashMap<>();
 
-    /**
-     * 订阅用户 SSE 流
-     */
-    public Flux<ServerSentEvent<Map<String, Object>>> subscribe(Long userId) {
-        log.info("用户 {} 订阅SSE流，当前活跃连接数: {}", userId, userSinks.size());
-        
-        // 为每次订阅创建新的 Sink，旧的完成掉
+    public Flux<ServerSentEvent<Map<String, Object>>> subscribe(Long userId, String channel) {
+        String safeChannel = normalizeChannel(channel);
+        Map<String, Sinks.Many<ServerSentEvent<Map<String, Object>>>> channelSinks =
+                userSinks.computeIfAbsent(userId, key -> new ConcurrentHashMap<>());
+
+        log.info("user {} subscribed to SSE channel {}, active channel count={}", userId, safeChannel, channelSinks.size());
+
         Sinks.Many<ServerSentEvent<Map<String, Object>>> sink =
                 Sinks.many().multicast().onBackpressureBuffer();
 
-        Sinks.Many<ServerSentEvent<Map<String, Object>>> old = userSinks.put(userId, sink);
-        if (old != null) {
-            log.info("用户 {} 已有SSE连接，关闭旧连接", userId);
-            old.tryEmitComplete();
+        Sinks.Many<ServerSentEvent<Map<String, Object>>> oldSink = channelSinks.put(safeChannel, sink);
+        if (oldSink != null) {
+            log.info("closing previous SSE channel {} for user {}", safeChannel, userId);
+            oldSink.tryEmitComplete();
         }
 
-        // 发送一个初始化事件
         Map<String, Object> initData = new HashMap<>();
-        initData.put("message", "SSE连接已建立");
+        initData.put("message", "SSE connection established");
         initData.put("userId", userId);
-        
-        Sinks.EmitResult initResult = sink.tryEmitNext(ServerSentEvent.<Map<String, Object>>builder()
+        initData.put("channel", safeChannel);
+
+        sink.tryEmitNext(ServerSentEvent.<Map<String, Object>>builder()
                 .event("INIT")
                 .data(initData)
                 .build());
-        
-        if (initResult.isSuccess()) {
-            log.info("用户 {} SSE连接初始化成功", userId);
-        } else {
-            log.warn("用户 {} SSE连接初始化失败: {}", userId, initResult);
-        }
 
-        return sink.asFlux()
-                .doFinally(signalType -> {
-                    log.info("用户 {} SSE流结束，信号类型: {}，当前活跃连接数: {}", userId, signalType, userSinks.size() - 1);
+        return sink.asFlux().doFinally(signalType -> {
+            Map<String, Sinks.Many<ServerSentEvent<Map<String, Object>>>> current = userSinks.get(userId);
+            if (current != null) {
+                current.remove(safeChannel, sink);
+                if (current.isEmpty()) {
                     userSinks.remove(userId);
-                });
+                }
+            }
+            int remaining = current == null ? 0 : current.size();
+            log.info("SSE channel {} for user {} closed, signal={}, remaining channels={}", safeChannel, userId, signalType, remaining);
+        });
     }
 
-    /**
-     * 给指定用户发送事件
-     */
     public void sendToUser(Long userId, String eventName, Map<String, Object> data) {
-        Sinks.Many<ServerSentEvent<Map<String, Object>>> sink = userSinks.get(userId);
-        if (sink == null) {
-            log.warn("用户 {} 未建立SSE连接，无法发送事件 {}。当前活跃连接数: {}", userId, eventName, userSinks.size());
+        Map<String, Sinks.Many<ServerSentEvent<Map<String, Object>>>> channelSinks = userSinks.get(userId);
+        if (channelSinks == null || channelSinks.isEmpty()) {
+            log.warn("no active SSE connections for user {}, skipped event {}", userId, eventName);
             return;
         }
 
@@ -76,13 +68,18 @@ public class SseEmitterService {
                 .data(data)
                 .build();
 
-        Sinks.EmitResult result = sink.tryEmitNext(event);
-        if (result.isFailure()) {
-            log.warn("发送SSE事件 {} 给用户 {} 失败: {}", eventName, userId, result);
-        } else {
-            log.debug("成功发送SSE事件 {} 给用户 {}", eventName, userId);
+        channelSinks.forEach((channel, sink) -> {
+            Sinks.EmitResult result = sink.tryEmitNext(event);
+            if (result.isFailure()) {
+                log.warn("failed to emit SSE event {} to user {} channel {}: {}", eventName, userId, channel, result);
+            }
+        });
+    }
+
+    private String normalizeChannel(String channel) {
+        if (channel == null || channel.isBlank()) {
+            return "default";
         }
+        return channel.trim().toLowerCase();
     }
 }
-
-

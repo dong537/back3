@@ -4,6 +4,10 @@ import com.example.demo.entity.Achievement;
 import com.example.demo.entity.UserAchievement;
 import com.example.demo.mapper.AchievementMapper;
 import com.example.demo.mapper.CalculationRecordMapper;
+import com.example.demo.mapper.CreditMapper;
+import com.example.demo.mapper.DailyCheckinMapper;
+import com.example.demo.mapper.FavoriteMapper;
+import com.example.demo.mapper.ReferralMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -15,57 +19,87 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 成就服务
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AchievementService {
+
+    private static final Map<String, List<String>> ACHIEVEMENT_CODE_ALIASES = Map.ofEntries(
+            Map.entry("first_divination", List.of("first_divination")),
+            Map.entry("divination_10", List.of("divination_10", "divination_master")),
+            Map.entry("divination_master", List.of("divination_master", "divination_10")),
+            Map.entry("divination_50", List.of("divination_50", "divination_expert")),
+            Map.entry("divination_expert", List.of("divination_expert", "divination_50")),
+            Map.entry("divination_100", List.of("divination_100")),
+            Map.entry("collector", List.of("collector")),
+            Map.entry("collector_master", List.of("collector_master")),
+            Map.entry("inviter", List.of("inviter")),
+            Map.entry("inviter_master", List.of("inviter_master")),
+            Map.entry("checkin_week", List.of("checkin_week")),
+            Map.entry("checkin_month", List.of("checkin_month")),
+            Map.entry("points_rich", List.of("points_rich")),
+            Map.entry("points_millionaire", List.of("points_millionaire"))
+    );
 
     private final AchievementMapper achievementMapper;
     private final CreditService creditService;
     private final SseEmitterService sseEmitterService;
     private final CalculationRecordMapper calculationRecordMapper;
     private final AchievementCacheService achievementCacheService;
-    
-    /**
-     * 获取所有成就列表
-     */
+    private final DailyCheckinMapper dailyCheckinMapper;
+    private final FavoriteMapper favoriteMapper;
+    private final ReferralMapper referralMapper;
+    private final CreditMapper creditMapper;
+
     public List<Achievement> getAllAchievements() {
         return achievementMapper.findAllActive();
     }
-    
-    /**
-     * 获取用户已解锁的成就
-     */
+
     public List<AchievementMapper.UserAchievementWithInfo> getUserAchievements(Long userId) {
         return achievementMapper.findUserAchievements(userId);
     }
-    
-    /**
-     * 检查并解锁成就
-     */
+
     @Transactional
-    public void checkAndUnlockAchievement(Long userId, String achievementCode) {
+    public void reconcileAchievements(Long userId) {
         if (userId == null) {
             return;
         }
-        if (achievementCode == null || achievementCode.isEmpty()) {
+
+        int divinationCount = calculationRecordMapper.countByUserId(userId);
+        unlockByMilestones(
+                userId,
+                divinationCount,
+                new int[]{1, 10, 50, 100},
+                new String[]{"first_divination", "divination_10", "divination_50", "divination_100"}
+        );
+        checkFavoriteAchievements(userId);
+        checkInviteAchievements(userId);
+        checkCheckinAchievements(userId);
+        checkPointsAchievements(userId);
+    }
+
+    @Transactional
+    public void checkAndUnlockAchievement(Long userId, String achievementCode) {
+        if (userId == null || achievementCode == null || achievementCode.isEmpty()) {
             return;
         }
-        
-        // 查询成就信息
-        Achievement achievement = achievementMapper.findByCode(achievementCode);
+
+        Achievement achievement = resolveAchievement(achievementCode);
         if (achievement == null || achievement.getIsActive() == null || achievement.getIsActive() == 0) {
-            return; // 成就不存在或已禁用
+            log.debug("Skip unlocking missing achievement, requestedCode={}", achievementCode);
+            return;
         }
 
-        // 解锁成就（数据库唯一索引 uk_user_achievement(user_id, achievement_code) 保障幂等）
+        String resolvedAchievementCode = achievement.getAchievementCode();
+        if (!achievementCode.equals(resolvedAchievementCode)) {
+            log.info("Achievement code alias matched, requestedCode={}, resolvedCode={}",
+                    achievementCode, resolvedAchievementCode);
+        }
+
         UserAchievement userAchievement = UserAchievement.builder()
                 .userId(userId)
                 .achievementId(achievement.getId())
-                .achievementCode(achievementCode)
+                .achievementCode(resolvedAchievementCode)
                 .unlockedTime(LocalDateTime.now())
                 .pointsEarned(achievement.getPointsReward())
                 .build();
@@ -73,84 +107,158 @@ public class AchievementService {
         try {
             achievementMapper.insertUserAchievement(userAchievement);
         } catch (DuplicateKeyException e) {
-            // 并发/重复触发：已解锁则忽略
             return;
         }
 
-        // 发放积分奖励
-        creditService.addPoints(userId, achievement.getPointsReward(),
-                "解锁成就：" + achievement.getAchievementName(), null);
+        Integer pointsReward = achievement.getPointsReward();
+        if (pointsReward != null && pointsReward > 0) {
+            creditService.addPoints(
+                    userId,
+                    pointsReward,
+                    "解锁成就：" + achievement.getAchievementName(),
+                    null
+            );
+            if (!"points".equalsIgnoreCase(achievement.getAchievementType())) {
+                checkPointsAchievements(userId);
+            }
+        }
 
-        log.info("用户 {} 解锁成就：{}，获得 {} 积分", userId, achievement.getAchievementName(),
-                achievement.getPointsReward());
+        log.info("用户 {} 解锁成就：{}，获得 {} 积分",
+                userId, achievement.getAchievementName(), achievement.getPointsReward());
 
-        // 通过 SSE 通知前端有新的成就解锁
         Map<String, Object> eventData = new HashMap<>();
         eventData.put("type", "ACHIEVEMENT_UNLOCKED");
         eventData.put("userId", userId);
-        eventData.put("achievementCode", achievementCode);
+        eventData.put("achievementCode", resolvedAchievementCode);
         eventData.put("achievementName", achievement.getAchievementName());
+        eventData.put("achievementDescription", achievement.getAchievementDescription());
+        eventData.put("achievementType", achievement.getAchievementType());
         eventData.put("pointsReward", achievement.getPointsReward());
         eventData.put("unlockedTime", userAchievement.getUnlockedTime());
-
         sseEmitterService.sendToUser(userId, "achievement", eventData);
     }
-    
-    /**
-     * 检查占卜次数相关的成就
-     * 在用户完成占卜后调用，检查是否达到10次、50次等成就
-     * 使用缓存优化性能，批量检查成就
-     */
+
     @Transactional
     public void checkDivinationAchievements(Long userId) {
         if (userId == null) {
-            log.warn("checkDivinationAchievements: userId为null，跳过检查");
+            log.warn("checkDivinationAchievements skipped because userId is null");
             return;
         }
-        
+
         try {
-            // 先更新缓存（增加1次）
             achievementCacheService.incrementDivinationCount(userId);
-            
-            // 从缓存获取占卜次数（如果缓存不存在，会查询数据库）
+
             int actualCount = calculationRecordMapper.countByUserId(userId);
             int divinationCount = achievementCacheService.getDivinationCount(userId, actualCount);
-            
-            log.info("用户 {} 当前占卜次数: {} (缓存: {})", userId, actualCount, divinationCount);
-            
-            // 批量检查成就（按顺序检查，避免重复解锁）
-            // 使用数组存储需要检查的成就，提高可维护性
+
+            log.info("User {} divination count: {} (cache={})", userId, actualCount, divinationCount);
+
             int[] milestones = {1, 10, 50, 100};
             String[] achievementCodes = {"first_divination", "divination_10", "divination_50", "divination_100"};
-            
-            for (int i = 0; i < milestones.length; i++) {
-                if (divinationCount >= milestones[i]) {
-                    log.info("检查成就: {} (占卜次数: {})", achievementCodes[i], divinationCount);
-                    checkAndUnlockAchievement(userId, achievementCodes[i]);
-                }
-            }
+            unlockByMilestones(userId, divinationCount, milestones, achievementCodes);
         } catch (Exception e) {
             log.error("检查占卜成就失败, userId={}", userId, e);
-            // 清除缓存，确保下次查询最新数据
             achievementCacheService.clearCache(userId);
-            // 不抛出异常，避免影响占卜流程
         }
     }
-    
-    /**
-     * 获取用户成就统计
-     */
+
+    @Transactional
+    public void checkFavoriteAchievements(Long userId) {
+        if (userId == null) {
+            return;
+        }
+
+        Integer favoriteCount = favoriteMapper.countAllFavoritesByUserId(userId);
+        int totalFavorites = favoriteCount != null ? favoriteCount : 0;
+        log.info("User {} favorite count: {}", userId, totalFavorites);
+
+        int[] milestones = {5, 20};
+        String[] achievementCodes = {"collector", "collector_master"};
+        unlockByMilestones(userId, totalFavorites, milestones, achievementCodes);
+    }
+
+    @Transactional
+    public void checkInviteAchievements(Long userId) {
+        if (userId == null) {
+            return;
+        }
+
+        Integer inviteCount = referralMapper.countRegisteredInvites(userId);
+        int registeredInvites = inviteCount != null ? inviteCount : 0;
+        log.info("User {} registered invite count: {}", userId, registeredInvites);
+
+        int[] milestones = {3, 10};
+        String[] achievementCodes = {"inviter", "inviter_master"};
+        unlockByMilestones(userId, registeredInvites, milestones, achievementCodes);
+    }
+
+    @Transactional
+    public void checkCheckinAchievements(Long userId) {
+        if (userId == null) {
+            return;
+        }
+
+        Integer maxStreak = dailyCheckinMapper.findMaxStreak(userId);
+        int achievedStreak = maxStreak != null ? maxStreak : 0;
+        log.info("User {} max check-in streak: {}", userId, achievedStreak);
+
+        int[] milestones = {7, 30};
+        String[] achievementCodes = {"checkin_week", "checkin_month"};
+        unlockByMilestones(userId, achievedStreak, milestones, achievementCodes);
+    }
+
+    @Transactional
+    public void checkPointsAchievements(Long userId) {
+        if (userId == null) {
+            return;
+        }
+
+        Integer earnedPoints = creditMapper.sumEarnedPoints(userId);
+        int totalEarnedPoints = earnedPoints != null ? earnedPoints : 0;
+        log.info("User {} earned points total: {}", userId, totalEarnedPoints);
+
+        int[] milestones = {500, 2000};
+        String[] achievementCodes = {"points_rich", "points_millionaire"};
+        unlockByMilestones(userId, totalEarnedPoints, milestones, achievementCodes);
+    }
+
     public Map<String, Object> getUserAchievementStats(Long userId) {
-        List<AchievementMapper.UserAchievementWithInfo> userAchievements = 
+        List<AchievementMapper.UserAchievementWithInfo> userAchievements =
                 achievementMapper.findUserAchievements(userId);
         List<Achievement> allAchievements = achievementMapper.findAllActive();
-        
+
         Map<String, Object> stats = new HashMap<>();
         stats.put("unlocked", userAchievements.size());
         stats.put("total", allAchievements.size());
-        stats.put("progress", allAchievements.size() > 0 ? 
-                (userAchievements.size() * 100 / allAchievements.size()) : 0);
-        
+        stats.put("progress", allAchievements.isEmpty()
+                ? 0
+                : userAchievements.size() * 100 / allAchievements.size());
         return stats;
+    }
+
+    private void unlockByMilestones(Long userId,
+                                    int currentValue,
+                                    int[] milestones,
+                                    String[] achievementCodes) {
+        for (int index = 0; index < milestones.length; index++) {
+            if (currentValue >= milestones[index]) {
+                checkAndUnlockAchievement(userId, achievementCodes[index]);
+            }
+        }
+    }
+
+    private Achievement resolveAchievement(String achievementCode) {
+        List<String> candidateCodes = ACHIEVEMENT_CODE_ALIASES.getOrDefault(
+                achievementCode,
+                List.of(achievementCode)
+        );
+
+        for (String candidateCode : candidateCodes) {
+            Achievement achievement = achievementMapper.findByCode(candidateCode);
+            if (achievement != null) {
+                return achievement;
+            }
+        }
+        return null;
     }
 }

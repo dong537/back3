@@ -8,12 +8,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
-/**
- * 八字解释服务
- */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -21,16 +20,10 @@ public class BaziInterpretationService {
 
     private final BaziInterpretationMapper baziInterpretationMapper;
 
-    /**
-     * 根据十神类型和干支位置获取解释
-     */
     public BaziInterpretation getInterpretation(String godType, String ganzhiPosition) {
         return baziInterpretationMapper.findByGodTypeAndPosition(godType, ganzhiPosition);
     }
 
-    /**
-     * 批量获取解释（根据多个十神和位置组合）
-     */
     public List<BaziInterpretation> getInterpretations(List<Map<String, String>> requests) {
         List<BaziInterpretation> results = new ArrayList<>();
         for (Map<String, String> request : requests) {
@@ -46,108 +39,113 @@ public class BaziInterpretationService {
         return results;
     }
 
-    /**
-     * 根据八字数据提取十神信息并获取对应的解释
-     * @param baziData 八字数据（Map格式，包含详细各柱信息）
-     * @return 解释列表
-     */
     public List<Map<String, Object>> getInterpretationsFromBaziData(Map<String, Object> baziData) {
         List<Map<String, Object>> results = new ArrayList<>();
-        
-        if (baziData == null) {
+        if (baziData == null || baziData.isEmpty()) {
             return results;
         }
 
-        // 获取各柱信息
-        @SuppressWarnings("unchecked")
-        Map<String, Object> detailedPillars = (Map<String, Object>) baziData.get("详细各柱信息");
-        if (detailedPillars == null) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> fallbackPillars = (Map<String, Object>) baziData.get("八字各柱信息");
-            detailedPillars = fallbackPillars;
-        }
-        
-        if (detailedPillars == null) {
+        Map<String, Object> detailedPillars = resolveDetailedPillars(baziData);
+        if (detailedPillars.isEmpty()) {
             return results;
         }
 
-        // 日支十神
-        @SuppressWarnings("unchecked")
-        Map<String, Object> riZhu = (Map<String, Object>) detailedPillars.get("日");
-        if (riZhu != null) {
-            @SuppressWarnings("unchecked")
-            List<String> dizhiShiShen = (List<String>) riZhu.get("地支十神");
-            if (dizhiShiShen != null && !dizhiShiShen.isEmpty()) {
-                String mainShiShen = dizhiShiShen.get(0);
-                if (mainShiShen != null && !"日主".equals(mainShiShen)) {
-                    BaziInterpretation interpretation = getInterpretation(mainShiShen, "日支");
-                    if (interpretation != null) {
-                        results.add(buildInterpretationMap(interpretation, "日支", mainShiShen, "rizhi"));
-                    }
-                }
-            }
-        }
-
-        // 年干十神
-        @SuppressWarnings("unchecked")
-        Map<String, Object> nianZhu = (Map<String, Object>) detailedPillars.get("年");
-        if (nianZhu != null) {
-            String tianganShiShen = (String) nianZhu.get("天干十神");
-            if (tianganShiShen != null && !"日主".equals(tianganShiShen)) {
-                BaziInterpretation interpretation = getInterpretation(tianganShiShen, "年干");
-                if (interpretation != null) {
-                    results.add(buildInterpretationMap(interpretation, "年干", tianganShiShen, "niangan"));
-                }
-            }
-            
-            // 年支十神
-            @SuppressWarnings("unchecked")
-            List<String> dizhiShiShen = (List<String>) nianZhu.get("地支十神");
-            if (dizhiShiShen != null && !dizhiShiShen.isEmpty()) {
-                String mainShiShen = dizhiShiShen.get(0);
-                if (mainShiShen != null && !"日主".equals(mainShiShen)) {
-                    BaziInterpretation interpretation = getInterpretation(mainShiShen, "年支");
-                    if (interpretation != null) {
-                        results.add(buildInterpretationMap(interpretation, "年支", mainShiShen, "nianzhi"));
-                    }
-                }
-            }
-        }
-
-        // 月干十神
-        @SuppressWarnings("unchecked")
-        Map<String, Object> yueZhu = (Map<String, Object>) detailedPillars.get("月");
-        if (yueZhu != null) {
-            String tianganShiShen = (String) yueZhu.get("天干十神");
-            if (tianganShiShen != null && !"日主".equals(tianganShiShen)) {
-                BaziInterpretation interpretation = getInterpretation(tianganShiShen, "月干");
-                if (interpretation != null) {
-                    results.add(buildInterpretationMap(interpretation, "月干", tianganShiShen, "yuegan"));
-                }
-            }
-        }
-
-        // 时干十神
-        @SuppressWarnings("unchecked")
-        Map<String, Object> shiZhu = (Map<String, Object>) detailedPillars.get("时");
-        if (shiZhu != null) {
-            String tianganShiShen = (String) shiZhu.get("天干十神");
-            if (tianganShiShen != null && !"日主".equals(tianganShiShen)) {
-                BaziInterpretation interpretation = getInterpretation(tianganShiShen, "时干");
-                if (interpretation != null) {
-                    results.add(buildInterpretationMap(interpretation, "时干", tianganShiShen, "shigan"));
-                }
-            }
-        }
+        addRiZhiInterpretation(results, detailedPillars);
+        addGanZhiInterpretation(results, detailedPillars, "year", "年干", "年支", "niangan", "nianzhi");
+        addGanOnlyInterpretation(results, detailedPillars, "month", "月干", "yuegan");
+        addGanOnlyInterpretation(results, detailedPillars, "hour", "时干", "shigan");
 
         return results;
     }
 
-    /**
-     * 构建解释Map（用于前端显示）
-     */
     public Map<String, Object> buildInterpretationDetailMap(BaziInterpretation interpretation) {
-        return buildInterpretationMap(interpretation, interpretation.getGanzhiPosition(), interpretation.getGodType(), String.valueOf(interpretation.getId()));
+        return buildInterpretationMap(
+                interpretation,
+                interpretation.getGanzhiPosition(),
+                interpretation.getGodType(),
+                String.valueOf(interpretation.getId())
+        );
+    }
+
+    private void addRiZhiInterpretation(List<Map<String, Object>> results, Map<String, Object> pillars) {
+        Map<String, Object> dayPillar = asMap(pillars.get("day"));
+        if (dayPillar.isEmpty()) {
+            dayPillar = asMap(pillars.get("日"));
+        }
+
+        List<String> diZhiShiShen = asStringList(firstNonNull(dayPillar.get("diZhiShiShen"), dayPillar.get("地支十神")));
+        if (diZhiShiShen.isEmpty()) {
+            return;
+        }
+
+        String mainShiShen = diZhiShiShen.get(0);
+        if (mainShiShen == null || "日主".equals(mainShiShen)) {
+            return;
+        }
+
+        BaziInterpretation interpretation = getInterpretation(mainShiShen, "日支");
+        if (interpretation != null) {
+            results.add(buildInterpretationMap(interpretation, "日支", mainShiShen, "rizhi"));
+        }
+    }
+
+    private void addGanZhiInterpretation(List<Map<String, Object>> results,
+                                         Map<String, Object> pillars,
+                                         String pillarKey,
+                                         String ganPosition,
+                                         String zhiPosition,
+                                         String ganId,
+                                         String zhiId) {
+        Map<String, Object> pillar = asMap(pillars.get(pillarKey));
+        if (pillar.isEmpty()) {
+            pillar = asMap(pillars.get(mapLegacyPillarKey(pillarKey)));
+        }
+        if (pillar.isEmpty()) {
+            return;
+        }
+
+        String ganShiShen = asString(firstNonNull(pillar.get("tianGanShiShen"), pillar.get("天干十神")));
+        if (ganShiShen != null && !"日主".equals(ganShiShen)) {
+            BaziInterpretation interpretation = getInterpretation(ganShiShen, ganPosition);
+            if (interpretation != null) {
+                results.add(buildInterpretationMap(interpretation, ganPosition, ganShiShen, ganId));
+            }
+        }
+
+        List<String> diZhiShiShen = asStringList(firstNonNull(pillar.get("diZhiShiShen"), pillar.get("地支十神")));
+        if (!diZhiShiShen.isEmpty()) {
+            String mainShiShen = diZhiShiShen.get(0);
+            if (mainShiShen != null && !"日主".equals(mainShiShen)) {
+                BaziInterpretation interpretation = getInterpretation(mainShiShen, zhiPosition);
+                if (interpretation != null) {
+                    results.add(buildInterpretationMap(interpretation, zhiPosition, mainShiShen, zhiId));
+                }
+            }
+        }
+    }
+
+    private void addGanOnlyInterpretation(List<Map<String, Object>> results,
+                                          Map<String, Object> pillars,
+                                          String pillarKey,
+                                          String ganPosition,
+                                          String ganId) {
+        Map<String, Object> pillar = asMap(pillars.get(pillarKey));
+        if (pillar.isEmpty()) {
+            pillar = asMap(pillars.get(mapLegacyPillarKey(pillarKey)));
+        }
+        if (pillar.isEmpty()) {
+            return;
+        }
+
+        String ganShiShen = asString(firstNonNull(pillar.get("tianGanShiShen"), pillar.get("天干十神")));
+        if (ganShiShen == null || "日主".equals(ganShiShen)) {
+            return;
+        }
+
+        BaziInterpretation interpretation = getInterpretation(ganShiShen, ganPosition);
+        if (interpretation != null) {
+            results.add(buildInterpretationMap(interpretation, ganPosition, ganShiShen, ganId));
+        }
     }
 
     private Map<String, Object> buildInterpretationMap(BaziInterpretation interpretation,
@@ -168,34 +166,23 @@ public class BaziInterpretationService {
         result.put("helpCount", interpretation.getHelpCount() != null ? interpretation.getHelpCount() : 0);
         result.put("unhelpCount", interpretation.getUnhelpCount() != null ? interpretation.getUnhelpCount() : 0);
         result.put("commentCount", interpretation.getCommentCount() != null ? interpretation.getCommentCount() : 0);
-
-        // 新增详细字段
         result.put("loveAdvice", interpretation.getLoveAdvice());
         result.put("careerAdvice", interpretation.getCareerAdvice());
         result.put("wealthAdvice", interpretation.getWealthAdvice());
         result.put("healthAdvice", interpretation.getHealthAdvice());
         result.put("suggestions", interpretation.getSuggestions());
         result.put("avoidances", interpretation.getAvoidances());
-
-        // 评分数据 - 如果数据库没有则根据十神类型生成默认值
         result.put("overallScore", interpretation.getOverallScore() != null ? interpretation.getOverallScore() : generateDefaultScore(shiShen, "overall"));
         result.put("loveScore", interpretation.getLoveScore() != null ? interpretation.getLoveScore() : generateDefaultScore(shiShen, "love"));
         result.put("careerScore", interpretation.getCareerScore() != null ? interpretation.getCareerScore() : generateDefaultScore(shiShen, "career"));
         result.put("wealthScore", interpretation.getWealthScore() != null ? interpretation.getWealthScore() : generateDefaultScore(shiShen, "wealth"));
         result.put("healthScore", interpretation.getHealthScore() != null ? interpretation.getHealthScore() : generateDefaultScore(shiShen, "health"));
         result.put("socialScore", interpretation.getSocialScore() != null ? interpretation.getSocialScore() : generateDefaultScore(shiShen, "social"));
-
         return result;
     }
-    
-    /**
-     * 根据十神类型生成默认评分
-     */
+
     private int generateDefaultScore(String shiShen, String aspect) {
-        // 基础分数
         int baseScore = 70;
-        
-        // 根据十神类型调整
         switch (shiShen) {
             case "正财":
                 if ("wealth".equals(aspect)) return 85;
@@ -241,9 +228,69 @@ public class BaziInterpretationService {
                 if ("career".equals(aspect)) return 78;
                 if ("love".equals(aspect)) return 68;
                 break;
+            default:
+                break;
         }
-        
-        // 添加随机波动
-        return baseScore + (int)(Math.random() * 15);
+        return baseScore + (int) (Math.random() * 15);
+    }
+
+    private Map<String, Object> resolveDetailedPillars(Map<String, Object> baziData) {
+        Map<String, Object> pillarDetails = asMap(baziData.get("pillarDetails"));
+        if (!pillarDetails.isEmpty()) {
+            return pillarDetails;
+        }
+
+        Map<String, Object> pillars = asMap(baziData.get("pillars"));
+        if (!pillars.isEmpty()) {
+            return pillars;
+        }
+
+        Map<String, Object> legacyDetails = asMap(baziData.get("详细各柱信息"));
+        if (!legacyDetails.isEmpty()) {
+            return legacyDetails;
+        }
+
+        return asMap(baziData.get("八字各柱信息"));
+    }
+
+    private String mapLegacyPillarKey(String key) {
+        return switch (key) {
+            case "year" -> "年";
+            case "month" -> "月";
+            case "day" -> "日";
+            case "hour" -> "时";
+            default -> key;
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> asMap(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            map.forEach((key, item) -> result.put(Objects.toString(key, ""), item));
+            return result;
+        }
+        return new LinkedHashMap<>();
+    }
+
+    private List<String> asStringList(Object value) {
+        if (value instanceof List<?> list) {
+            List<String> result = new ArrayList<>();
+            for (Object item : list) {
+                if (item != null) {
+                    result.add(item.toString());
+                }
+            }
+            return result;
+        }
+        return new ArrayList<>();
+    }
+
+    private String asString(Object value) {
+        return value == null ? null : value.toString();
+    }
+
+    private Object firstNonNull(Object first, Object second) {
+        return first != null ? first : second;
     }
 }

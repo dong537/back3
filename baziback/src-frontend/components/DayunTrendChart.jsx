@@ -1,296 +1,387 @@
-import { useState, useMemo } from 'react'
-import { TrendingUp, TrendingDown, Minus, Calendar, Info } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Calendar, Info, Minus, TrendingDown, TrendingUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { resolvePageLocale, safeText } from '../utils/displayText'
 
-/**
- * 大运走势图组件 - 优化版，更清晰明了
- */
+const DAYUN_COPY = {
+  'zh-CN': {
+    noData: '暂无大运数据',
+    scoreHint: '综合运势评分采用 0-100 分，分数越高表示阶段越顺。',
+    excellent: '极佳',
+    good: '良好',
+    stable: '平稳',
+    mixed: '起伏',
+    caution: '留意',
+    age: '岁',
+    majorLuck: '大运',
+    stemBranch: '干支',
+    naYin: '纳音',
+    wealth: '财运',
+    career: '事业',
+    love: '感情',
+    health: '健康',
+    rising: '运势上升',
+    falling: '运势下降',
+    flat: '运势平稳',
+    clickHint: '点击柱状卡片可查看更细的说明',
+  },
+  'en-US': {
+    noData: 'No major-luck data available',
+    scoreHint:
+      'Overall fortune is scored from 0 to 100. Higher scores indicate smoother momentum.',
+    excellent: 'Excellent',
+    good: 'Good',
+    stable: 'Stable',
+    mixed: 'Mixed',
+    caution: 'Caution',
+    age: 'yrs',
+    majorLuck: 'Major Luck',
+    stemBranch: 'Stem-Branch',
+    naYin: 'Na Yin',
+    wealth: 'Wealth',
+    career: 'Career',
+    love: 'Love',
+    health: 'Health',
+    rising: 'Trending up',
+    falling: 'Trending down',
+    flat: 'Stable',
+    clickHint: 'Click a bar card to inspect more detail',
+  },
+}
+
+function parseDayunItem(item, index) {
+  const wealth = Number(item.wealth)
+  const career = Number(item.career)
+  const love = Number(item.love)
+  const health = Number(item.health)
+  const hasAllMetrics = [wealth, career, love, health].every(
+    (value) => !Number.isNaN(value)
+  )
+
+  let overallScore = 50
+  if (hasAllMetrics) {
+    overallScore = Math.round((wealth + career + love + health) / 4)
+  } else {
+    const ganZhi = safeText(item['干支'] || item['大运'])
+    const hash = ganZhi
+      .split('')
+      .reduce((sum, char) => sum + char.charCodeAt(0), 0)
+    overallScore = 50 + (hash % 30)
+  }
+
+  return {
+    ...item,
+    index,
+    overallScore,
+    wealth: Number.isNaN(wealth) ? 0 : wealth,
+    career: Number.isNaN(career) ? 0 : career,
+    love: Number.isNaN(love) ? 0 : love,
+    health: Number.isNaN(health) ? 0 : health,
+    startAge: item['起始年龄'] || index * 10 + 1,
+    endAge: item['结束年龄'] || (index + 1) * 10,
+    ganZhi: safeText(item['干支'] || item['大运']),
+    naYin: safeText(item['纳音']),
+    yearRange: safeText(item['年份范围'] || item['开始']),
+    desc: safeText(item.desc || item.description),
+  }
+}
+
 export default function DayunTrendChart({ data, onNodeClick }) {
-  const { t } = useTranslation()
+  const { i18n } = useTranslation()
+  const locale = resolvePageLocale(i18n.language)
+  const copy = DAYUN_COPY[locale]
   const [hoveredIndex, setHoveredIndex] = useState(null)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
-  // 计算综合运势分数
   const chartData = useMemo(() => {
-    if (!data || data.length === 0) return []
-    
-    return data.map((yun, index) => {
-      // 如果有运势数据，使用它；否则基于干支计算
-      let overallScore = 50
-      if (yun.wealth !== undefined && yun.career !== undefined && yun.love !== undefined && yun.health !== undefined) {
-        overallScore = Math.round((yun.wealth + yun.career + yun.love + yun.health) / 4)
-      } else {
-        // 基于干支的简单哈希计算
-        const ganZhi = yun.干支 || yun.大运 || ''
-        const hash = ganZhi.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-        overallScore = 50 + (hash % 30)
-      }
-
-      return {
-        ...yun,
-        index,
-        overallScore,
-        startAge: yun.起始年龄 || (index * 10 + 1),
-        endAge: yun.结束年龄 || ((index + 1) * 10),
-        ganZhi: yun.干支 || yun.大运 || '',
-        naYin: yun.纳音 || '',
-        yearRange: yun.年份范围 || yun.开始 || ''
-      }
-    })
+    if (!Array.isArray(data) || data.length === 0) return []
+    return data.map(parseDayunItem)
   }, [data])
 
-  if (!chartData || chartData.length === 0) {
+  const getTrendIcon = (current, previous) => {
+    if (previous === undefined) {
+      return <Minus className="h-4 w-4 text-[#8f7b66]" />
+    }
+    if (current > previous) {
+      return <TrendingUp className="h-4 w-4 text-[#dcb86f]" />
+    }
+    if (current < previous) {
+      return <TrendingDown className="h-4 w-4 text-[#e19a84]" />
+    }
+    return <Minus className="h-4 w-4 text-[#8f7b66]" />
+  }
+
+  const getFortuneLevel = (score) => {
+    if (score >= 80) {
+      return {
+        label: copy.excellent,
+        color: 'text-[#f0d9a5]',
+        bg: 'bg-[#6a4a1e]/18',
+        border: 'border-[#d0a85b]/26',
+      }
+    }
+    if (score >= 65) {
+      return {
+        label: copy.good,
+        color: 'text-[#dcb86f]',
+        bg: 'bg-[#8f5c1f]/16',
+        border: 'border-[#b88a3d]/26',
+      }
+    }
+    if (score >= 50) {
+      return {
+        label: copy.stable,
+        color: 'text-[#bdaa94]',
+        bg: 'bg-white/[0.04]',
+        border: 'border-white/10',
+      }
+    }
+    if (score >= 35) {
+      return {
+        label: copy.mixed,
+        color: 'text-[#e19a84]',
+        bg: 'bg-[#7a3218]/14',
+        border: 'border-[#a34224]/24',
+      }
+    }
+    return {
+      label: copy.caution,
+      color: 'text-[#e19a84]',
+      bg: 'bg-[#5a2318]/16',
+      border: 'border-[#9a4e34]/26',
+    }
+  }
+
+  if (chartData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
+      <div className="panel-soft flex h-64 items-center justify-center rounded-[28px] text-[#8f7b66]">
         <div className="text-center">
-          <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p>暂无大运数据</p>
+          <Calendar className="mx-auto mb-2 h-12 w-12 opacity-50" />
+          <p>{copy.noData}</p>
         </div>
       </div>
     )
   }
 
-  const maxScore = Math.max(...chartData.map(d => d.overallScore), 100)
-  const minScore = Math.min(...chartData.map(d => d.overallScore), 0)
+  const maxScore = Math.max(...chartData.map((item) => item.overallScore), 100)
+  const minScore = Math.min(...chartData.map((item) => item.overallScore), 0)
   const scoreRange = maxScore - minScore || 1
-
-  // 获取趋势图标
-  const getTrendIcon = (current, prev) => {
-    if (prev === undefined) return <Minus className="w-4 h-4" />
-    if (current > prev) return <TrendingUp className="w-4 h-4 text-green-400" />
-    if (current < prev) return <TrendingDown className="w-4 h-4 text-red-400" />
-    return <Minus className="w-4 h-4 text-gray-400" />
-  }
-
-  // 获取运势等级
-  const getFortuneLevel = (score) => {
-    if (score >= 80) return { label: '极佳', color: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/50' }
-    if (score >= 65) return { label: '良好', color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/50' }
-    if (score >= 50) return { label: '平稳', color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/50' }
-    if (score >= 35) return { label: '一般', color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500/50' }
-    return { label: '需注意', color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/50' }
-  }
 
   return (
     <div className="space-y-6">
-      {/* 图表说明 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2 text-sm text-gray-400">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center space-x-2 text-sm text-[#8f7b66]">
           <Info size={16} />
-          <span>综合运势评分：0-100分，分数越高运势越好</span>
+          <span>{copy.scoreHint}</span>
         </div>
-        <div className="flex items-center space-x-4 text-xs text-gray-500">
-          <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 rounded bg-green-500/50"></div>
-            <span>极佳(80+)</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 rounded bg-blue-500/50"></div>
-            <span>良好(65-79)</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 rounded bg-yellow-500/50"></div>
-            <span>平稳(50-64)</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-4 text-xs text-[#8f7b66]">
+          <LegendDot color="bg-[#d0a85b]/60" label={`${copy.excellent} (80+)`} />
+          <LegendDot color="bg-[#b88a3d]/60" label={`${copy.good} (65-79)`} />
+          <LegendDot color="bg-white/20" label={`${copy.stable} (50-64)`} />
         </div>
       </div>
 
-      {/* 主图表区域 */}
       <div className="relative">
-        {/* 背景网格 */}
         <div className="absolute inset-0 flex flex-col justify-between py-8">
           {[0, 25, 50, 75, 100].map((line) => (
-            <div key={line} className="border-t border-white/5">
-              <span className="absolute left-0 text-xs text-gray-600 -mt-2">{line}</span>
+            <div key={line} className="border-t border-white/[0.05]">
+              <span className="absolute left-0 -mt-2 text-xs text-[#6f6257]">
+                {line}
+              </span>
             </div>
           ))}
         </div>
 
-        {/* 数据点连线 */}
-        <div className="relative h-64 flex items-end justify-between px-4 pb-8">
+        <div className="relative flex h-64 items-end justify-between px-4 pb-8">
           {chartData.map((item, index) => {
-            const prevScore = index > 0 ? chartData[index - 1].overallScore : undefined
-            const nextScore = index < chartData.length - 1 ? chartData[index + 1].overallScore : undefined
+            const previousScore =
+              index > 0 ? chartData[index - 1].overallScore : undefined
             const height = ((item.overallScore - minScore) / scoreRange) * 100
             const level = getFortuneLevel(item.overallScore)
             const isHovered = hoveredIndex === index
 
             return (
               <div
-                key={index}
-                className="flex-1 flex flex-col items-center justify-end relative group cursor-pointer"
-                onMouseEnter={(e) => {
+                key={`${item.ganZhi || index}-${index}`}
+                className="group relative flex flex-1 cursor-pointer flex-col items-center justify-end"
+                onMouseEnter={(event) => {
                   setHoveredIndex(index)
-                  const rect = e.currentTarget.getBoundingClientRect()
+                  const rect = event.currentTarget.getBoundingClientRect()
                   setMousePosition({
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top,
                   })
                 }}
-                onMouseMove={(e) => {
-                  if (hoveredIndex === index) {
-                    const rect = e.currentTarget.getBoundingClientRect()
-                    setMousePosition({
-                      x: e.clientX - rect.left,
-                      y: e.clientY - rect.top
-                    })
-                  }
+                onMouseMove={(event) => {
+                  if (hoveredIndex !== index) return
+                  const rect = event.currentTarget.getBoundingClientRect()
+                  setMousePosition({
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top,
+                  })
                 }}
-                onMouseLeave={() => {
-                  setHoveredIndex(null)
-                }}
+                onMouseLeave={() => setHoveredIndex(null)}
                 onClick={() => onNodeClick?.(item)}
               >
-                {/* 连接线 */}
-                {index < chartData.length - 1 && (
+                {index < chartData.length - 1 ? (
                   <div
-                    className="absolute top-1/2 left-1/2 w-full h-0.5 z-0 opacity-30"
+                    className="absolute left-1/2 top-1/2 z-0 h-0.5 w-full opacity-40"
                     style={{
-                      background: `linear-gradient(to right, rgba(34, 197, 94, 0.5), rgba(59, 130, 246, 0.5))`,
-                      transform: 'translateY(-50%)'
+                      background:
+                        'linear-gradient(to right, rgba(163,66,36,0.38), rgba(208,168,91,0.42))',
+                      transform: 'translateY(-50%)',
                     }}
                   />
-                )}
+                ) : null}
 
-                  {/* 数据柱 */}
-                  <div className="relative w-full flex flex-col items-center z-10">
-                    {/* 柱状图 */}
-                    <div
-                      className={`w-12 rounded-t-lg transition-all duration-300 ${
-                        isHovered ? 'w-16 shadow-lg' : ''
-                      } ${level.bg} ${level.border} border-2`}
-                      style={{
-                        height: `${Math.max(height, 5)}%`,
-                        minHeight: '20px'
-                      }}
-                    >
-                    </div>
+                <div className="relative z-10 flex w-full flex-col items-center">
+                  <div
+                    className={`w-12 rounded-t-[18px] border transition-all duration-300 ${
+                      isHovered ? 'w-16 shadow-[0_16px_32px_rgba(0,0,0,0.22)]' : ''
+                    } ${level.bg} ${level.border}`}
+                    style={{
+                      height: `${Math.max(height, 5)}%`,
+                      minHeight: '20px',
+                    }}
+                  />
 
-                  {/* 底部信息卡片 */}
                   <div
                     className={`mt-2 w-full text-center transition-all duration-300 ${
-                      isHovered ? 'scale-110' : ''
+                      isHovered ? 'scale-105' : ''
                     }`}
                   >
-                    {/* 年龄范围 */}
-                    <div className="text-xs font-medium text-white mb-1">
-                      {item.startAge}-{item.endAge}岁
+                    <div className="mb-1 text-xs font-medium text-[#f4ece1]">
+                      {item.startAge}-{item.endAge}
+                      {copy.age}
                     </div>
-                    
-                    {/* 干支 */}
-                    <div className="text-sm font-bold text-white mb-1">
-                      {item.ganZhi}
+                    <div className="mb-1 text-sm font-bold text-[#f4ece1]">
+                      {item.ganZhi || '-'}
                     </div>
-
-                    {/* 纳音 */}
-                    {item.naYin && (
-                      <div className="text-xs text-gray-400 mb-1">
+                    {item.naYin ? (
+                      <div className="mb-1 text-xs text-[#8f7b66]">
                         {item.naYin}
                       </div>
-                    )}
-
-                    {/* 年份范围 */}
-                    {item.yearRange && (
-                      <div className="text-xs text-gray-500">
-                        {item.yearRange}
-                      </div>
-                    )}
-
-                    {/* 趋势图标 */}
-                    {prevScore !== undefined && (
+                    ) : null}
+                    {item.yearRange ? (
+                      <div className="text-xs text-[#6f6257]">{item.yearRange}</div>
+                    ) : null}
+                    {previousScore !== undefined ? (
                       <div className="mt-1 flex justify-center">
-                        {getTrendIcon(item.overallScore, prevScore)}
+                        {getTrendIcon(item.overallScore, previousScore)}
                       </div>
-                    )}
-
-                    {/* 运势等级标签 */}
-                    <div className={`mt-1 inline-block px-2 py-0.5 rounded text-xs ${level.bg} ${level.color} border ${level.border}`}>
+                    ) : null}
+                    <div
+                      className={`mt-1 inline-block rounded-full border px-2 py-0.5 text-xs ${level.bg} ${level.color} ${level.border}`}
+                    >
                       {level.label}
                     </div>
                   </div>
                 </div>
 
-                {/* 悬停详情卡片 */}
-                {isHovered && (
-                  <div 
-                    className="absolute z-50 pointer-events-none"
+                {isHovered ? (
+                  <div
+                    className="pointer-events-none absolute z-50"
                     style={{
                       left: `${mousePosition.x}px`,
                       top: `${mousePosition.y - 10}px`,
-                      transform: 'translate(-50%, -100%)'
+                      transform: 'translate(-50%, -100%)',
                     }}
                   >
-                    <div className="glass rounded-lg p-3 shadow-xl border border-white/20 min-w-[200px]">
-                      <div className="text-sm font-bold text-white mb-2 text-center">
-                        {item.startAge}-{item.endAge}岁大运
+                    <div className="glass min-w-[240px] rounded-[22px] border border-white/10 p-3 shadow-xl">
+                      <div className="mb-2 text-center text-sm font-bold text-[#f4ece1]">
+                        {item.startAge}-{item.endAge}
+                        {copy.age} {copy.majorLuck}
                       </div>
-                      
+
                       <div className="space-y-1 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400">干支：</span>
-                          <span className="text-white font-medium">{item.ganZhi}</span>
-                        </div>
-                        {item.naYin && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-400">纳音：</span>
-                            <span className="text-white">{item.naYin}</span>
-                          </div>
-                        )}
-                        {item.wealth !== undefined && (
+                        <TooltipRow
+                          label={copy.stemBranch}
+                          value={item.ganZhi}
+                          valueClassName="text-[#f4ece1]"
+                        />
+                        {item.naYin ? (
+                          <TooltipRow
+                            label={copy.naYin}
+                            value={item.naYin}
+                            valueClassName="text-[#e4d6c8]"
+                          />
+                        ) : null}
+                        {(item.wealth || item.career || item.love || item.health) ? (
                           <>
-                            <div className="border-t border-white/10 my-1"></div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-400">财运：</span>
-                              <span className="text-yellow-400">{item.wealth || 0}%</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-400">事业：</span>
-                              <span className="text-blue-400">{item.career || 0}%</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-400">感情：</span>
-                              <span className="text-red-400">{item.love || 0}%</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-400">健康：</span>
-                              <span className="text-green-400">{item.health || 0}%</span>
+                            <div className="my-1 border-t border-white/10" />
+                            <TooltipRow
+                              label={copy.wealth}
+                              value={`${item.wealth || 0}%`}
+                              valueClassName="text-[#f0d9a5]"
+                            />
+                            <TooltipRow
+                              label={copy.career}
+                              value={`${item.career || 0}%`}
+                              valueClassName="text-[#dcb86f]"
+                            />
+                            <TooltipRow
+                              label={copy.love}
+                              value={`${item.love || 0}%`}
+                              valueClassName="text-[#e19a84]"
+                            />
+                            <TooltipRow
+                              label={copy.health}
+                              value={`${item.health || 0}%`}
+                              valueClassName="text-[#bdaa94]"
+                            />
+                          </>
+                        ) : null}
+                        {item.desc ? (
+                          <>
+                            <div className="my-1 border-t border-white/10" />
+                            <div className="text-xs leading-6 text-[#bdaa94]">
+                              {item.desc}
                             </div>
                           </>
-                        )}
-                        {item.desc && (
-                          <>
-                            <div className="border-t border-white/10 my-1"></div>
-                            <div className="text-gray-300 text-xs">{item.desc}</div>
-                          </>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </div>
-                )}
+                ) : null}
               </div>
             )
           })}
         </div>
       </div>
 
-      {/* 图例说明 */}
-      <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-gray-400 pt-4 border-t border-white/10">
+      <div className="flex flex-wrap items-center justify-center gap-4 border-t border-white/10 pt-4 text-xs text-[#8f7b66]">
         <div className="flex items-center space-x-1">
-          <TrendingUp className="w-3 h-3 text-green-400" />
-          <span>运势上升</span>
-        </div>
-        <div className="flex items-center space-x-1">
-          <TrendingDown className="w-3 h-3 text-red-400" />
-          <span>运势下降</span>
+          <TrendingUp className="h-3 w-3 text-[#dcb86f]" />
+          <span>{copy.rising}</span>
         </div>
         <div className="flex items-center space-x-1">
-          <Minus className="w-3 h-3 text-gray-400" />
-          <span>运势平稳</span>
+          <TrendingDown className="h-3 w-3 text-[#e19a84]" />
+          <span>{copy.falling}</span>
         </div>
-        <div className="text-gray-500 ml-4">
-          点击柱状图可查看详细解读
+        <div className="flex items-center space-x-1">
+          <Minus className="h-3 w-3 text-[#8f7b66]" />
+          <span>{copy.flat}</span>
         </div>
+        <div className="ml-4 text-[#6f6257]">{copy.clickHint}</div>
       </div>
+    </div>
+  )
+}
+
+function LegendDot({ color, label }) {
+  return (
+    <div className="flex items-center space-x-1">
+      <div className={`h-3 w-3 rounded ${color}`} />
+      <span>{label}</span>
+    </div>
+  )
+}
+
+function TooltipRow({ label, value, valueClassName }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-[#8f7b66]">{label}</span>
+      <span className={valueClassName}>{value}</span>
     </div>
   )
 }

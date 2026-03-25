@@ -7,6 +7,7 @@ import com.example.demo.mapper.UserFeatureUnlockMapper;
 import com.example.demo.mapper.UserVipMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,9 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class CreditExchangeService {
+
+    @Value("${app.free-features:false}")
+    private boolean freeFeatures;
     
     private final CreditMapper creditMapper;
     private final CreditService creditService;
@@ -32,7 +36,12 @@ public class CreditExchangeService {
      * 获取所有可兑换商品
      */
     public List<ExchangeProduct> getAvailableProducts() {
-        return creditMapper.findAllActiveProducts();
+        List<ExchangeProduct> products = creditMapper.findAllActiveProducts();
+        if (!freeFeatures) {
+            return products;
+        }
+        products.forEach(product -> product.setPointsCost(0));
+        return products;
     }
     
     /**
@@ -63,11 +72,13 @@ public class CreditExchangeService {
         }
         
         // 2. 检查用户积分
-        Integer currentPoints = creditService.getCurrentPoints(userId);
-        if (currentPoints < product.getPointsCost()) {
-            result.put("success", false);
-            result.put("message", "积分不足");
-            return result;
+        if (!freeFeatures) {
+            Integer currentPoints = creditService.getCurrentPoints(userId);
+            if (currentPoints < product.getPointsCost()) {
+                result.put("success", false);
+                result.put("message", "积分不足");
+                return result;
+            }
         }
         
         // 3. 检查兑换限制
@@ -86,12 +97,14 @@ public class CreditExchangeService {
         }
         
         // 4. 扣除积分
-        boolean deducted = creditService.deductPoints(userId, product.getPointsCost(), 
-                "兑换商品：" + product.getProductName());
-        if (!deducted) {
-            result.put("success", false);
-            result.put("message", "积分扣除失败");
-            return result;
+        if (!freeFeatures) {
+            boolean deducted = creditService.deductPoints(userId, product.getPointsCost(),
+                    "兑换商品：" + product.getProductName());
+            if (!deducted) {
+                result.put("success", false);
+                result.put("message", "积分扣除失败");
+                return result;
+            }
         }
         
         // 5. 创建兑换记录
@@ -106,7 +119,7 @@ public class CreditExchangeService {
                 .productId(product.getId())
                 .productCode(productCode)
                 .productName(product.getProductName())
-                .pointsCost(product.getPointsCost())
+                .pointsCost(freeFeatures ? 0 : product.getPointsCost())
                 .productValue(product.getProductValue())
                 .status(1) // 已发放
                 .expireTime(expireTime)
@@ -118,7 +131,7 @@ public class CreditExchangeService {
         distributeProduct(userId, product, record);
         
         result.put("success", true);
-        result.put("message", "兑换成功");
+        result.put("message", freeFeatures ? "兑换成功（免积分模式）" : "兑换成功");
         result.put("record", record);
         return result;
     }

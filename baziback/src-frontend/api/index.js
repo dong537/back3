@@ -2,8 +2,10 @@ import axios from 'axios'
 import { toast } from '../components/Toast'
 import { logger } from '../utils/logger'
 import { emitLogout } from '../utils/authEvents'
+import { clearStoredAuth, getStoredToken } from '../utils/authStorage'
 
 const API_BASE = '/api'
+const LANGUAGE_STORAGE_KEY = 'lang'
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -12,6 +14,23 @@ const api = axios.create({
   }
 })
 
+function getCurrentLanguage() {
+  try {
+    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY)
+    if (stored) return stored
+  } catch {}
+
+  if (typeof document !== 'undefined' && document.documentElement?.lang) {
+    return document.documentElement.lang
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.language) {
+    return navigator.language
+  }
+
+  return 'zh-CN'
+}
+
 // 请求拦截器，自动添加token
 api.interceptors.request.use(
   (config) => {
@@ -19,6 +38,11 @@ api.interceptors.request.use(
     const token = sessionStorage.getItem('token')
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`
+    }
+    const language = getCurrentLanguage()
+    if (language) {
+      config.headers['X-Language'] = language
+      config.headers['Accept-Language'] = language
     }
     return config
   },
@@ -128,6 +152,8 @@ export const yijingApi = {
   getMethods: () => api.get('/standalone/yijing/methods'),
 
   aiInterpret: (data) => api.post('/standalone/yijing/hexagram/interpret', data),
+
+  generateSceneImage: (data) => api.post('/standalone/yijing/scene-image', data),
 
   liuYaoDivination: (data) => api.post('/liuyao/divination', data),
 }
@@ -288,6 +314,8 @@ export const achievementApi = {
 // 打卡签到相关 API
 export const checkinApi = {
   doCheckin: () => api.post('/checkin'),
+
+  getOverview: () => api.get('/checkin/overview'),
 
   getTodayStatus: () => api.get('/checkin/today'),
 

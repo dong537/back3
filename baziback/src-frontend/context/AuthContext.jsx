@@ -1,11 +1,25 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
-import { userApi, creditApi } from '../api'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { userApi, creditApi, unwrapApiData } from '../api'
 import { logger } from '../utils/logger'
 import { onLogout } from '../utils/authEvents'
 import { favoritesStorage } from '../utils/storage'
+import achievementCache from '../utils/achievementCache'
+import {
+  clearStoredAuth,
+  getStoredToken,
+  migrateLegacyAuthToSession,
+  storeSessionAuth,
+} from '../utils/authStorage'
 
 const AuthContext = createContext(null)
-
 const FREE_DAILY_LIMIT = 2
 
 export function AuthProvider({ children }) {
@@ -15,64 +29,97 @@ export function AuthProvider({ children }) {
   const [lastResetDate, setLastResetDate] = useState(null)
   const [credits, setCredits] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const creditRequestRef = useRef(null)
 
   const logout = useCallback(() => {
     setUser(null)
     setToken(null)
     setCredits(0)
-    // ✅ 改用 sessionStorage
-    sessionStorage.removeItem('token')
+    creditRequestRef.current = null
+    clearStoredAuth()
     sessionStorage.removeItem('user')
-    // 清理旧的 localStorage（兼容旧版本）
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     favoritesStorage.invalidateCache()
+    achievementCache.clear()
   }, [])
 
-  const refreshCredits = useCallback(async () => {
-    if (!token) return 0
-    try {
-      const res = await creditApi.getBalance()
-      if (res.data?.code === 200) {
-        const bal = res.data.data?.balance || 0
-        setCredits(bal)
-        return bal
-      }
-    } catch (e) {
-      logger.warn('刷新积分失败', e)
-    }
-    return 0
-  }, [token])
+  const refreshCredits = useCallback(
+    async (options = {}) => {
+      const { tokenOverride = token, force = false } = options
 
-  // 消费积分（调用后端API）
-  const spendCredits = useCallback(async (amount, reason = '功能消费') => {
-    if (!token) {
-      return { success: false, message: '请先登录' }
-    }
-    if (credits < amount) {
-      return { success: false, message: `积分不足，当前余额：${credits}，需要：${amount}` }
-    }
-    try {
-      const res = await creditApi.spend(amount, reason)
-      if (res.data?.code === 200 && res.data?.data?.success) {
-        const newBalance = res.data.data.newBalance
-        setCredits(newBalance)
-        return { success: true, newBalance, amount }
+      if (!tokenOverride) return 0
+      if (creditRequestRef.current && !force) {
+        return creditRequestRef.current
       }
-      return { success: false, message: res.data?.message || '积分扣除失败' }
-    } catch (e) {
-      logger.error('消费积分失败', e)
-      return { success: false, message: e?.message || '积分扣除失败' }
-    }
-  }, [token, credits])
 
-  // 检查是否有足够积分
-  const canSpendCredits = useCallback((amount) => {
-    return credits >= amount
-  }, [credits])
+      const request = creditApi
+        .getBalance()
+        .then((res) => {
+          if (res.data?.code === 200) {
+            const balance = res.data.data?.balance || 0
+            setCredits(balance)
+            return balance
+          }
+          return 0
+        })
+        .catch((error) => {
+          logger.warn('刷新积分失败', error)
+          return 0
+        })
+        .finally(() => {
+          if (creditRequestRef.current === request) {
+            creditRequestRef.current = null
+          }
+        })
+
+      creditRequestRef.current = request
+      return request
+    },
+    [token]
+  )
+
+  const spendCredits = useCallback(
+    async (amount, reason = '积分消费') => {
+      if (!amount || amount <= 0) {
+        return { success: true, newBalance: credits, amount: 0, reason }
+      }
+      if (!token) {
+        return { success: true, newBalance: credits, amount, reason }
+      }
+
+      try {
+        const res = await creditApi.spend(amount, reason)
+        if (res.data?.code === 200 && res.data?.data?.success) {
+          const newBalance = res.data.data.newBalance
+          setCredits(newBalance)
+          return { success: true, newBalance, amount }
+        }
+        return {
+          success: false,
+          message: res.data?.message || '积分扣除失败',
+        }
+      } catch (error) {
+        logger.error('消费积分失败', error)
+        return {
+          success: false,
+          message: error?.message || '积分扣除失败',
+        }
+      }
+    },
+    [token, credits]
+  )
+
+  const canSpendCredits = useCallback(
+    (amount) => {
+      if (!amount || amount <= 0) return true
+      return credits >= amount
+    },
+    [credits]
+  )
 
   const login = useCallback(
-    (userData, userToken) => {
+    (userData, userToken, options = {}) => {
       if (!userData || !userToken) {
         logger.error('Login failed: Invalid user data or token', {
           hasUserData: !!userData,
@@ -82,24 +129,38 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const u = typeof userData === 'object' ? userData : JSON.parse(userData)
+        const {
+          initialCredits,
+          skipCreditRefresh = false,
+          skipFavoritesSync = false,
+        } = options
 
-        if (!u || !u.id || !u.username) {
-          logger.error('Login failed: Invalid user data structure', u)
+        const normalizedUser =
+          typeof userData === 'object' ? userData : JSON.parse(userData)
+
+        if (
+          !normalizedUser ||
+          !normalizedUser.id ||
+          !normalizedUser.username
+        ) {
+          logger.error('Login failed: Invalid user data structure', normalizedUser)
           return false
         }
 
-        // ✅ 改用 sessionStorage（仅当前标签页有效，更安全）
-        sessionStorage.setItem('token', userToken)
-        sessionStorage.setItem('user', JSON.stringify(u))
-
+        storeSessionAuth(userToken, normalizedUser)
         setToken(() => userToken)
-        setUser(() => u)
+        setUser(() => normalizedUser)
+        setCredits(
+          typeof initialCredits === 'number' ? initialCredits : 0
+        )
 
-        // 登录成功后异步刷新积分余额和同步收藏夹
         setTimeout(() => {
-          refreshCredits()
-          favoritesStorage.syncWithServer()
+          if (!skipCreditRefresh) {
+            refreshCredits({ tokenOverride: userToken, force: true })
+          }
+          if (!skipFavoritesSync) {
+            favoritesStorage.syncWithServer()
+          }
         }, 0)
 
         return true
@@ -121,20 +182,33 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      // ✅ 改用 sessionStorage
-      const savedToken = sessionStorage.getItem('token')
+      migrateLegacyAuthToSession()
+      const savedToken = getStoredToken()
 
       if (savedToken) {
         try {
-          // 调用 user/info 获取用户信息
-          const response = await userApi.getInfo(savedToken)
-          const payload = response.data?.data
+          const [userResponse, balanceResponse] = await Promise.allSettled([
+            userApi.getInfo(savedToken),
+            creditApi.getBalance(),
+          ])
 
-          // 获取用户对象（直接从data中获取）
-          const userFromApi = payload?.user
+          if (userResponse.status !== 'fulfilled') {
+            throw userResponse.reason
+          }
+
+          const payload = unwrapApiData(userResponse.value)
+          const userFromApi = payload?.user ?? payload
+          const initialCredits =
+            balanceResponse.status === 'fulfilled' &&
+            balanceResponse.value.data?.code === 200
+              ? balanceResponse.value.data.data?.balance || 0
+              : undefined
 
           if (userFromApi) {
-            login(userFromApi, savedToken)
+            login(userFromApi, savedToken, {
+              initialCredits,
+              skipCreditRefresh: typeof initialCredits === 'number',
+            })
           } else {
             logout()
           }
@@ -153,21 +227,10 @@ export function AuthProvider({ children }) {
         localStorage.setItem('freeInterpretCount', '0')
         localStorage.setItem('freeInterpretResetDate', today)
       } else {
-        setFreeCount(parseInt(savedFreeCount) || 0)
+        setFreeCount(parseInt(savedFreeCount, 10) || 0)
       }
+
       setLastResetDate(today)
-
-      if (savedToken) {
-        try {
-          const balRes = await creditApi.getBalance()
-          if (balRes.data?.code === 200) {
-            setCredits(balRes.data.data?.balance || 0)
-          }
-        } catch (e) {
-          logger.warn('获取积分余额失败', e)
-        }
-      }
-
       setIsLoading(false)
     }
 
@@ -176,7 +239,12 @@ export function AuthProvider({ children }) {
 
   const canUseAI = useCallback(() => {
     const loggedIn = !!user && !!token
-    logger.debug('canUseAI called:', { isLoggedIn: loggedIn, user: !!user, token: !!token, freeCount })
+    logger.debug('canUseAI called:', {
+      isLoggedIn: loggedIn,
+      user: !!user,
+      token: !!token,
+      freeCount,
+    })
     if (!loggedIn) return { allowed: false, reason: 'not_logged_in' }
     if (freeCount < FREE_DAILY_LIMIT) return { allowed: true, reason: 'free' }
     return { allowed: false, reason: 'limit_reached' }
@@ -200,9 +268,14 @@ export function AuthProvider({ children }) {
 
   const isLoggedIn = useMemo(() => {
     const loggedIn = !!user && !!token
-    logger.debug('isLoggedIn computed:', { user: !!user, token: !!token, isLoggedIn: loggedIn })
+    logger.debug('isLoggedIn computed:', {
+      user: !!user,
+      token: !!token,
+      isLoggedIn: loggedIn,
+      lastResetDate,
+    })
     return loggedIn
-  }, [user, token])
+  }, [user, token, lastResetDate])
 
   const value = useMemo(
     () => ({

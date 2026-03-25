@@ -4,11 +4,11 @@
 
 // 功能消费积分配置
 export const POINTS_COST = {
-  AI_INTERPRET: 10,      // AI解读消耗积分
-  AI_CHAT: 5,            // AI对话消耗积分
-  AI_FACE_ANALYZE: 15,   // Gemini 人脸分析消耗积分
+  AI_INTERPRET: 0,       // AI解读临时免费
+  AI_CHAT: 0,            // AI对话临时免费
+  AI_FACE_ANALYZE: 0,    // Gemini 人脸分析临时免费
   TAROT_DRAW: 0,         // 塔罗抽牌免费（入门牌阵）
-  TAROT_ADVANCED: 20,    // 塔罗进阶牌阵消耗积分
+  TAROT_ADVANCED: 0,     // 塔罗进阶牌阵临时免费
   YIJING_DIVINE: 0,      // 易经起卦免费
   BAZI_ANALYZE: 0,       // 八字排盘免费
 }

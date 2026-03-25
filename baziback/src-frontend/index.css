@@ -64,6 +64,53 @@
   -webkit-overflow-scrolling: touch;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.app-page-shell {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+.app-page-shell-narrow {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+.app-sticky-inner {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .app-page-shell,
+  .app-page-shell-narrow,
+  .app-sticky-inner {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-page-shell,
+  .app-page-shell-narrow,
+  .app-sticky-inner {
+    padding-inline: 2rem;
+  }
+}
+
 /* 翻转动画 */
 @keyframes fadeIn {
   from {
@@ -82,10 +129,15 @@
 
 @layer base {
   :root, [data-theme='default'] {
-    --color-primary: #a855f7;
-    --color-secondary: #d8b4fe;
-    --color-gradient-from: #a855f7;
-    --color-gradient-to: #581c87;
+    --color-primary: #d0a85b;
+    --color-secondary: #f0d9a5;
+    --color-gradient-from: #9d4124;
+    --color-gradient-to: #e3bf73;
+    --color-bg-ink: #090706;
+    --color-bg-panel: #140f0f;
+    --color-bg-panel-soft: #1b1412;
+    --color-text-main: #f4ece1;
+    --color-text-muted: #bdaa94;
   }
 
 /* ===== 塔罗牌专属组件样式 ===== */
@@ -371,9 +423,14 @@
 body {
   /* 避免依赖 Google Fonts，使用本地可用字体栈；同时保留八卦符号的字体兜底 */
   font-family: "Noto Serif SC", "Noto Serif", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Songti SC", "SimSun", serif;
-  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  background:
+    radial-gradient(circle at 12% 14%, rgba(130, 42, 19, 0.34), transparent 28%),
+    radial-gradient(circle at 82% 12%, rgba(188, 141, 68, 0.14), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.04), transparent 38%),
+    linear-gradient(180deg, #150907 0%, #090706 54%, #070606 100%);
+  background-attachment: fixed;
   min-height: 100vh;
-  color: #e2e8f0;
+  color: var(--color-text-main);
 }
 
 /* 自定义滚动条 */
@@ -388,27 +445,30 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.5);
+  background: rgba(189, 141, 68, 0.55);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.7);
+  background: rgba(221, 177, 92, 0.72);
 }
 
 /* 玻璃态效果 */
 .glass {
-  background: rgba(255, 255, 255, 0.05);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(30, 22, 20, 0.88), rgba(18, 13, 12, 0.8));
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 22px 80px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .glass-dark {
-  background: rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(20, 15, 15, 0.94), rgba(11, 9, 8, 0.86));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* 卡片悬浮效果 */
@@ -418,7 +478,9 @@ body {
 
 .card-hover:hover {
   transform: translateY(-5px);
-  box-shadow: 0 20px 40px rgba(139, 92, 246, 0.3);
+  box-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(210, 168, 91, 0.14);
 }
 
 /* 发光按钮 */
@@ -435,7 +497,7 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), rgba(255,227,179,0.22), transparent);
   transition: left 0.5s ease;
 }
 
@@ -586,7 +648,11 @@ body {
 /* ============ 页面级统一外观（直接可用） ============ */
 @layer components {
   .page-shell {
-    @apply min-h-screen px-4 py-10;
+    @apply relative isolate min-h-screen px-4 py-10;
+    background:
+      radial-gradient(circle at 14% 14%, rgba(126, 41, 19, 0.22), transparent 24%),
+      radial-gradient(circle at 88% 12%, rgba(177, 131, 60, 0.12), transparent 20%),
+      linear-gradient(180deg, rgba(9, 7, 6, 0.92), rgba(9, 7, 6, 0.98));
     /* 移动端安全区域适配 */
     padding-top: max(2.5rem, env(safe-area-inset-top));
     padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
@@ -596,65 +662,80 @@ body {
 
   /* 顶部标题区：根据主题色自动渐变 */
   .page-hero {
-    @apply relative mb-8 overflow-hidden rounded-3xl border border-white/10;
-    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
+    @apply relative mb-8 overflow-hidden border border-white/10;
+    border-radius: 2rem;
+    background: linear-gradient(135deg, rgba(37, 20, 17, 0.95), rgba(20, 15, 13, 0.86));
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    box-shadow:
+      0 22px 80px rgba(0, 0, 0, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
   .page-hero::before {
     content: '';
     position: absolute;
     inset: -2px;
-    background: radial-gradient(600px circle at 20% 20%, color-mix(in srgb, var(--color-primary) 35%, transparent), transparent 60%),
-                radial-gradient(700px circle at 80% 30%, color-mix(in srgb, var(--color-secondary) 25%, transparent), transparent 55%);
-    opacity: 0.9;
+    background: radial-gradient(620px circle at 16% 16%, rgba(126, 41, 19, 0.34), transparent 58%),
+                radial-gradient(720px circle at 84% 26%, rgba(208, 168, 91, 0.14), transparent 52%);
+    opacity: 1;
     pointer-events: none;
   }
 
   .page-hero-inner {
-    @apply relative z-10 mx-auto max-w-6xl px-6 py-10 text-center;
+    @apply relative z-10 mx-auto max-w-6xl px-6 py-10 text-center md:px-10 md:py-12;
   }
 
   .page-badge {
-    @apply inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.10);
+    @apply inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm uppercase tracking-[0.24em];
+    background: rgba(103, 67, 21, 0.32);
+    border: 1px solid rgba(208, 168, 91, 0.18);
+    color: var(--color-primary);
   }
 
   .page-title {
-    @apply mt-4 text-3xl font-bold md:text-4xl;
+    @apply mt-4 text-3xl font-semibold tracking-[0.01em] md:text-5xl;
+    color: var(--color-text-main);
   }
 
   .page-subtitle {
-    @apply mt-2 text-sm text-slate-300 md:text-base;
+    @apply mx-auto mt-3 max-w-3xl text-sm leading-7 md:text-base;
+    color: var(--color-text-muted);
   }
 
   .section-title {
     @apply mb-3 flex items-center gap-2 text-lg font-semibold;
+    color: var(--color-text-main);
   }
 
   .panel {
-    @apply rounded-2xl border border-white/10;
-    background: rgba(255,255,255,0.04);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    border-radius: 1.875rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(22, 17, 16, 0.9), rgba(14, 11, 10, 0.76));
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
   .panel-soft {
-    @apply rounded-2xl border border-white/10;
-    background: rgba(0,0,0,0.18);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    border-radius: 1.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(28, 21, 18, 0.76), rgba(15, 11, 9, 0.74));
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
   }
 
   .btn-primary-theme {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-medium text-white transition;
-    background: linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to));
+    @apply inline-flex items-center justify-center gap-2 rounded-[18px] px-5 py-3 font-medium text-white transition;
+    background: linear-gradient(135deg, #a34224 0%, #cd7840 52%, #e3bf73 100%);
+    border: 1px solid rgba(255, 235, 200, 0.08);
+    box-shadow: 0 18px 40px rgba(163, 66, 36, 0.26);
   }
 
   .btn-primary-theme:hover {
-    filter: brightness(1.05);
+    filter: brightness(1.04);
     transform: translateY(-1px);
   }
 
@@ -663,7 +744,62 @@ body {
   }
 
   .ring-theme {
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 45%, transparent);
+    box-shadow: 0 0 0 1px rgba(208, 168, 91, 0.32);
+  }
+
+  .mystic-input {
+    @apply w-full rounded-[18px] border px-4 py-3 transition outline-none;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--color-text-main);
+  }
+
+  .mystic-input::placeholder {
+    color: rgba(189, 170, 148, 0.68);
+  }
+
+  .mystic-input:focus {
+    border-color: rgba(208, 168, 91, 0.45);
+    box-shadow: 0 0 0 4px rgba(163, 66, 36, 0.16);
+  }
+
+  .mystic-tab {
+    @apply rounded-full border px-4 py-2 text-sm transition;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--color-text-muted);
+  }
+
+  .mystic-tab:hover {
+    border-color: rgba(208, 168, 91, 0.24);
+    color: var(--color-text-main);
+  }
+
+  .mystic-tab-active {
+    border-color: rgba(208, 168, 91, 0.32);
+    background: rgba(122, 50, 24, 0.24);
+    color: #fff7eb;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .mystic-chip {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-xs uppercase tracking-[0.18em];
+    border-color: rgba(208, 168, 91, 0.16);
+    background: rgba(103, 67, 21, 0.28);
+    color: var(--color-primary);
+  }
+
+  .mystic-muted-box {
+    @apply rounded-[24px] border p-4;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .mystic-icon-badge {
+    @apply flex items-center justify-center rounded-2xl;
+    background: linear-gradient(135deg, #a34224 0%, #cd7840 55%, #e3bf73 100%);
+    color: #fff7eb;
+    box-shadow: 0 16px 32px rgba(163, 66, 36, 0.2);
   }
 }
 

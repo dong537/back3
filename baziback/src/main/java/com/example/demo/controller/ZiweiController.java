@@ -5,6 +5,7 @@ import com.example.demo.dto.response.ziwei.McpZiweiResponse;
 import com.example.demo.service.ZiweiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -20,6 +21,7 @@ import java.util.Map;
  * - 服务器异常 -> 500
  */
 @RestController
+@ConditionalOnProperty(name = "mcp.enabled", havingValue = "true")
 @Slf4j
 @Validated
 @RequestMapping("/api/ziwei")

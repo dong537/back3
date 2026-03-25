@@ -2,25 +2,25 @@
   "app": {
     "name": "天机明理",
     "footerTitle": "天机明理 · 易经 · 星座 · 八字",
-    "footerNote": "仅供娱乐参考，请理性看待"
+    "footerNote": "仅供娱乐参考，请理性看待。"
   },
   "nav": {
     "home": "首页",
-    "yijing": "易经占卜",
-    "tarot": "塔罗牌",
-    "zodiac": "星座运势",
-    "bazi": "八字分析",
-    "ai": "AI推理",
+    "yijing": "易经",
+    "tarot": "塔罗",
+    "zodiac": "星座",
+    "bazi": "八字",
+    "ai": "AI",
     "dashboard": "数据面板",
     "login": "登录",
     "logout": "退出",
     "logoutFull": "退出登录",
     "dailyTest": "每日测试",
-    "records": "我的记录",
-    "compatibility": "八字合盘",
+    "records": "记录",
+    "compatibility": "合盘",
     "favorites": "我的收藏",
     "ask": "问",
-    "achievement": "我的成就",
+    "achievement": "成就",
     "self": "我的"
   },
   "lang": {
@@ -30,20 +30,20 @@
   "home": {
     "badge": "AI 驱动的玄学智能系统",
     "heroTitle": "天机明理",
-    "heroSubtitle": "融合传统智慧与现代AI技术，为您提供易经、星座、八字的专业分析与解读",
+    "heroSubtitle": "融合传统智慧与现代 AI 技术，为你提供易经、星座与八字的文化赏析与解读体验",
     "startDivination": "开始占卜",
     "coreFeatures": "核心功能",
-    "experienceNow": "进入体验",
+    "experienceNow": "立即体验",
     "stats": {
       "yijing": "易经卦象",
-      "tarot": "塔罗牌",
+      "tarot": "塔罗牌阵",
       "zodiac": "星座运势",
       "ai": "智能分析"
     },
     "features": {
       "yijing": {
         "title": "易经占卜",
-        "description": "64卦象 · 5种起卦方法 · AI智能解读",
+        "description": "64 卦象 · 5 种起卦方式 · AI 解读",
         "details": [
           "时间起卦",
           "随机起卦",
@@ -53,18 +53,18 @@
         ]
       },
       "tarot": {
-        "title": "塔罗牌占卜",
-        "description": "78张牌 · 12种牌阵 · 正逆位解读",
+        "title": "塔罗占卜",
+        "description": "78 张牌 · 12 种牌阵 · 正逆位解读",
         "details": [
           "单牌占卜",
-          "时间之流",
+          "过去现在未来",
           "凯尔特十字",
-          "AI深度解读"
+          "AI 深度解读"
         ]
       },
       "zodiac": {
         "title": "星座运势",
-        "description": "12星座 · 每日运势 · 星座配对",
+        "description": "12 星座 · 每日运势 · 配对参考",
         "details": [
           "星座查询",
           "今日运势",
@@ -74,43 +74,43 @@
       },
       "bazi": {
         "title": "八字分析",
-        "description": "四柱八字 · 大运流年 · 命理解读",
+        "description": "四柱八字 · 大运流年 · 命理赏析",
         "details": [
           "八字排盘",
           "五行分析",
-          "大运预测",
-          "喜用神"
+          "运势预测",
+          "喜用神参考"
         ]
       },
       "ai": {
-        "title": "AI推理",
-        "description": "思维链 · 流式推理 · 深度分析",
+        "title": "AI 推演",
+        "description": "思维过程 · 流式输出 · 深度分析",
         "details": [
-          "思维链展示",
-          "流式推理",
+          "思维过程展示",
+          "流式输出",
           "深度分析",
-          "个性解读"
+          "个性化解读"
         ]
       }
     }
   },
   "yijing": {
     "title": "易经占卜",
-    "subtitle": "64卦象 · 5种起卦方法 · AI智能解读",
-    "selectMethod": "选择起卦方法",
-    "methodDesc": "不同方法适用于不同场景",
+    "subtitle": "64 卦象 · 5 种起卦方式 · AI 解读",
+    "selectMethod": "选择起卦方式",
+    "methodDesc": "不同方式适合不同场景",
     "methods": {
-      "time": { "label": "时间起卦", "desc": "根据当前时间计算" },
-      "random": { "label": "随机起卦", "desc": "完全随机生成" },
+      "time": { "label": "时间起卦", "desc": "根据当前时间推演卦象" },
+      "random": { "label": "随机起卦", "desc": "完全随机生成卦象" },
       "number": { "label": "数字起卦", "desc": "使用数字作为种子" },
-      "coin": { "label": "铜钱起卦", "desc": "模拟三枚铜钱" },
-      "plum_blossom": { "label": "梅花易数", "desc": "结合时间与数字" }
+      "coin": { "label": "铜钱起卦", "desc": "模拟三枚铜钱起卦" },
+      "plum_blossom": { "label": "梅花易数", "desc": "结合时间与数字推演" }
     },
-    "inputQuestion": "输入您的问题",
-    "questionDesc": "心诚则灵，专注于您想问的事情",
-    "questionPlaceholder": "请输入您想占卜的问题，例如：今年事业运势如何？",
+    "inputQuestion": "输入你的问题",
+    "questionDesc": "心诚则灵，请专注于你真正想问的事",
+    "questionPlaceholder": "请输入你想占问的问题，例如：今年事业运势如何？",
     "seedLabel": "数字种子（可选）",
-    "seedPlaceholder": "输入一个数字，如：168",
+    "seedPlaceholder": "输入一个数字，例如：168",
     "startDivination": "开始占卜",
     "result": "占卜结果",
     "originalHexagram": "本卦",
@@ -121,23 +121,23 @@
     "changingLines": "动爻",
     "aiInterpret": "AI 深度解读",
     "remainingFree": "今日剩余免费次数",
-    "loginPrompt": "后每天可免费使用2次",
+    "loginPrompt": "登录后每天可获得 2 次免费使用",
     "error": "占卜失败，请稍后重试",
-    "aiError": "AI解读失败，请稍后重试",
-    "aiPrompt": "我占问\"{{question}}\"，得{{hexagram}}卦，{{changingLines}}请详细解读这个卦象的含义和建议。",
-    "changingLinesText": "第{{lines}}爻动，变{{changedHexagram}}卦。",
+    "aiError": "AI 解读失败，请稍后重试",
+    "aiPrompt": "我询问“{{question}}”，得到 {{hexagram}} 卦，{{changingLines}}。请从传统文化角度给出详细解读与建议。",
+    "changingLinesText": "第 {{lines}} 爻发生变化，形成 {{changedHexagram}} 卦。",
     "noChangingLines": "无动爻。"
   },
   "tarot": {
-    "title": "塔罗牌占卜",
-    "subtitle": "78张神秘牌卡 · 12种牌阵 · 正逆位深度解读",
+    "title": "塔罗占卜",
+    "subtitle": "78 张神秘卡牌 · 12 种牌阵 · 正逆位解读",
     "step1": "第一步：静心冥想",
-    "step1Desc": "专注于您想了解的事情，写下您的问题。",
+    "step1Desc": "专注于你真正想了解的事，并写下问题。",
     "step2": "第二步：选择牌阵",
-    "step2Desc": "不同的牌阵适用于不同类型的问题。",
+    "step2Desc": "不同牌阵适合不同类型的问题。",
     "step3": "第三步：洗牌与抽牌",
-    "questionPlaceholder": "例如：我和他/她的感情会如何发展？",
-    "shuffleDraw": "洗牌与抽牌",
+    "questionPlaceholder": "例如：我和 TA 的关系会如何发展？",
+    "shuffleDraw": "洗牌并抽牌",
     "result": "占卜结果",
     "reveal": "翻开牌面",
     "redraw": "重新抽牌",
@@ -145,34 +145,34 @@
     "reversed": "逆位",
     "aiInterpret": "AI 深度解读",
     "remainingFree": "今日剩余免费次数",
-    "loginPrompt": "登录后每天可免费使用2次AI解读",
+    "loginPrompt": "登录后每天可获得 2 次免费 AI 解读",
     "copyResult": "复制结果",
     "copied": "已复制到剪贴板！",
     "copyFailed": "复制失败！",
     "disclaimer": "免责声明：本占卜结果仅供娱乐参考，不构成任何决策依据。请理性看待，相信科学。",
     "spreads": {
-      "SINGLE": { "label": "单牌占卜", "desc": "快速指引，适合简单问题" },
-      "PAST_PRESENT_FUTURE": { "label": "时间之流", "desc": "过去、现在、未来" },
-      "LOVE_TRIAD": { "label": "爱情三角", "desc": "你、对方、关系走向" },
-      "RELATIONSHIP_CROSS": { "label": "关系十字", "desc": "深度剖析人际关系" },
-      "DECISION_MAKING": { "label": "决策分析", "desc": "选择A vs 选择B" },
-      "CAREER_PATH": { "label": "事业之路", "desc": "职业发展全面分析" },
-      "HORSESHOE": { "label": "马蹄铁阵", "desc": "综合运势分析" },
-      "CELTIC_CROSS": { "label": "凯尔特十字", "desc": "最经典的深度牌阵" }
+      "SINGLE": { "label": "单牌占卜", "desc": "适合快速获取简单指引" },
+      "PAST_PRESENT_FUTURE": { "label": "过去 / 现在 / 未来", "desc": "查看时间脉络中的变化" },
+      "LOVE_TRIAD": { "label": "爱情三角", "desc": "你、对方与关系走向" },
+      "RELATIONSHIP_CROSS": { "label": "关系十字", "desc": "更深入分析关系状态" },
+      "DECISION_MAKING": { "label": "决策分析", "desc": "帮助比较不同选项" },
+      "CAREER_PATH": { "label": "事业之路", "desc": "适合职业与成长话题" },
+      "HORSESHOE": { "label": "马蹄牌阵", "desc": "用于整体运势赏析" },
+      "CELTIC_CROSS": { "label": "凯尔特十字", "desc": "经典的综合深度牌阵" }
     },
-    "cardPosition": "第{{position}}张：{{name}}（{{positionType}}）",
-    "aiPrompt": "我用塔罗牌占问\"{{question}}\"，使用{{spread}}牌阵，抽到的牌是：{{cards}}。请详细解读这个牌阵的含义和建议。"
+    "cardPosition": "第 {{position}} 张牌：{{name}}（{{positionType}}）",
+    "aiPrompt": "我使用 {{spread}} 牌阵询问“{{question}}”，抽到的牌是：{{cards}}。请从传统文化娱乐赏析角度给出详细解读与建议。"
   },
   "zodiac": {
     "title": "星座运势",
-    "subtitle": "12星座 · 每日运势 · 星座配对",
-    "selectZodiac": "选择您的星座",
+    "subtitle": "12 星座 · 每日运势 · 配对参考",
+    "selectZodiac": "选择你的星座",
     "zodiacInfo": "星座信息",
     "todayHoroscope": "今日运势",
-    "selectCategory": "选择运势类别查看详情",
+    "selectCategory": "选择分类查看详情",
     "viewHoroscope": "查看今日运势",
     "compatibility": "星座配对",
-    "compatibilityDesc": "查看两个星座的契合度",
+    "compatibilityDesc": "查看两个星座之间的相处气场",
     "viewCompatibility": "查看配对结果",
     "compatibilityScore": "契合度",
     "dateRange": "日期范围",
@@ -186,8 +186,23 @@
       "love": "爱情运势",
       "career": "事业运势",
       "health": "健康运势",
-      "finance": "财运分析"
+      "finance": "财富分析"
     },
+    "fortune": {
+      "love": "爱情",
+      "wealth": "财富",
+      "career": "事业",
+      "study": "学习",
+      "social": "社交"
+    },
+    "luckyItems": {
+      "color": "幸运颜色",
+      "accessory": "幸运配饰",
+      "time": "幸运时间",
+      "direction": "幸运方位"
+    },
+    "suggestions": "建议",
+    "avoidances": "注意事项",
     "signs": {
       "aries": "白羊座",
       "taurus": "金牛座",
@@ -206,7 +221,7 @@
   },
   "bazi": {
     "title": "八字分析",
-    "subtitle": "四柱八字 · 大运流年 · AI命理解读",
+    "subtitle": "四柱八字 · 大运流年 · AI 命理解读",
     "inputInfo": "输入出生信息",
     "inputDesc": "请填写阳历出生日期和时间",
     "birthDate": "出生日期",
@@ -217,7 +232,7 @@
     "startAnalysis": "开始分析",
     "fourPillars": "四柱八字",
     "bazi": "八字",
-    "zodiac": "属",
+    "zodiac": "生肖",
     "yearPillar": "年柱",
     "monthPillar": "月柱",
     "dayPillar": "日柱",
@@ -241,32 +256,29 @@
     "dayunTrend": "大运走势",
     "age": "岁",
     "shensha": "神煞",
-    "visualization": "可视化分析",
-    "basicChart": "基础命盘",
-    "detailedChart": "专业细盘",
     "generateReport": "生成 AI 命理报告",
     "error": "分析失败，请稍后重试",
-    "fillComplete": "请填写完整的出生日期和时间"
+    "fillComplete": "请填写完整的出生日期与时间"
   },
   "ai": {
-    "title": "AI 智能推理",
-    "subtitle": "思维链展示 · 流式推理",
+    "title": "AI 智能推演",
+    "subtitle": "思维过程展示 · 流式推理",
     "chat": "AI 对话",
-    "chatDesc": "支持八字、卦象、紫微等玄学问题解读",
+    "chatDesc": "支持易经、八字、紫微等玄学话题交流",
     "clear": "清空",
     "startChat": "开始与 AI 对话",
-    "startChatDesc": "可以询问八字、卦象、紫微命盘等玄学问题",
+    "startChatDesc": "你可以询问八字、卦象、紫微盘等相关内容",
     "viewThinking": "查看思维过程",
     "thinking": "思考中...",
-    "inputPlaceholder": "输入您的问题，例如：请分析八字甲子 丁丑 甲辰 辛未的事业运势...",
+    "inputPlaceholder": "输入你的问题，例如：请分析某个八字的事业走势……",
     "send": "发送",
     "stop": "停止生成",
     "remainingFree": "今日剩余免费次数",
-    "loginPrompt": "登录后每天可免费使用2次AI对话",
+    "loginPrompt": "登录后每天可获得 2 次免费 AI 对话",
     "features": {
-      "thinking": { "title": "思维链展示", "desc": "实时展示 AI 的推理过程" },
-      "streaming": { "title": "流式输出", "desc": "逐字输出，体验更流畅" },
-      "modes": { "title": "多种模式", "desc": "支持八字、卦象、紫微等" }
+      "thinking": { "title": "思维过程展示", "desc": "实时查看 AI 的推演过程" },
+      "streaming": { "title": "流式输出", "desc": "逐步展示结果，阅读更顺畅" },
+      "modes": { "title": "多种模式", "desc": "支持八字、卦象、紫微等类型" }
     },
     "presets": {
       "bazi": "八字解读",
@@ -279,8 +291,8 @@
   "login": {
     "welcome": "欢迎回来",
     "createAccount": "创建账号",
-    "loginDesc": "登录以保存您的占卜记录",
-    "registerDesc": "注册以开启您的玄学之旅",
+    "loginDesc": "登录后可保存你的占卜记录",
+    "registerDesc": "注册后开启你的玄学之旅",
     "login": "登录",
     "register": "注册",
     "username": "用户名",
@@ -289,19 +301,36 @@
     "confirmPassword": "确认密码",
     "rememberMe": "记住我",
     "forgotPassword": "忘记密码？",
-    "guestMode": "游客模式体验",
-    "terms": "继续即表示您同意我们的",
+    "guestMode": "游客模式",
+    "terms": "继续即表示你同意我们的",
     "serviceTerms": "服务条款",
     "and": "和",
     "privacyPolicy": "隐私政策",
     "usernameRequired": "请输入用户名",
     "passwordRequired": "请输入密码",
-    "passwordMismatch": "两次密码输入不一致",
+    "passwordMismatch": "两次输入的密码不一致",
     "loginFailed": "登录失败，请检查用户名和密码",
-    "registerSuccess": "注册成功！请使用您的账号登录",
+    "registerSuccess": "注册成功！请使用你的账号登录",
     "registerFailed": "注册失败，请稍后重试",
     "networkError": "网络错误，请检查网络连接",
     "operationFailed": "操作失败，请稍后重试"
+  },
+  "achievement": {
+    "title": "成就系统",
+    "subtitle": "解锁成就并获得丰富奖励",
+    "types": {
+      "divination": "占卜",
+      "favorite": "收藏",
+      "invite": "邀请",
+      "checkin": "签到",
+      "points": "积分",
+      "other": "其他"
+    },
+    "status": {
+      "unlocked": "已解锁",
+      "locked": "未解锁",
+      "dateError": "日期异常"
+    }
   },
   "common": {
     "loading": "加载中...",

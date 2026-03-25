@@ -8,7 +8,7 @@ const STORAGE_KEYS = {
 }
 
 // Helper to check login status without context dependency
-const isLoggedIn = () => !!localStorage.getItem('token')
+const isLoggedIn = () => !!sessionStorage.getItem('token') || !!localStorage.getItem('token')
 
 // --- historyStorage remains unchanged ---
 export const historyStorage = {

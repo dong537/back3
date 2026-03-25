@@ -1,81 +1,108 @@
 import React from 'react'
 import { FixedSizeList as List } from 'react-window'
-import { Trash2, Eye } from 'lucide-react'
+import { Eye, Trash2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import {
+  formatLocaleDate,
+  resolvePageLocale,
+  safeText,
+} from '../utils/displayText'
 
-/**
- * 虚拟列表组件 - 用于渲染大量记录
- * 只渲染可见的项目，大幅提升性能
- */
-const VirtualRecordList = React.memo(({ records, onDelete, onView, loading = false }) => {
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    )
-  }
+const RECORD_LIST_COPY = {
+  'zh-CN': {
+    empty: '暂无记录',
+    untitled: '无标题',
+    type: '类型',
+    view: '查看详情',
+    delete: '删除',
+  },
+  'en-US': {
+    empty: 'No records yet',
+    untitled: 'Untitled',
+    type: 'Type',
+    view: 'View details',
+    delete: 'Delete',
+  },
+}
 
-  if (!records || records.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-96 text-gray-500">
-        <p>暂无记录</p>
-      </div>
-    )
-  }
+const VirtualRecordList = React.memo(
+  ({ records, onDelete, onView, loading = false }) => {
+    const { i18n } = useTranslation()
+    const locale = resolvePageLocale(i18n.language)
+    const copy = RECORD_LIST_COPY[locale]
 
-  const Row = ({ index, style }) => {
-    const record = records[index]
-    
-    return (
-      <div style={style} className="px-4 py-2">
-        <div className="flex items-center justify-between p-3 rounded-lg bg-white border border-gray-200 hover:shadow-md transition-shadow">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-800 truncate">
-              {record.question || record.title || record.recordTitle || '无标题'}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {record.recordType && `类型: ${record.recordType}`}
-              {record.createTime && ` · ${new Date(record.createTime).toLocaleDateString('zh-CN')}`}
-            </p>
-          </div>
-          
-          <div className="flex items-center space-x-2 ml-4">
-            {onView && (
-              <button
-                onClick={() => onView(record)}
-                className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
-                title="查看详情"
-              >
-                <Eye size={18} className="text-blue-600" />
-              </button>
-            )}
-            
-            {onDelete && (
-              <button
-                onClick={() => onDelete(record.id)}
-                className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-                title="删除"
-              >
-                <Trash2 size={18} className="text-red-600" />
-              </button>
-            )}
+    if (loading) {
+      return (
+        <div className="flex h-96 items-center justify-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/10 border-t-[#dcb86f]"></div>
+        </div>
+      )
+    }
+
+    if (!records || records.length === 0) {
+      return (
+        <div className="flex h-96 items-center justify-center text-[#8f7b66]">
+          <p>{copy.empty}</p>
+        </div>
+      )
+    }
+
+    const Row = ({ index, style }) => {
+      const record = records[index]
+      const title =
+        safeText(record.question) ||
+        safeText(record.title) ||
+        safeText(record.recordTitle) ||
+        copy.untitled
+      const date = formatLocaleDate(record.createTime, locale)
+
+      return (
+        <div style={style} className="px-4 py-2">
+          <div className="flex items-center justify-between rounded-[22px] border border-white/10 bg-[#140f0f]/72 p-3 transition-all hover:border-[#d0a85b]/18 hover:bg-[#171110]/84">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-[#f4ece1]">
+                {title}
+              </p>
+              <p className="mt-1 text-xs text-[#8f7b66]">
+                {record.recordType && `${copy.type}: ${record.recordType}`}
+                {record.recordType && date ? ' · ' : ''}
+                {date}
+              </p>
+            </div>
+
+            <div className="ml-4 flex items-center space-x-2">
+              {onView && (
+                <button
+                  onClick={() => onView(record)}
+                  className="rounded-xl p-2 text-[#bdaa94] transition-colors hover:bg-[#6a4a1e]/16 hover:text-[#f0d9a5]"
+                  title={copy.view}
+                >
+                  <Eye size={18} />
+                </button>
+              )}
+
+              {onDelete && (
+                <button
+                  onClick={() => onDelete(record.id)}
+                  className="rounded-xl p-2 text-[#bdaa94] transition-colors hover:bg-[#7a3218]/16 hover:text-[#e19a84]"
+                  title={copy.delete}
+                >
+                  <Trash2 size={18} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )
+    }
+
+    return (
+      <List height={600} itemCount={records.length} itemSize={100} width="100%">
+        {Row}
+      </List>
     )
   }
-
-  return (
-    <List
-      height={600}
-      itemCount={records.length}
-      itemSize={100}
-      width="100%"
-    >
-      {Row}
-    </List>
-  )
-})
+)
 
 VirtualRecordList.displayName = 'VirtualRecordList'
 

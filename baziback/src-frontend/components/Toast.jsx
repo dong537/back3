@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle, XCircle, Info, AlertTriangle, X } from 'lucide-react'
+import { getStoredUiLocale, translateUiText } from '../utils/runtimeLocale'
 
 // Toast 管理器
 class ToastManager {
@@ -36,7 +37,9 @@ class ToastManager {
                 }
               })()
 
-    this.toasts.push({ id, message: safeMessage, type, duration })
+    const localizedMessage = translateUiText(safeMessage, getStoredUiLocale())
+
+    this.toasts.push({ id, message: localizedMessage, type, duration })
     this.notify()
     return id
   }
@@ -90,7 +93,7 @@ export default function Toast({ message, type = 'info', duration = 3000, onClose
   if (!isVisible) return null
 
   return (
-    <div className={`fixed top-4 right-4 z-50 animate-slide-in ${colorClass} border rounded-lg p-4 shadow-lg min-w-[300px] max-w-md`}>
+    <div className={`animate-slide-in w-full ${colorClass} rounded-lg border p-4 shadow-lg sm:min-w-[300px] sm:max-w-md`}>
       <div className="flex items-start space-x-3">
         <Icon size={20} className="flex-shrink-0 mt-0.5" />
         <div className="flex-1">
@@ -120,7 +123,7 @@ export function ToastContainer() {
   }, [])
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div className="fixed left-4 right-4 top-4 z-50 space-y-2 sm:left-auto sm:right-4 sm:w-auto">
       {toasts.map(toastItem => (
         <Toast
           key={toastItem.id}

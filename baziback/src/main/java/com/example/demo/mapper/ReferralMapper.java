@@ -77,4 +77,8 @@ public interface ReferralMapper {
             "COALESCE(SUM(CASE WHEN invite_status >= 3 THEN 1 ELSE 0 END), 0) as completed " +
             "FROM tb_invite_record WHERE inviter_id = #{inviterId}")
     Map<String, Object> getInviteStats(Long inviterId);
+
+    @Select("SELECT COALESCE(SUM(CASE WHEN invite_status >= 1 THEN 1 ELSE 0 END), 0) " +
+            "FROM tb_invite_record WHERE inviter_id = #{inviterId}")
+    Integer countRegisteredInvites(Long inviterId);
 }

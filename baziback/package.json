@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "i18n:check": "node scripts/check-i18n.mjs",
     "preview": "vite preview",
     "mcp:build": "tsc -p tsconfig.mcp.json",
     "mcp:start": "node mcp-dist/index.js",

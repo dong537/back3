@@ -9,6 +9,7 @@ import com.example.demo.dto.response.star.*;
 import com.example.demo.service.ZodiacService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@ConditionalOnProperty(name = "mcp.enabled", havingValue = "true")
 @RequestMapping("/api/zodiac")
 @RequiredArgsConstructor
 @Slf4j

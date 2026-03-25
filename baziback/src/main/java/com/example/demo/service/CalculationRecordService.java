@@ -1,123 +1,159 @@
 package com.example.demo.service;
 
 import com.example.demo.entity.TbCalculationRecord;
+import com.example.demo.exception.BusinessException;
 import com.example.demo.mapper.CalculationRecordMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
- * 测算记录服务
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CalculationRecordService {
 
+    private static final int MAX_PAGE_SIZE = 50;
+
     private final CalculationRecordMapper calculationRecordMapper;
     private final AchievementService achievementService;
+    private final ReferralService referralService;
 
-    /**
-     * 保存测算记录
-     */
     @Transactional
     public TbCalculationRecord saveRecord(TbCalculationRecord record) {
-        log.info("保存测算记录: userId={}, recordType={}, recordTitle={}", 
+        normalizeRecord(record);
+
+        log.info("Saving calculation record: userId={}, recordType={}, recordTitle={}",
                 record.getUserId(), record.getRecordType(), record.getRecordTitle());
-        
+
         calculationRecordMapper.insert(record);
-        
-        log.info("记录保存成功: id={}, userId={}", record.getId(), record.getUserId());
-        
-        // 保存记录后，异步检查占卜次数相关的成就（性能优化）
+
         if (record.getUserId() != null) {
-            Long userId = record.getUserId();
-            // 使用异步方式检查成就，不阻塞主流程
-            // 注意：由于使用了@Async，需要在配置类中启用异步支持
             try {
-                log.info("开始检查占卜成就: userId={}", userId);
-                // 同步检查（如果异步有问题，可以改为异步）
-                achievementService.checkDivinationAchievements(userId);
-                log.info("占卜成就检查完成: userId={}", userId);
+                achievementService.checkDivinationAchievements(record.getUserId());
             } catch (Exception e) {
-                log.error("保存记录后检查成就失败, userId={}", userId, e);
-                // 不抛出异常，避免影响记录保存
+                log.error("Failed to check achievements after saving record, userId={}", record.getUserId(), e);
             }
-        } else {
-            log.warn("记录保存成功但userId为null，跳过成就检查");
+            try {
+                referralService.recordFirstDivination(record.getUserId());
+            } catch (Exception e) {
+                log.error("Failed to record referral first-divination after saving record, userId={}", record.getUserId(), e);
+            }
         }
-        
+
         return record;
     }
 
-    /**
-     * 获取记录详情
-     */
-    public TbCalculationRecord getRecord(Long id) {
-        return calculationRecordMapper.selectById(id);
+    public TbCalculationRecord getUserRecord(Long userId, Long id) {
+        if (userId == null) {
+            throw new BusinessException("用户未登录", HttpStatus.UNAUTHORIZED);
+        }
+        TbCalculationRecord record = calculationRecordMapper.selectByIdAndUserId(id, userId);
+        if (record == null) {
+            throw new BusinessException("记录不存在", HttpStatus.NOT_FOUND);
+        }
+        return record;
     }
 
-    /**
-     * 获取用户所有记录
-     */
     public List<TbCalculationRecord> getUserRecords(Long userId) {
         return calculationRecordMapper.selectByUserId(userId);
     }
 
-    /**
-     * 获取用户某类型的记录
-     */
     public List<TbCalculationRecord> getUserRecordsByType(Long userId, String recordType) {
-        return calculationRecordMapper.selectByUserIdAndType(userId, recordType);
+        return calculationRecordMapper.selectByUserIdAndType(userId, normalizeRecordType(recordType));
     }
 
-    /**
-     * 分页获取用户记录
-     */
-    public List<TbCalculationRecord> getUserRecordsPaged(Long userId, int page, int size) {
-        int offset = (page - 1) * size;
-        return calculationRecordMapper.selectByUserIdPaged(userId, offset, size);
+    public List<TbCalculationRecord> getUserRecordsPaged(Long userId, String recordType, int page, int size) {
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int offset = (safePage - 1) * safeSize;
+
+        if (recordType == null || recordType.isBlank()) {
+            return calculationRecordMapper.selectByUserIdPaged(userId, offset, safeSize);
+        }
+        return calculationRecordMapper.selectByUserIdAndTypePaged(
+                userId,
+                normalizeRecordType(recordType),
+                offset,
+                safeSize
+        );
     }
 
-    /**
-     * 更新记录
-     */
     @Transactional
-    public TbCalculationRecord updateRecord(TbCalculationRecord record) {
-        calculationRecordMapper.update(record);
-        return record;
+    public TbCalculationRecord updateUserRecord(Long userId, Long id, TbCalculationRecord record) {
+        TbCalculationRecord existing = getUserRecord(userId, id);
+        TbCalculationRecord updatedRecord = TbCalculationRecord.builder()
+                .id(existing.getId())
+                .userId(userId)
+                .recordType(existing.getRecordType())
+                .recordTitle(trimToDefault(record.getRecordTitle(), existing.getRecordTitle()))
+                .question(trimToNull(record.getQuestion()))
+                .summary(trimToNull(record.getSummary()))
+                .inputData(trimToDefault(record.getInputData(), existing.getInputData()))
+                .data(trimToDefault(record.getData(), existing.getData()))
+                .build();
+
+        int updated = calculationRecordMapper.updateByUserId(updatedRecord);
+        if (updated <= 0) {
+            throw new BusinessException("更新记录失败");
+        }
+        return getUserRecord(userId, id);
     }
 
-    /**
-     * 删除记录
-     */
     @Transactional
-    public void deleteRecord(Long id) {
-        calculationRecordMapper.delete(id);
+    public void deleteUserRecord(Long userId, Long id) {
+        int deleted = calculationRecordMapper.deleteByIdAndUserId(id, userId);
+        if (deleted <= 0) {
+            throw new BusinessException("记录不存在", HttpStatus.NOT_FOUND);
+        }
     }
 
-    /**
-     * 删除用户所有记录
-     */
     @Transactional
     public void deleteUserRecords(Long userId) {
         calculationRecordMapper.deleteByUserId(userId);
     }
 
-    /**
-     * 获取用户记录总数
-     */
     public int getUserRecordCount(Long userId) {
         return calculationRecordMapper.countByUserId(userId);
     }
 
-    /**
-     * 获取用户某类型的记录总数
-     */
     public int getUserRecordCountByType(Long userId, String recordType) {
-        return calculationRecordMapper.countByUserIdAndType(userId, recordType);
+        return calculationRecordMapper.countByUserIdAndType(userId, normalizeRecordType(recordType));
+    }
+
+    private void normalizeRecord(TbCalculationRecord record) {
+        if (record == null) {
+            throw new BusinessException("记录内容不能为空");
+        }
+        record.setRecordType(normalizeRecordType(record.getRecordType()));
+        record.setRecordTitle(trimToDefault(record.getRecordTitle(), "未命名记录"));
+        record.setQuestion(trimToNull(record.getQuestion()));
+        record.setSummary(trimToNull(record.getSummary()));
+        record.setInputData(trimToNull(record.getInputData()));
+        record.setData(trimToDefault(record.getData(), "{}"));
+    }
+
+    private String normalizeRecordType(String recordType) {
+        String normalized = trimToNull(recordType);
+        if (normalized == null) {
+            throw new BusinessException("记录类型不能为空");
+        }
+        return normalized.toLowerCase();
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String trimToDefault(String value, String defaultValue) {
+        String trimmed = trimToNull(value);
+        return trimmed != null ? trimmed : defaultValue;
     }
 }

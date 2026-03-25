@@ -1,67 +1,83 @@
-/**
- * 简单的图表组件（不依赖外部库）
- * 用于展示运势趋势等数据
- */
+import { useTranslation } from 'react-i18next'
+import { resolvePageLocale } from '../utils/displayText'
+
+const SIMPLE_CHART_COPY = {
+  'zh-CN': {
+    noData: '暂无数据',
+  },
+  'en-US': {
+    noData: 'No data available',
+  },
+}
+
 export default function SimpleChart({ data, title, height = 200 }) {
-  if (!data || data.length === 0) {
+  const { i18n } = useTranslation()
+  const locale = resolvePageLocale(i18n.language)
+  const copy = SIMPLE_CHART_COPY[locale]
+
+  if (!Array.isArray(data) || data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-48 text-gray-400">
-        暂无数据
+      <div className="flex h-48 items-center justify-center text-gray-400">
+        {copy.noData}
       </div>
     )
   }
 
-  const maxValue = Math.max(...data.map(d => d.value || 0))
-  const minValue = Math.min(...data.map(d => d.value || 0))
+  const maxValue = Math.max(...data.map((item) => item.value || 0))
+  const minValue = Math.min(...data.map((item) => item.value || 0))
   const range = maxValue - minValue || 1
 
   return (
     <div className="w-full">
-      {title && (
-        <h3 className="text-sm font-medium text-gray-400 mb-4">{title}</h3>
-      )}
+      {title ? (
+        <h3 className="mb-4 text-sm font-medium text-gray-400">{title}</h3>
+      ) : null}
       <div className="relative" style={{ height: `${height}px` }}>
-        {/* Y轴标签 */}
-        <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 pr-2">
+        <div className="absolute bottom-0 left-0 top-0 flex flex-col justify-between pr-2 text-xs text-gray-500">
           <span>{Math.round(maxValue)}</span>
           <span>{Math.round((maxValue + minValue) / 2)}</span>
           <span>{Math.round(minValue)}</span>
         </div>
 
-        {/* 图表区域 */}
-        <div className="ml-12 h-full relative">
-          {/* 网格线 */}
+        <div className="relative ml-12 h-full">
           <div className="absolute inset-0 flex flex-col justify-between">
-            {[0, 0.5, 1].map((pos) => (
+            {[0, 0.5, 1].map((position) => (
               <div
-                key={pos}
+                key={position}
                 className="border-t border-white/5"
-                style={{ marginTop: pos === 0 ? 0 : pos === 1 ? 'auto' : '50%' }}
+                style={{
+                  marginTop:
+                    position === 0 ? 0 : position === 1 ? 'auto' : '50%',
+                }}
               />
             ))}
           </div>
 
-          {/* 数据点连线 */}
-          <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible' }} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <svg
+            className="absolute inset-0 h-full w-full"
+            style={{ overflow: 'visible' }}
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
             <polyline
-              points={data.map((d, i) => {
-                const x = (i / (data.length - 1 || 1)) * 100
-                const y = 100 - ((d.value - minValue) / range) * 100
-                return `${x},${y}`
-              }).join(' ')}
+              points={data
+                .map((item, index) => {
+                  const x = (index / (data.length - 1 || 1)) * 100
+                  const y = 100 - (((item.value || 0) - minValue) / range) * 100
+                  return `${x},${y}`
+                })
+                .join(' ')}
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               className="text-skin-primary"
             />
-            
-            {/* 数据点 */}
-            {data.map((d, i) => {
-              const x = (i / (data.length - 1 || 1)) * 100
-              const y = 100 - ((d.value - minValue) / range) * 100
+            {data.map((item, index) => {
+              const x = (index / (data.length - 1 || 1)) * 100
+              const y = 100 - (((item.value || 0) - minValue) / range) * 100
               return (
                 <circle
-                  key={i}
+                  key={`${item.label || index}-${index}`}
                   cx={x}
                   cy={y}
                   r="4"
@@ -72,11 +88,14 @@ export default function SimpleChart({ data, title, height = 200 }) {
             })}
           </svg>
 
-          {/* X轴标签 */}
           <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-xs text-gray-500">
-            {data.map((d, i) => (
-              <span key={i} className="transform -rotate-45 origin-top-left" style={{ transform: 'rotate(-45deg)' }}>
-                {d.label || i + 1}
+            {data.map((item, index) => (
+              <span
+                key={`${item.label || index}-label-${index}`}
+                className="origin-top-left"
+                style={{ transform: 'rotate(-45deg)' }}
+              >
+                {item.label || index + 1}
               </span>
             ))}
           </div>

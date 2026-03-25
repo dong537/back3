@@ -11,9 +11,13 @@
     "zodiac": "Zodiac",
     "bazi": "Bazi",
     "ai": "AI",
+    "dashboard": "Dashboard",
     "login": "Login",
     "logout": "Logout",
     "logoutFull": "Sign out",
+    "dailyTest": "Daily Test",
+    "records": "Records",
+    "compatibility": "Compatibility",
     "favorites": "Favorites",
     "ask": "Ask",
     "achievement": "Achievements",
@@ -120,7 +124,7 @@
     "loginPrompt": "to get 2 free uses per day",
     "error": "Divination failed, please try again later",
     "aiError": "AI interpretation failed, please try again later",
-    "aiPrompt": "I asked \"{{question}}\" and got hexagram {{hexagram}}, {{changingLines}}Please provide a detailed interpretation of this hexagram's meaning and advice.",
+    "aiPrompt": "I asked \"{{question}}\" and got hexagram {{hexagram}}, {{changingLines}} Please provide a detailed interpretation of this hexagram's meaning and advice.",
     "changingLinesText": "Lines {{lines}} are changing, transforming to hexagram {{changedHexagram}}.",
     "noChangingLines": "No changing lines."
   },
@@ -184,6 +188,21 @@
       "health": "Health Fortune",
       "finance": "Wealth Analysis"
     },
+    "fortune": {
+      "love": "Love",
+      "wealth": "Wealth",
+      "career": "Career",
+      "study": "Study",
+      "social": "Social"
+    },
+    "luckyItems": {
+      "color": "Lucky Color",
+      "accessory": "Lucky Accessory",
+      "time": "Lucky Time",
+      "direction": "Lucky Direction"
+    },
+    "suggestions": "Suggestions",
+    "avoidances": "Avoidances",
     "signs": {
       "aries": "Aries",
       "taurus": "Taurus",
@@ -296,6 +315,23 @@
     "networkError": "Network error, please check your connection",
     "operationFailed": "Operation failed, please try again later"
   },
+  "achievement": {
+    "title": "Achievement System",
+    "subtitle": "Unlock achievements and earn rich rewards",
+    "types": {
+      "divination": "Divination",
+      "favorite": "Favorite",
+      "invite": "Invite",
+      "checkin": "Check-in",
+      "points": "Points",
+      "other": "Other"
+    },
+    "status": {
+      "unlocked": "Unlocked",
+      "locked": "Locked",
+      "dateError": "Date Error"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -307,4 +343,3 @@
     "question": "Question"
   }
 }
-

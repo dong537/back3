@@ -1,237 +1,362 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Heart, MessageSquare, Share2, Bookmark, MoreHorizontal, Send, Loader2, Sparkles } from 'lucide-react';
-import { communityApi } from '../api';
-import { useAuth } from '../context/AuthContext';
-import { toast } from '../components/Toast';
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import {
+  ArrowLeft,
+  Bookmark,
+  Heart,
+  Loader2,
+  MessageSquare,
+  MoreHorizontal,
+  Send,
+  Share2,
+  Sparkles,
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { communityApi } from '../api'
+import { useAuth } from '../context/AuthContext'
+import { toast } from '../components/Toast'
+import { logger } from '../utils/logger'
+import { resolvePageLocale, safeText } from '../utils/displayText'
+
+const POST_DETAIL_COPY = {
+  'zh-CN': {
+    back: '返回',
+    more: '更多操作',
+    like: '点赞',
+    share: '分享',
+    save: '收藏',
+    sendComment: '发送评论',
+    title: '动态详情',
+    loading: '加载中...',
+    postMissing: '帖子不存在或已删除',
+    loadCommentsFailed: '加载评论失败',
+    loginFirst: '请先登录',
+    commentRequired: '请输入评论内容',
+    commentSuccess: '评论成功',
+    commentFailed: '评论失败',
+    saveFailed: '收藏失败，请稍后重试',
+    likeFailed: '点赞失败，请稍后重试',
+    shareSuccess: '链接已复制',
+    shareFailed: '分享失败',
+    commentsTitle: '评论',
+    commentsEmpty: '暂无评论，快来抢沙发吧',
+    commentPlaceholder: '写下你的评论...',
+    unknownUser: '用户',
+    question: '问题',
+    justNow: '刚刚',
+    minutesAgo: (count) => `${count} 分钟前`,
+    hoursAgo: (count) => `${count} 小时前`,
+    monthDay: (month, day) => `${month}月${day}日`,
+  },
+  'en-US': {
+    back: 'Back',
+    more: 'More actions',
+    like: 'Like',
+    share: 'Share',
+    save: 'Save',
+    sendComment: 'Post comment',
+    title: 'Post Detail',
+    loading: 'Loading...',
+    postMissing: 'This post does not exist or has been removed',
+    loadCommentsFailed: 'Failed to load comments',
+    loginFirst: 'Please sign in first',
+    commentRequired: 'Please enter a comment',
+    commentSuccess: 'Comment posted',
+    commentFailed: 'Failed to post comment',
+    saveFailed: 'Failed to save. Please try again later.',
+    likeFailed: 'Failed to like. Please try again later.',
+    shareSuccess: 'Link copied',
+    shareFailed: 'Share failed',
+    commentsTitle: 'Comments',
+    commentsEmpty: 'No comments yet. Be the first to reply.',
+    commentPlaceholder: 'Write your comment...',
+    unknownUser: 'User',
+    question: 'Question',
+    justNow: 'Just now',
+    minutesAgo: (count) => `${count} min ago`,
+    hoursAgo: (count) => `${count} hr ago`,
+    monthDay: (month, day) => `${month}/${day}`,
+  },
+}
 
 export default function PostDetailPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
-  
-  const [post, setPost] = useState(null);
-  const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [commentText, setCommentText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { isLoggedIn } = useAuth()
+  const { i18n } = useTranslation()
+  const locale = resolvePageLocale(i18n.language)
+  const copy = POST_DETAIL_COPY[locale]
+
+  const [post, setPost] = useState(null)
+  const [comments, setComments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [commentText, setCommentText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const loadPost = useCallback(async () => {
     try {
-      setLoading(true);
-      const res = await communityApi.getPostDetail(id);
-      setPost(res.data?.data || res.data);
-    } catch (err) {
-      console.error('Load post failed:', err);
-      toast.error('帖子不存在或已删除');
-      navigate('/');
+      setLoading(true)
+      const response = await communityApi.getPostDetail(id)
+      setPost(response.data?.data || response.data)
+    } catch (error) {
+      logger.error('Load post failed:', error)
+      toast.error(copy.postMissing)
+      navigate('/')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [id, navigate]);
+  }, [copy.postMissing, id, navigate])
 
   const loadComments = useCallback(async () => {
     try {
-      const res = await communityApi.getComments(id, 1, 50);
-      const data = res.data?.data || res.data;
-      setComments(data.list || []);
-    } catch (err) {
-      console.error('加载评论失败:', err);
+      const response = await communityApi.getComments(id, 1, 50)
+      const payload = response.data?.data || response.data || {}
+      setComments(Array.isArray(payload.list) ? payload.list : [])
+    } catch (error) {
+      logger.error('Load comments failed:', error)
+      toast.error(copy.loadCommentsFailed)
     }
-  }, [id]);
+  }, [copy.loadCommentsFailed, id])
 
   useEffect(() => {
-    loadPost();
-    loadComments();
-  }, [loadPost, loadComments]);
+    loadPost()
+    loadComments()
+  }, [loadComments, loadPost])
+
+  const ensureLogin = () => {
+    if (isLoggedIn) return true
+    toast.warning(copy.loginFirst)
+    navigate('/login')
+    return false
+  }
 
   const handleLike = async () => {
-    if (!isLoggedIn) {
-      toast.warning('请先登录');
-      navigate('/login');
-      return;
-    }
-    setPost(prev => ({
+    if (!ensureLogin()) return
+
+    setPost((prev) => ({
       ...prev,
       liked: !prev.liked,
-      likesCount: prev.liked ? prev.likesCount - 1 : prev.likesCount + 1
-    }));
+      likesCount: prev.liked ? prev.likesCount - 1 : prev.likesCount + 1,
+    }))
+
     try {
-      await communityApi.toggleLike('post', id);
-    } catch (err) {
-      setPost(prev => ({
+      await communityApi.toggleLike('post', id)
+    } catch (error) {
+      logger.error('Toggle post like failed:', error)
+      setPost((prev) => ({
         ...prev,
         liked: !prev.liked,
-        likesCount: prev.liked ? prev.likesCount + 1 : prev.likesCount - 1
-      }));
+        likesCount: prev.liked ? prev.likesCount + 1 : prev.likesCount - 1,
+      }))
+      toast.error(copy.likeFailed)
     }
-  };
+  }
 
   const handleSave = async () => {
-    if (!isLoggedIn) {
-      toast.warning('请先登录');
-      navigate('/login');
-      return;
-    }
-    setPost(prev => ({ ...prev, saved: !prev.saved }));
+    if (!ensureLogin()) return
+
+    setPost((prev) => ({ ...prev, saved: !prev.saved }))
     try {
-      await communityApi.toggleFavorite(id);
-    } catch (err) {
-      setPost(prev => ({ ...prev, saved: !prev.saved }));
+      await communityApi.toggleFavorite(id)
+    } catch (error) {
+      logger.error('Toggle post favorite failed:', error)
+      setPost((prev) => ({ ...prev, saved: !prev.saved }))
+      toast.error(copy.saveFailed)
     }
-  };
+  }
+
+  const handleShare = async () => {
+    const shareText = `${safeText(post?.title) || copy.title}\n${window.location.href}`
+    try {
+      await navigator.clipboard.writeText(shareText)
+      toast.success(copy.shareSuccess)
+    } catch (error) {
+      logger.error('Share post failed:', error)
+      toast.error(copy.shareFailed)
+    }
+  }
 
   const handleSubmitComment = async () => {
-    if (!isLoggedIn) {
-      toast.warning('请先登录');
-      navigate('/login');
-      return;
-    }
+    if (!ensureLogin()) return
     if (!commentText.trim()) {
-      toast.warning('请输入评论内容');
-      return;
+      toast.warning(copy.commentRequired)
+      return
     }
-    setSubmitting(true);
-    try {
-      const res = await communityApi.createComment({
-        postId: parseInt(id),
-        content: commentText.trim(),
-        anonymous: false
-      });
-      const newComment = res.data?.data || res.data;
-      setComments(prev => [newComment, ...prev]);
-      setCommentText('');
-      setPost(prev => ({ ...prev, commentsCount: (prev.commentsCount || 0) + 1 }));
-      toast.success('评论成功');
-    } catch (err) {
-      toast.error('评论失败');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
-  const formatTime = (dateStr) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now - date;
-    if (diff < 60000) return '刚刚';
-    if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
-    if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
-    return (date.getMonth() + 1) + '月' + date.getDate() + '日';
-  };
+    setSubmitting(true)
+    try {
+      const response = await communityApi.createComment({
+        postId: Number.parseInt(id, 10),
+        content: commentText.trim(),
+        anonymous: false,
+      })
+      const newComment = response.data?.data || response.data
+      setComments((prev) => [newComment, ...prev])
+      setCommentText('')
+      setPost((prev) => ({
+        ...prev,
+        commentsCount: (prev.commentsCount || 0) + 1,
+      }))
+      toast.success(copy.commentSuccess)
+    } catch (error) {
+      logger.error('Create comment failed:', error)
+      toast.error(copy.commentFailed)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const formatTime = (value) => {
+    if (!value) return ''
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    const diff = Date.now() - date.getTime()
+    if (diff < 60_000) return copy.justNow
+    if (diff < 3_600_000) return copy.minutesAgo(Math.floor(diff / 60_000))
+    if (diff < 86_400_000) return copy.hoursAgo(Math.floor(diff / 3_600_000))
+    return copy.monthDay(date.getMonth() + 1, date.getDate())
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f0f23] flex items-center justify-center">
+      <div className="page-shell flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" />
-            <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white animate-spin" size={24} />
+            <div className="h-16 w-16 animate-pulse rounded-full bg-[linear-gradient(135deg,#a34224_0%,#cd7840_52%,#e3bf73_100%)]" />
+            <Sparkles
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-white"
+              size={24}
+            />
           </div>
-          <span className="text-purple-300 text-sm animate-pulse">加载中...</span>
+          <span className="animate-pulse text-sm text-[#dcb86f]">
+            {copy.loading}
+          </span>
         </div>
       </div>
-    );
+    )
   }
 
-  if (!post) return null;
+  if (!post) return null
 
-  const user = post.user || {};
+  const user = post.user || {}
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f0f23] pb-24">
-      {/* 顶部导航栏 */}
-      <div className="sticky top-0 z-50 backdrop-blur-xl bg-[#1a1a2e]/80 border-b border-purple-500/20">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="p-2 hover:bg-purple-500/20 rounded-xl transition-all duration-300 group"
+    <div className="page-shell pb-32" data-theme="default">
+      <div className="sticky top-0 z-50 -mx-4 border-b border-white/10 bg-[#0f0a09]/82 backdrop-blur-xl">
+        <div className="app-sticky-inner flex items-center justify-between py-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="group rounded-xl p-2 transition-all duration-300 hover:bg-white/10"
+            title={copy.back}
+            aria-label={copy.back}
           >
-            <ArrowLeft size={20} className="text-purple-300 group-hover:text-purple-200 transition-colors" />
+            <ArrowLeft
+              size={20}
+              className="text-[#f4ece1] transition-colors group-hover:text-[#fff7eb]"
+            />
           </button>
-          <h1 className="text-lg font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">
-            动态详情
+          <h1 className="bg-[linear-gradient(135deg,#f6e7cf_0%,#dcb86f_52%,#e19a84_100%)] bg-clip-text text-lg font-bold text-transparent">
+            {copy.title}
           </h1>
-          <button className="p-2 hover:bg-purple-500/20 rounded-xl transition-all duration-300 group">
-            <MoreHorizontal size={20} className="text-purple-300 group-hover:text-purple-200 transition-colors" />
+          <button
+            className="group rounded-xl p-2 transition-all duration-300 hover:bg-white/10"
+            title={copy.more}
+            aria-label={copy.more}
+          >
+            <MoreHorizontal
+              size={20}
+              className="text-[#bdaa94] transition-colors group-hover:text-[#f4ece1]"
+            />
           </button>
         </div>
       </div>
 
-      {/* 帖子内容卡片 */}
-      <div className="m-4 relative group">
-        {/* 卡片光晕效果 */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-purple-600/30 via-pink-500/30 to-purple-600/30 rounded-2xl blur-lg opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
-        
-        <div className="relative bg-gradient-to-br from-[#252547]/90 to-[#1a1a35]/90 backdrop-blur-xl rounded-2xl border border-purple-500/30 overflow-hidden">
-          {/* 顶部装饰线 */}
-          <div className="h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500" />
-          
+      <div className="group relative m-4">
+        <div className="absolute -inset-1 rounded-2xl bg-[linear-gradient(135deg,rgba(163,66,36,0.28),rgba(208,168,91,0.22),rgba(122,50,24,0.24))] opacity-60 blur-lg transition-opacity duration-500 group-hover:opacity-80" />
+
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(22,17,16,0.9),rgba(14,11,10,0.82))] backdrop-blur-xl">
+          <div className="h-1 bg-[linear-gradient(135deg,#a34224_0%,#cd7840_52%,#e3bf73_100%)]" />
+
           <div className="p-5">
-            {/* 用户信息 */}
-            <div className="flex items-center space-x-3 mb-5">
+            <div className="mb-5 flex items-center space-x-3">
               <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 p-0.5">
-                  <div className="w-full h-full rounded-full bg-[#1a1a2e] flex items-center justify-center text-xl">
+                <div className="h-12 w-12 rounded-full bg-[linear-gradient(135deg,#a34224_0%,#cd7840_52%,#e3bf73_100%)] p-0.5">
+                  <div className="flex h-full w-full items-center justify-center rounded-full bg-[#100b0a] text-xl">
                     {user.avatar || '👤'}
                   </div>
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#1a1a2e]" />
+                <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-[#100b0a] bg-[#d0a85b]" />
               </div>
               <div className="flex-1">
-                <span className="font-semibold text-purple-100">{user.nickname || '用户'}</span>
-                <div className="text-xs text-purple-400/70">{formatTime(post.createdAt)}</div>
+                <span className="font-semibold text-[#f4ece1]">
+                  {user.nickname || copy.unknownUser}
+                </span>
+                <div className="text-xs text-[#8f7b66]">
+                  {formatTime(post.createdAt)}
+                </div>
               </div>
             </div>
 
-            {/* 帖子标题和内容 */}
             {post.title && (
-              <h2 className="text-xl font-bold text-white mb-3 leading-tight">{post.title}</h2>
+              <h2 className="mb-3 text-xl font-bold leading-tight text-white">
+                {post.title}
+              </h2>
             )}
-            <p className="text-purple-200/90 leading-relaxed whitespace-pre-line mb-5 text-[15px]">
+            <p className="mb-5 whitespace-pre-line text-[15px] leading-relaxed text-[#e4d6c8]">
               {post.content}
             </p>
 
-            {/* 互动按钮 */}
-            <div className="flex items-center justify-between pt-4 border-t border-purple-500/20">
-              <button 
-                onClick={handleLike} 
-                className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-300 ${
-                  post.liked 
-                    ? 'text-pink-400 bg-pink-500/20 shadow-lg shadow-pink-500/20' 
-                    : 'text-purple-400 hover:bg-purple-500/20'
+            <div className="flex items-center justify-between border-t border-white/10 pt-4">
+              <button
+                onClick={handleLike}
+                className={`flex items-center space-x-2 rounded-xl px-4 py-2 transition-all duration-300 ${
+                  post.liked
+                    ? 'bg-[#7a3218]/20 text-[#e19a84] shadow-lg shadow-[rgba(163,66,36,0.18)]'
+                    : 'text-[#bdaa94] hover:bg-white/[0.05]'
                 }`}
+                title={copy.like}
+                aria-label={copy.like}
               >
-                <Heart 
-                  size={20} 
-                  fill={post.liked ? 'currentColor' : 'none'} 
-                  className={post.liked ? 'animate-pulse' : ''} 
+                <Heart
+                  size={20}
+                  fill={post.liked ? 'currentColor' : 'none'}
+                  className={post.liked ? 'animate-pulse' : ''}
                 />
-                <span className="text-sm font-medium">{post.likesCount || 0}</span>
+                <span className="text-sm font-medium">
+                  {post.likesCount || 0}
+                </span>
               </button>
-              
-              <div className="flex items-center space-x-2 px-4 py-2 text-purple-400">
+
+              <div className="flex items-center space-x-2 px-4 py-2 text-[#bdaa94]">
                 <MessageSquare size={20} />
-                <span className="text-sm font-medium">{post.commentsCount || 0}</span>
+                <span className="text-sm font-medium">
+                  {post.commentsCount || 0}
+                </span>
               </div>
-              
-              <button className="flex items-center space-x-2 px-4 py-2 text-purple-400 hover:bg-purple-500/20 rounded-xl transition-all duration-300">
+
+              <button
+                onClick={handleShare}
+                className="flex items-center space-x-2 rounded-xl px-4 py-2 text-[#bdaa94] transition-all duration-300 hover:bg-white/[0.05]"
+                title={copy.share}
+                aria-label={copy.share}
+              >
                 <Share2 size={20} />
               </button>
-              
-              <button 
-                onClick={handleSave} 
-                className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-300 ${
-                  post.saved 
-                    ? 'text-yellow-400 bg-yellow-500/20 shadow-lg shadow-yellow-500/20' 
-                    : 'text-purple-400 hover:bg-purple-500/20'
+
+              <button
+                onClick={handleSave}
+                className={`flex items-center space-x-2 rounded-xl px-4 py-2 transition-all duration-300 ${
+                  post.saved
+                    ? 'bg-[#6a4a1e]/20 text-[#f0d9a5] shadow-lg shadow-[rgba(208,168,91,0.16)]'
+                    : 'text-[#bdaa94] hover:bg-white/[0.05]'
                 }`}
+                title={copy.save}
+                aria-label={copy.save}
               >
-                <Bookmark 
-                  size={20} 
-                  fill={post.saved ? 'currentColor' : 'none'} 
-                  className={post.saved ? 'animate-pulse' : ''} 
+                <Bookmark
+                  size={20}
+                  fill={post.saved ? 'currentColor' : 'none'}
+                  className={post.saved ? 'animate-pulse' : ''}
                 />
               </button>
             </div>
@@ -239,77 +364,90 @@ export default function PostDetailPage() {
         </div>
       </div>
 
-      {/* 评论区 */}
       <div className="px-4">
-        <div className="flex items-center space-x-2 mb-4">
-          <Sparkles size={18} className="text-purple-400" />
-          <h3 className="font-bold text-purple-100">评论</h3>
-          <span className="text-sm text-purple-400/70">({comments.length})</span>
+        <div className="mb-4 flex items-center space-x-2">
+          <Sparkles size={18} className="text-[#d0a85b]" />
+          <h3 className="font-bold text-[#f4ece1]">{copy.commentsTitle}</h3>
+          <span className="text-sm text-[#8f7b66]">
+            ({comments.length})
+          </span>
         </div>
-        
+
         {comments.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <MessageSquare size={28} className="text-purple-400" />
+          <div className="py-12 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+              <MessageSquare size={28} className="text-[#8f7b66]" />
             </div>
-            <p className="text-purple-400/70">暂无评论，快来抢沙发吧~</p>
+            <p className="text-[#8f7b66]">{copy.commentsEmpty}</p>
           </div>
         ) : (
           <div className="space-y-3">
             {comments.map((comment, index) => {
-              const commentUser = comment.user || {};
+              const commentUser = comment.user || {}
+
               return (
-                <div 
-                  key={comment.id} 
-                  className="relative group"
+                <div
+                  key={comment.id}
+                  className="group relative"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600/20 to-pink-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  
-                  <div className="relative bg-[#252547]/60 backdrop-blur-sm rounded-xl p-4 border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300">
+                  <div className="absolute -inset-0.5 rounded-xl bg-[linear-gradient(135deg,rgba(163,66,36,0.18),rgba(208,168,91,0.14))] opacity-0 blur transition-opacity duration-300 group-hover:opacity-100" />
+
+                  <div className="relative rounded-xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm transition-all duration-300 hover:border-[#d0a85b]/24 hover:bg-white/[0.06]">
                     <div className="flex items-start space-x-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500/50 to-pink-500/50 p-0.5 flex-shrink-0">
-                        <div className="w-full h-full rounded-full bg-[#1a1a2e] flex items-center justify-center text-sm">
+                      <div className="h-9 w-9 flex-shrink-0 rounded-full bg-[linear-gradient(135deg,#a34224_0%,#cd7840_52%,#e3bf73_100%)] p-0.5">
+                        <div className="flex h-full w-full items-center justify-center rounded-full bg-[#100b0a] text-sm">
                           {commentUser.avatar || '👤'}
                         </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-sm font-semibold text-purple-200">{commentUser.nickname || '用户'}</span>
-                          <span className="text-xs text-purple-400/60">{formatTime(comment.createdAt)}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <span className="text-sm font-semibold text-[#f4ece1]">
+                            {commentUser.nickname || copy.unknownUser}
+                          </span>
+                          <span className="text-xs text-[#8f7b66]">
+                            {formatTime(comment.createdAt)}
+                          </span>
                         </div>
-                        <p className="text-sm text-purple-300/90 leading-relaxed">{comment.content}</p>
+                        <p className="text-sm leading-relaxed text-[#e4d6c8]">
+                          {comment.content}
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
         )}
       </div>
 
-      {/* 底部评论输入框 */}
-      <div className="fixed bottom-0 left-0 right-0 backdrop-blur-xl bg-[#1a1a2e]/90 border-t border-purple-500/20 p-4">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-[#0f0a09]/90 p-4 backdrop-blur-xl">
         <div className="flex items-center space-x-3">
-          <div className="flex-1 relative">
+          <div className="relative flex-1">
             <input
               type="text"
               value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="写下你的评论..."
-              className="w-full px-5 py-3 bg-[#252547]/80 rounded-2xl text-sm text-purple-100 placeholder-purple-400/50 border border-purple-500/30 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
-              onKeyPress={(e) => e.key === 'Enter' && !submitting && handleSubmitComment()}
+              onChange={(event) => setCommentText(event.target.value)}
+              placeholder={copy.commentPlaceholder}
+              className="mystic-input w-full rounded-2xl px-5 py-3 text-sm"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !submitting) {
+                  handleSubmitComment()
+                }
+              }}
             />
           </div>
           <button
             onClick={handleSubmitComment}
             disabled={submitting || !commentText.trim()}
-            className={`p-3 rounded-2xl transition-all duration-300 ${
-              commentText.trim() 
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 active:scale-95' 
-                : 'bg-[#252547] text-purple-400/50 border border-purple-500/20'
+            className={`rounded-2xl p-3 transition-all duration-300 ${
+              commentText.trim()
+                ? 'btn-primary-theme text-white hover:scale-105 active:scale-95'
+                : 'border border-white/10 bg-white/[0.04] text-[#8f7b66]'
             }`}
+            title={copy.sendComment}
+            aria-label={copy.sendComment}
           >
             {submitting ? (
               <Loader2 size={20} className="animate-spin" />
@@ -320,5 +458,5 @@ export default function PostDetailPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

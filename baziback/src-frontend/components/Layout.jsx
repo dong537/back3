@@ -1,36 +1,102 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Compass, Star, Calendar, Brain, User, Home, Menu, X, Sparkles, LogOut, Languages, BarChart3, Users, Trophy } from 'lucide-react'
+import {
+  Compass,
+  Calendar,
+  Brain,
+  User,
+  Home,
+  Menu,
+  X,
+  Sparkles,
+  LogOut,
+  BarChart3,
+  Users,
+  Trophy,
+} from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { setLanguage } from '../i18n'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { logger } from '../utils/logger'
 import BottomNavigation from './BottomNavigation'
+import useAppLocale from '../hooks/useAppLocale'
+import LanguageToggleButton from './LanguageToggleButton'
+
+const LAYOUT_COPY = {
+  'zh-CN': {
+    appName: '天机明理',
+    nav: {
+      home: '首页',
+      yijing: '易经',
+      tarot: '塔罗',
+      bazi: '八字',
+      ai: 'AI',
+      dashboard: '工作台',
+      achievement: '成就',
+      invite: '邀请好友',
+      login: '登录',
+      logout: '退出',
+      logoutFull: '退出登录',
+      user: '用户',
+    },
+    footerTitle: '天机明理 · 易经 · 星座 · 八字',
+    footerNote: '内容仅供娱乐与文化参考，请理性看待。',
+    menuAria: '菜单',
+  },
+  'en-US': {
+    appName: 'Tianji Mingli',
+    nav: {
+      home: 'Home',
+      yijing: 'Yijing',
+      tarot: 'Tarot',
+      bazi: 'Bazi',
+      ai: 'AI',
+      dashboard: 'Workspace',
+      achievement: 'Achievements',
+      invite: 'Invite Friends',
+      login: 'Login',
+      logout: 'Logout',
+      logoutFull: 'Sign out',
+      user: 'User',
+    },
+    footerTitle: 'Tianji Mingli · Yijing · Zodiac · Bazi',
+    footerNote: 'For entertainment and cultural reference only.',
+    menuAria: 'Menu',
+  },
+}
 
 const navItems = [
-  { path: '/', icon: Home, key: 'nav.home' },
-  { path: '/yijing', icon: Compass, key: 'nav.yijing' },
-  { path: '/tarot', icon: Sparkles, key: 'nav.tarot' },
-  // { path: '/zodiac', icon: Star, key: 'nav.zodiac' }, // 暂时禁用星座页面
-  { path: '/bazi', icon: Calendar, key: 'nav.bazi' },
-  { path: '/ai', icon: Brain, key: 'nav.ai' },
-  { path: '/dashboard', icon: BarChart3, key: 'nav.dashboard' },
+  { path: '/', icon: Home, id: 'home' },
+  { path: '/yijing', icon: Compass, id: 'yijing' },
+  { path: '/tarot', icon: Sparkles, id: 'tarot' },
+  { path: '/bazi', icon: Calendar, id: 'bazi' },
+  { path: '/ai', icon: Brain, id: 'ai' },
+  { path: '/dashboard', icon: BarChart3, id: 'dashboard' },
 ]
 
 export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { t, i18n } = useTranslation()
+  const { locale } = useAppLocale()
+  const copy = LAYOUT_COPY[locale]
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const auth = useAuth()
   const { setTheme } = useTheme()
 
   useEffect(() => {
-    const path = location.pathname.split('/')[1];
-    const themeName = ['yijing', 'tarot', /* 'zodiac', */ 'bazi', 'ai'].includes(path) ? path : 'default';
-    setTheme(themeName);
-  }, [location.pathname, setTheme]);
+    const path = location.pathname.split('/')[1]
+    const themeName = ['yijing', 'tarot', 'bazi', 'ai'].includes(path)
+      ? path
+      : 'default'
+    setTheme(themeName)
+  }, [location.pathname, setTheme])
+
+  useEffect(() => {
+    logger.debug('Layout mounted, auth state:', {
+      user: auth.user?.username,
+      token: !!auth.token,
+      isLoggedIn: auth.isLoggedIn,
+    })
+  }, [auth.isLoggedIn, auth.user, auth.token])
 
   const handleLogout = () => {
     auth.logout()
@@ -38,220 +104,195 @@ export default function Layout() {
     navigate('/login')
   }
 
-  // 注意：不再在Layout中同步localStorage和AuthContext
-  // AuthContext的useEffect已经在初始化时处理了localStorage的读取
-  // 在这里再次同步会导致无限循环或状态不稳定
-  useEffect(() => {
-    logger.debug('Layout mounted, auth state:', { 
-      user: auth.user?.username, 
-      token: !!auth.token, 
-      isLoggedIn: auth.isLoggedIn 
-    })
-  }, [auth.isLoggedIn, auth.user, auth.token])
-
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* 顶部导航 - 移动端简化显示 */}
+    <div className="flex min-h-screen flex-col overflow-x-hidden">
       {location.pathname !== '/' && (
-      <header className="glass-dark sticky top-0 z-50 safe-area-top">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14 md:h-16">
-            {/* Logo - 移动端只显示图标 */}
-            <Link to="/" className="flex items-center space-x-2 md:space-x-3">
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <span className="text-white text-lg md:text-xl">☯</span>
+        <header className="glass-dark safe-area-top sticky top-0 z-50">
+          <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex h-14 items-center justify-between md:h-16">
+              <Link to="/" className="flex items-center space-x-2 md:space-x-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(135deg,#a34224_0%,#cd7840_52%,#e3bf73_100%)] md:h-10 md:w-10">
+                  <span className="text-lg text-white md:text-xl">
+                    {'\u262F'}
+                  </span>
+                </div>
+                <span className="hidden bg-[linear-gradient(135deg,#f6e7cf_0%,#dcb86f_52%,#e19a84_100%)] bg-clip-text text-lg font-bold text-transparent sm:inline-block md:text-xl">
+                  {copy.appName}
+                </span>
+              </Link>
+
+              <div className="hidden items-center space-x-1 md:flex">
+                {navItems.map(({ path, icon: Icon, id }) => (
+                  <Link
+                    key={path}
+                    to={path}
+                    className={`flex items-center space-x-2 rounded-lg px-4 py-2 transition-all duration-300 ${
+                      location.pathname === path
+                        ? 'bg-[#7a3218]/18 text-[#f0d9a5]'
+                        : 'text-[#8f7b66] hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <Icon size={18} />
+                    <span>{copy.nav[id]}</span>
+                  </Link>
+                ))}
               </div>
-              <span className="hidden sm:inline-block text-lg md:text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                {t('app.name')}
-              </span>
-            </Link>
 
-            {/* 桌面导航 */}
-            <div className="hidden md:flex items-center space-x-1">
-              {navItems.map(({ path, icon: Icon, key }) => (
+              <div className="hidden items-center space-x-4 md:flex">
                 <Link
-                  key={path}
-                  to={path}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-                    location.pathname === path
-                      ? 'bg-purple-500/20 text-purple-300'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
+                  to="/achievement"
+                  className="flex items-center space-x-2 rounded-lg px-3 py-2 text-[#bdaa94] transition-all duration-300 hover:bg-white/5 hover:text-white"
                 >
-                  <Icon size={18} />
-                  <span>{t(key)}</span>
+                  <Trophy size={18} />
+                  <span>{copy.nav.achievement}</span>
                 </Link>
-              ))}
-            </div>
-
-            {/* 用户按钮 */}
-            <div className="hidden md:flex items-center space-x-4">
-              {/* 成就系统 */}
-              <Link
-                to="/achievement"
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300"
-              >
-                <Trophy size={18} />
-                <span>成就</span>
-              </Link>
-              {/* 邀请好友 */}
-              <Link
-                to="/referral"
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300"
-              >
-                <Users size={18} />
-                <span>邀请好友</span>
-              </Link>
-              {/* 语言切换 */}
-              <button
-                type="button"
-                onClick={() => setLanguage(i18n.language === 'en-US' ? 'zh-CN' : 'en-US')}
-                className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300"
-                title={i18n.language === 'en-US' ? t('lang.zh') : t('lang.en')}
-              >
-                <Languages size={18} />
-                <span>{i18n.language === 'en-US' ? t('lang.zh') : t('lang.en')}</span>
-              </button>
-              {/* 调试：显示auth状态 */}
-              {/* <div className="text-xs text-gray-500">
-                isLoggedIn: {auth.isLoggedIn.toString()}, user: {auth.user ? 'yes' : 'no'}
-              </div> */}
-              {auth.isLoggedIn ? (
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2 text-white">
-                    <span className="px-2 py-0.5 rounded-lg bg-purple-600/30 text-sm flex items-center space-x-1">
-                      <span className="">💎</span>
-                      <span>{auth.credits}</span>
-                    </span>
+                <Link
+                  to="/referral"
+                  className="flex items-center space-x-2 rounded-lg px-3 py-2 text-[#bdaa94] transition-all duration-300 hover:bg-white/5 hover:text-white"
+                >
+                  <Users size={18} />
+                  <span>{copy.nav.invite}</span>
+                </Link>
+                <LanguageToggleButton className="flex items-center space-x-2 rounded-lg px-3 py-2 text-[#bdaa94] transition-all duration-300 hover:bg-white/5 hover:text-white"></LanguageToggleButton>
+                {auth.isLoggedIn ? (
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2 text-white">
+                      <span className="flex items-center space-x-1 rounded-lg bg-[#7a3218]/18 px-2 py-0.5 text-sm text-[#f0d9a5]">
+                        <span>{'\u{1F48E}'}</span>
+                        <span>{auth.credits}</span>
+                      </span>
+                      <button
+                        onClick={() => navigate('/self')}
+                        className="flex cursor-pointer items-center space-x-2 transition-colors hover:text-[#f0d9a5]"
+                      >
+                        <User size={18} />
+                        <span>{auth.user?.username || copy.nav.user}</span>
+                      </button>
+                    </div>
                     <button
-                      onClick={() => navigate('/self')}
-                      className="flex items-center space-x-2 hover:text-purple-300 transition-colors cursor-pointer"
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex items-center space-x-2 rounded-lg px-3 py-2 text-[#bdaa94] transition-all duration-300 hover:bg-white/5 hover:text-white"
                     >
-                      <User size={18} />
-                      <span>{auth.user?.username || '用户'}</span>
+                      <LogOut size={18} />
+                      <span>{copy.nav.logout}</span>
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300"
-                  >
-                    <LogOut size={18} />
-                    <span>{t('nav.logout')}</span>
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  to="/login"
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 transition-all duration-300"
-                >
-                  <User size={18} />
-                  <span>{t('nav.login')}</span>
-                </Link>
-              )}
-            </div>
-
-            {/* 移动端菜单按钮和用户信息 */}
-            <div className="md:hidden flex items-center space-x-2">
-              {/* 移动端显示积分（如果已登录） */}
-              {auth.isLoggedIn && (
-                <div className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-purple-600/30">
-                  <span className="text-sm">💎</span>
-                  <span className="text-sm text-white font-medium">{auth.credits}</span>
-                </div>
-              )}
-            <button
-                className="p-2 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label="菜单"
-            >
-                {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-            </div>
-          </div>
-
-          {/* 移动端菜单 */}
-          {mobileMenuOpen && (
-            <div className="md:hidden py-4 space-y-2">
-              {navItems.map(({ path, icon: Icon, key }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
-                    location.pathname === path
-                      ? 'bg-purple-500/20 text-purple-300'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Icon size={20} />
-                  <span>{t(key)}</span>
-                </Link>
-              ))}
-              {auth.isLoggedIn ? (
-                <>
+                ) : (
                   <Link
-                    to="/achievement"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                    to="/login"
+                    className="flex items-center space-x-2 rounded-lg bg-[linear-gradient(135deg,#a34224_0%,#cd7840_52%,#e3bf73_100%)] px-4 py-2 text-white transition-all duration-300 hover:brightness-105"
                   >
-                    <Trophy size={20} />
-                    <span>成就</span>
+                    <User size={18} />
+                    <span>{copy.nav.login}</span>
                   </Link>
-                  <Link
-                    to="/referral"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-                  >
-                    <Users size={20} />
-                    <span>邀请好友</span>
-                  </Link>
-                  <div className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-purple-500/20 text-purple-300 cursor-pointer hover:bg-purple-500/30 transition-colors" onClick={() => {
-                    setMobileMenuOpen(false)
-                    navigate('/self')
-                  }}>
-                    <User size={20} />
-                    <span>{auth.user?.username || '用户'}</span>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2 md:hidden">
+                {auth.isLoggedIn && (
+                  <div className="flex items-center space-x-1 rounded-lg bg-[#7a3218]/18 px-2 py-1">
+                    <span className="text-sm">{'\u{1F48E}'}</span>
+                    <span className="text-sm font-medium text-white">
+                      {auth.credits}
+                    </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-                  >
-                    <LogOut size={20} />
-                    <span>{t('nav.logoutFull')}</span>
-                  </button>
-                </>
-              ) : (
-                <Link
-                  to="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                )}
+                <button
+                  className="rounded-lg p-2 transition-colors hover:bg-white/10 active:bg-white/20"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  aria-label={copy.menuAria}
                 >
-                  <User size={20} />
-                  <span>{t('nav.login')}</span>
-                </Link>
-              )}
+                  {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+                </button>
+              </div>
             </div>
-          )}
-        </nav>
-      </header>
+
+            {mobileMenuOpen && (
+              <div className="space-y-2 py-4 md:hidden">
+                {navItems.map(({ path, icon: Icon, id }) => (
+                  <Link
+                    key={path}
+                    to={path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center space-x-3 rounded-lg px-4 py-3 transition-all ${
+                      location.pathname === path
+                        ? 'bg-[#7a3218]/18 text-[#f0d9a5]'
+                        : 'text-[#8f7b66] hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <Icon size={20} />
+                    <span>{copy.nav[id]}</span>
+                  </Link>
+                ))}
+                <LanguageToggleButton
+                  onAfterToggle={() => setMobileMenuOpen(false)}
+                  className="flex w-full items-center space-x-3 rounded-lg px-4 py-3 text-[#bdaa94] transition-all hover:bg-white/5 hover:text-white"
+                ></LanguageToggleButton>
+                {auth.isLoggedIn ? (
+                  <>
+                    <Link
+                      to="/achievement"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center space-x-3 rounded-lg px-4 py-3 text-[#bdaa94] transition-all hover:bg-white/5 hover:text-white"
+                    >
+                      <Trophy size={20} />
+                      <span>{copy.nav.achievement}</span>
+                    </Link>
+                    <Link
+                      to="/referral"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center space-x-3 rounded-lg px-4 py-3 text-[#bdaa94] transition-all hover:bg-white/5 hover:text-white"
+                    >
+                      <Users size={20} />
+                      <span>{copy.nav.invite}</span>
+                    </Link>
+                    <div
+                      className="flex cursor-pointer items-center space-x-3 rounded-lg bg-[#7a3218]/18 px-4 py-3 text-[#f0d9a5] transition-colors hover:bg-[#7a3218]/28"
+                      onClick={() => {
+                        setMobileMenuOpen(false)
+                        navigate('/self')
+                      }}
+                    >
+                      <User size={20} />
+                      <span>{auth.user?.username || copy.nav.user}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center space-x-3 rounded-lg px-4 py-3 text-[#bdaa94] transition-all hover:bg-white/5 hover:text-white"
+                    >
+                      <LogOut size={20} />
+                      <span>{copy.nav.logoutFull}</span>
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center space-x-3 rounded-lg bg-[linear-gradient(135deg,#a34224_0%,#cd7840_52%,#e3bf73_100%)] px-4 py-3 text-white"
+                  >
+                    <User size={20} />
+                    <span>{copy.nav.login}</span>
+                  </Link>
+                )}
+              </div>
+            )}
+          </nav>
+        </header>
       )}
 
-      {/* 主内容区 - 为底部导航栏留出空间，移动端增加更多间距 */}
-      <main className="flex-1 pb-20 md:pb-16">
+      <main className="flex-1 pb-20 md:pb-0">
         <Outlet />
       </main>
 
-      {/* 底部导航栏 - 所有页面都显示，登录页除外 */}
       {location.pathname !== '/login' && <BottomNavigation />}
 
-      {/* 底部版权信息 - 仅在非登录页且非首页显示 */}
       {location.pathname !== '/' && location.pathname !== '/login' && (
-        <footer className="glass-dark py-6 mt-auto safe-area-bottom hidden md:block">
-          <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-            <p>© 2025 {t('app.footerTitle')}</p>
-            <p className="mt-1">{t('app.footerNote')}</p>
+        <footer className="glass-dark safe-area-bottom mt-auto hidden py-6 md:block">
+          <div className="mx-auto max-w-7xl px-4 text-center text-sm text-[#8f7b66]">
+            <p>{copy.footerTitle}</p>
+            <p className="mt-1">{copy.footerNote}</p>
           </div>
         </footer>
       )}

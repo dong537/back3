@@ -5,6 +5,7 @@ import com.example.demo.mapper.CreditMapper;
 import com.example.demo.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,73 +19,28 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class CreditService {
-    
+
+    private static final int TRANSACTION_TYPE_SPEND = 2;
+    private static final int TRANSACTION_TYPE_SYSTEM = 4;
+    private static final String WATCH_AD_DESCRIPTION = "观看广告";
+
+    @Value("${app.free-features:false}")
+    private boolean freeFeatures;
+
     private final CreditMapper creditMapper;
     private final UserMapper userMapper;
     private final SseEmitterService sseEmitterService;
-    
-    /**
-     * 添加积分
-     */
+
     @Transactional(rollbackFor = Exception.class)
     public boolean addPoints(Long userId, Integer points, String description, Long relatedOrderId) {
-        if (userId == null || points == null || points <= 0) {
-            log.warn("添加积分参数无效: userId={}, points={}", userId, points);
-            return false;
-        }
-
-        // 1) 锁定余额行（FOR UPDATE），确保并发安全
-        Integer balanceBefore = creditMapper.getBalanceByUserIdForUpdate(userId);
-
-        // 2) 若 tb_credit 不存在该用户，先初始化
-        if (balanceBefore == null) {
-            var user = userMapper.findById(userId);
-            balanceBefore = (user != null && user.getCurrentPoints() != null) ? user.getCurrentPoints() : 0;
-            creditMapper.initUserCredit(userId, balanceBefore);
-            // 再次 FOR UPDATE 读取，确保进入锁定态
-            balanceBefore = creditMapper.getBalanceByUserIdForUpdate(userId);
-            if (balanceBefore == null) {
-                log.error("初始化用户积分记录失败: userId={}", userId);
-                throw new BusinessException("初始化用户积分记录失败");
-            }
-        }
-
-        // 3) 更新 tb_credit
-        int updatedCredit = creditMapper.addPoints(userId, points);
-        if (updatedCredit <= 0) {
-            log.error("更新 tb_credit 失败: userId={}, points={}", userId, points);
-            throw new BusinessException("更新积分失败");
-        }
-
-        // 4) 更新 tb_user 冗余字段
-        int updatedUser = userMapper.updatePoints(userId, points);
-        if (updatedUser <= 0) {
-            log.error("更新 tb_user 积分失败: userId={}, points={}", userId, points);
-            throw new BusinessException("更新用户积分失败");
-        }
-
-        // 5) 写流水
-        Integer balanceAfter = balanceBefore + points;
-        creditMapper.insertTransaction(userId, 4, points, balanceBefore, balanceAfter, description, relatedOrderId);
-
-        log.info("用户 {} 获得 {} 积分，原因：{}，余额：{} -> {}", userId, points, description, balanceBefore, balanceAfter);
-        
-        // 6) 通过SSE推送积分更新事件
-        Map<String, Object> eventData = new HashMap<>();
-        eventData.put("type", "CREDIT_UPDATED");
-        eventData.put("userId", userId);
-        eventData.put("pointsChange", points);
-        eventData.put("balanceBefore", balanceBefore);
-        eventData.put("balanceAfter", balanceAfter);
-        eventData.put("description", description);
-        sseEmitterService.sendToUser(userId, "credit", eventData);
-        
-        return true;
+        return addPointsInternal(userId, points, description, relatedOrderId) != null;
     }
-    
-    /**
-     * 扣除积分
-     */
+
+    @Transactional(rollbackFor = Exception.class)
+    public Integer addPointsAndGetBalance(Long userId, Integer points, String description, Long relatedOrderId) {
+        return addPointsInternal(userId, points, description, relatedOrderId);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public boolean deductPoints(Long userId, Integer points, String description) {
         if (userId == null || points == null || points <= 0) {
@@ -92,75 +48,152 @@ public class CreditService {
             return false;
         }
 
-        // 1) 锁定余额行（FOR UPDATE），确保并发安全
-        Integer balanceBefore = creditMapper.getBalanceByUserIdForUpdate(userId);
-
-        // 2) 若 tb_credit 不存在该用户，先初始化（余额按 tb_user 同步）
-        if (balanceBefore == null) {
-            var user = userMapper.findById(userId);
-            balanceBefore = (user != null && user.getCurrentPoints() != null) ? user.getCurrentPoints() : 0;
-            creditMapper.initUserCredit(userId, balanceBefore);
-            balanceBefore = creditMapper.getBalanceByUserIdForUpdate(userId);
-            if (balanceBefore == null) {
-                log.error("初始化用户积分记录失败: userId={}", userId);
-                throw new BusinessException("初始化用户积分记录失败");
-            }
+        if (freeFeatures) {
+            log.info("免积分模式已开启，跳过积分扣除: userId={}, points={}, description={}",
+                    userId, points, description);
+            return true;
         }
 
+        Integer balanceBefore = getOrCreateBalanceForUpdate(userId);
         if (balanceBefore < points) {
             log.warn("用户 {} 积分不足，当前余额：{}，需要扣除：{}", userId, balanceBefore, points);
             return false;
         }
 
-        // 3) 更新 tb_credit（扣减）
-        int updatedCredit = creditMapper.addPoints(userId, -points);
+        int updatedCredit = creditMapper.deductPointsIfEnough(userId, points);
         if (updatedCredit <= 0) {
-            log.error("扣减 tb_credit 失败: userId={}, points={}", userId, points);
-            throw new BusinessException("扣减积分失败");
+            log.warn("扣减积分失败，可能是并发导致余额变化: userId={}, points={}, balanceBefore={}",
+                    userId, points, balanceBefore);
+            return false;
         }
 
-        // 4) 更新 tb_user 冗余字段
         int updatedUser = userMapper.updatePoints(userId, -points);
         if (updatedUser <= 0) {
             log.error("更新 tb_user 积分失败: userId={}, points={}", userId, points);
             throw new BusinessException("更新用户积分失败");
         }
 
-        // 5) 写流水
         Integer balanceAfter = balanceBefore - points;
-        creditMapper.insertTransaction(userId, 2, -points, balanceBefore, balanceAfter, description, null);
+        creditMapper.insertTransaction(
+                userId,
+                TRANSACTION_TYPE_SPEND,
+                -points,
+                balanceBefore,
+                balanceAfter,
+                description,
+                null
+        );
 
-        log.info("用户 {} 扣除 {} 积分，原因：{}，余额：{} -> {}", userId, points, description, balanceBefore, balanceAfter);
-        
-        // 6) 通过SSE推送积分更新事件
-        Map<String, Object> eventData = new HashMap<>();
-        eventData.put("type", "CREDIT_UPDATED");
-        eventData.put("userId", userId);
-        eventData.put("pointsChange", -points);
-        eventData.put("balanceBefore", balanceBefore);
-        eventData.put("balanceAfter", balanceAfter);
-        eventData.put("description", description);
-        sseEmitterService.sendToUser(userId, "credit", eventData);
-        
+        log.info("用户 {} 扣除 {} 积分，原因：{}，余额：{} -> {}",
+                userId, points, description, balanceBefore, balanceAfter);
+        publishCreditEvent(userId, -points, balanceBefore, balanceAfter, description);
         return true;
     }
-    
+
     /**
-     * 获取用户当前积分
+     * Read current balance and lazily backfill tb_credit from tb_user when needed.
      */
     public Integer getCurrentPoints(Long userId) {
-        // 优先从tb_credit表获取
+        if (userId == null) {
+            return 0;
+        }
+
         Integer balance = creditMapper.getBalanceByUserId(userId);
         if (balance != null) {
             return balance;
         }
-        
-        // 如果tb_credit表中没有，从tb_user表获取
-        var user = userMapper.findById(userId);
-        if (user != null && user.getCurrentPoints() != null) {
-            return user.getCurrentPoints();
+
+        Integer initialBalance = resolveInitialBalance(userId);
+        creditMapper.initUserCredit(userId, initialBalance);
+
+        Integer syncedBalance = creditMapper.getBalanceByUserId(userId);
+        return syncedBalance != null ? syncedBalance : initialBalance;
+    }
+
+    public int getTodayWatchAdEarnCount(Long userId) {
+        if (userId == null) {
+            return 0;
         }
-        
-        return 0;
+        return creditMapper.countTransactionsTodayByTypeAndDescription(
+                userId,
+                TRANSACTION_TYPE_SYSTEM,
+                WATCH_AD_DESCRIPTION
+        );
+    }
+
+    private Integer addPointsInternal(Long userId, Integer points, String description, Long relatedOrderId) {
+        if (userId == null || points == null || points <= 0) {
+            log.warn("添加积分参数无效: userId={}, points={}", userId, points);
+            return null;
+        }
+
+        Integer balanceBefore = getOrCreateBalanceForUpdate(userId);
+
+        int updatedCredit = creditMapper.addPoints(userId, points);
+        if (updatedCredit <= 0) {
+            log.error("更新 tb_credit 失败: userId={}, points={}", userId, points);
+            throw new BusinessException("更新积分失败");
+        }
+
+        int updatedUser = userMapper.updatePoints(userId, points);
+        if (updatedUser <= 0) {
+            log.error("更新 tb_user 积分失败: userId={}, points={}", userId, points);
+            throw new BusinessException("更新用户积分失败");
+        }
+
+        Integer balanceAfter = balanceBefore + points;
+        creditMapper.insertTransaction(
+                userId,
+                TRANSACTION_TYPE_SYSTEM,
+                points,
+                balanceBefore,
+                balanceAfter,
+                description,
+                relatedOrderId
+        );
+
+        log.info("用户 {} 获得 {} 积分，原因：{}，余额：{} -> {}",
+                userId, points, description, balanceBefore, balanceAfter);
+        publishCreditEvent(userId, points, balanceBefore, balanceAfter, description);
+        return balanceAfter;
+    }
+
+    private Integer getOrCreateBalanceForUpdate(Long userId) {
+        Integer balance = creditMapper.getBalanceByUserIdForUpdate(userId);
+        if (balance != null) {
+            return balance;
+        }
+
+        Integer initialBalance = resolveInitialBalance(userId);
+        creditMapper.initUserCredit(userId, initialBalance);
+        balance = creditMapper.getBalanceByUserIdForUpdate(userId);
+        if (balance == null) {
+            log.error("初始化用户积分记录失败: userId={}", userId);
+            throw new BusinessException("初始化用户积分记录失败");
+        }
+        return balance;
+    }
+
+    private Integer resolveInitialBalance(Long userId) {
+        var user = userMapper.findById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        return user.getCurrentPoints() != null ? user.getCurrentPoints() : 0;
+    }
+
+    private void publishCreditEvent(Long userId,
+                                    Integer pointsChange,
+                                    Integer balanceBefore,
+                                    Integer balanceAfter,
+                                    String description) {
+        Map<String, Object> eventData = new HashMap<>();
+        eventData.put("type", "CREDIT_UPDATED");
+        eventData.put("userId", userId);
+        eventData.put("pointsChange", pointsChange);
+        eventData.put("balanceBefore", balanceBefore);
+        eventData.put("balanceAfter", balanceAfter);
+        eventData.put("description", description);
+        sseEmitterService.sendToUser(userId, "credit", eventData);
     }
 }

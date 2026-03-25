@@ -25,11 +25,20 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { checkReferralCode } from './utils/referralHelper'
 import { toast } from './components/Toast'
 import { preventDoubleTapZoom, setViewportHeight } from './utils/mobile'
+import { getStoredUiLocale, translateUiText } from './utils/runtimeLocale'
 import './i18n'
 import './index.css'
 
 // 检测推荐码
 checkReferralCode()
+
+if (typeof window !== 'undefined') {
+  const originalConfirm = window.confirm.bind(window)
+  const originalAlert = window.alert.bind(window)
+
+  window.confirm = (message) => originalConfirm(translateUiText(message, getStoredUiLocale()))
+  window.alert = (message) => originalAlert(translateUiText(message, getStoredUiLocale()))
+}
 
 // 注册 Service Worker
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

@@ -56,12 +56,8 @@ public class UserController {
      */
     @GetMapping("/info")
     public Result<?> getUserInfo(@RequestHeader(value = "Authorization", required = false) String token) {
-        // 这里不强制登录：沿用原有 userService.getUserInfo 的行为
-        // 如果你希望严格要求必须登录，可改成 authUtil.requireUserId(token) 并让 service 根据 userId 查
-        if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
-        return Result.success(userService.getUserInfo(token));
+        Long userId = authUtil.requireUserId(token);
+        return Result.success(userService.getUserInfo(userId));
     }
 
     /**

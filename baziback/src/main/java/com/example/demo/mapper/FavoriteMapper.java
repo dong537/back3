@@ -27,6 +27,11 @@ public interface FavoriteMapper {
     @Select("SELECT * FROM tb_user_favorite WHERE user_id = #{userId} ORDER BY create_time DESC")
     List<TbUserFavorite> findByUserId(Long userId);
 
+    @Select("SELECT " +
+            "(SELECT COUNT(*) FROM tb_user_favorite WHERE user_id = #{userId}) + " +
+            "(SELECT COUNT(*) FROM tb_favorite WHERE user_id = #{userId})")
+    Integer countAllFavoritesByUserId(Long userId);
+
     @Insert("INSERT INTO tb_user_favorite (user_id, favorite_type, data_id, title, summary, data, create_time) " +
             "VALUES (#{userId}, #{favoriteType}, #{dataId}, #{title}, #{summary}, #{data}, #{createTime})")
     @Options(useGeneratedKeys = true, keyProperty = "id")

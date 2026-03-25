@@ -6,6 +6,7 @@
 class AchievementCache {
   constructor() {
     this.cache = {
+      userId: null,
       allAchievements: null,
       userAchievements: null,
       stats: null,
@@ -17,7 +18,10 @@ class AchievementCache {
   /**
    * 检查缓存是否有效
    */
-  isValid() {
+  isValid(userId = null) {
+    if (userId !== null && this.cache.userId !== userId) {
+      return false
+    }
     if (!this.cache.timestamp) {
       return false
     }
@@ -27,8 +31,8 @@ class AchievementCache {
   /**
    * 获取所有成就（带缓存）
    */
-  getAllAchievements() {
-    if (this.isValid() && this.cache.allAchievements) {
+  getAllAchievements(userId = null) {
+    if (this.isValid(userId) && this.cache.allAchievements) {
       return this.cache.allAchievements
     }
     return null
@@ -37,8 +41,8 @@ class AchievementCache {
   /**
    * 获取用户成就（带缓存）
    */
-  getUserAchievements() {
-    if (this.isValid() && this.cache.userAchievements) {
+  getUserAchievements(userId = null) {
+    if (this.isValid(userId) && this.cache.userAchievements) {
       return this.cache.userAchievements
     }
     return null
@@ -47,8 +51,8 @@ class AchievementCache {
   /**
    * 获取统计信息（带缓存）
    */
-  getStats() {
-    if (this.isValid() && this.cache.stats) {
+  getStats(userId = null) {
+    if (this.isValid(userId) && this.cache.stats) {
       return this.cache.stats
     }
     return null
@@ -57,7 +61,8 @@ class AchievementCache {
   /**
    * 设置缓存
    */
-  setCache(allAchievements, userAchievements, stats) {
+  setCache(userId, allAchievements, userAchievements, stats) {
+    this.cache.userId = userId ?? null
     this.cache.allAchievements = allAchievements
     this.cache.userAchievements = userAchievements
     this.cache.stats = stats
@@ -68,6 +73,7 @@ class AchievementCache {
    * 清除缓存
    */
   clear() {
+    this.cache.userId = null
     this.cache.allAchievements = null
     this.cache.userAchievements = null
     this.cache.stats = null
@@ -77,7 +83,11 @@ class AchievementCache {
   /**
    * 更新用户成就（当解锁新成就时）
    */
-  updateUserAchievements(newAchievement) {
+  updateUserAchievements(userId, newAchievement) {
+    if (userId !== null && this.cache.userId !== userId) {
+      return
+    }
+
     if (this.cache.userAchievements) {
       // 检查是否已存在
       const exists = this.cache.userAchievements.some(

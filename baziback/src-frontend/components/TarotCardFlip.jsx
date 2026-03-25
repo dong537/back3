@@ -1,16 +1,38 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { tarotApi } from '../api'
 import { logger } from '../utils/logger'
 import { toast } from './Toast'
 import { useAuth } from '../context/AuthContext'
+import { resolvePageLocale, safeText } from '../utils/displayText'
 
-/**
- * 塔罗牌翻转卡片组件
- * 支持点击翻转动画，显示今日运势
- * 实现每日抽牌逻辑：每个用户每天只能抽一次
- */
+function defaultCard(isLoggedIn) {
+  if (!isLoggedIn) {
+    return {
+      cardId: null,
+      cardNameCn: '登录后抽牌',
+      cardNameEn: 'Please sign in first',
+      symbol: '✦',
+      imageUrl: null,
+    }
+  }
+
+  return {
+    cardId: null,
+    cardNameCn: '点击翻牌',
+    cardNameEn: 'Tap to Draw',
+    symbol: '✦',
+    imageUrl: null,
+  }
+}
+
 export default function TarotCardFlip({ onCardFlipped }) {
+  const { i18n } = useTranslation()
+  const locale = resolvePageLocale(i18n.language)
+  const isEn = locale === 'en-US'
+  const t = (zh, en) => (isEn ? en : zh)
   const { isLoggedIn } = useAuth()
+
   const [isFlipped, setIsFlipped] = useState(false)
   const [isFlipping, setIsFlipping] = useState(false)
   const [card, setCard] = useState(null)
@@ -19,38 +41,30 @@ export default function TarotCardFlip({ onCardFlipped }) {
   const [loadingFortune, setLoadingFortune] = useState(false)
   const [hasDrawnToday, setHasDrawnToday] = useState(false)
 
-  // 组件加载时检查今日是否已抽牌
   useEffect(() => {
-    checkTodayDraw()
-  }, [isLoggedIn])
+    void checkTodayDraw()
+  }, [isLoggedIn, isEn])
 
-  // 检查今日是否已抽牌
   const checkTodayDraw = async () => {
     if (!isLoggedIn) {
-      // 未登录，显示默认背面
-      setCard({
-        cardId: null,
-        cardNameCn: '请登录后抽牌',
-        cardNameEn: 'Please Login',
-        symbol: '🎴',
-        imageUrl: null
-      })
+      setCard(defaultCard(false))
+      setHasDrawnToday(false)
+      setIsFlipped(false)
       return
     }
 
     try {
       setLoading(true)
       const response = await tarotApi.getTodayDraw()
-      
+
       if (response.data?.success && response.data.data) {
-        // 今天已抽过牌，直接显示结果
         const drawResult = response.data.data
         setCard({
           cardId: drawResult.cardId,
           cardNameCn: drawResult.cardNameCn,
           cardNameEn: drawResult.cardNameEn,
-          symbol: drawResult.symbol || '🎴',
-          imageUrl: drawResult.imageUrl
+          symbol: drawResult.symbol || '✦',
+          imageUrl: drawResult.imageUrl,
         })
         setDailyFortune({
           date: drawResult.date,
@@ -63,88 +77,43 @@ export default function TarotCardFlip({ onCardFlipped }) {
           wealth: drawResult.wealth,
           health: drawResult.health,
           advice: drawResult.advice,
-          keyword: drawResult.keyword
+          keyword: drawResult.keyword,
         })
-        setIsFlipped(true) // 已抽过，直接显示正面
+        setIsFlipped(true)
         setHasDrawnToday(true)
       } else {
-        // 今天还没抽牌，显示背面等待抽牌
-        setCard({
-          cardId: null,
-          cardNameCn: '点击翻转',
-          cardNameEn: 'Tap to Draw',
-          symbol: '🎴',
-          imageUrl: null
-        })
+        setCard(defaultCard(true))
         setHasDrawnToday(false)
       }
     } catch (error) {
       logger.error('Check today draw error:', error)
-      // 如果API返回错误（如未抽过），显示背面
-      if (error.response?.data?.message?.includes('还没有抽牌')) {
-        setCard({
-          cardId: null,
-          cardNameCn: '点击翻转',
-          cardNameEn: 'Tap to Draw',
-          symbol: '🎴',
-          imageUrl: null
-        })
+      const message = safeText(error.response?.data?.message)
+      if (message && (message.includes('还没') || message.includes('not'))) {
+        setCard(defaultCard(true))
         setHasDrawnToday(false)
       } else {
-        toast.error('检查抽牌记录失败')
+        toast.error(t('检查今日抽牌记录失败', 'Failed to check today draw'))
       }
     } finally {
       setLoading(false)
     }
   }
 
-  // 处理卡片点击翻转
-  const handleCardClick = async () => {
-    if (isFlipping || loading) return
-
-    // 如果未登录，提示登录
-    if (!isLoggedIn) {
-      toast.error('请先登录后再抽牌')
-      return
-    }
-
-    // 如果今天已抽过，不允许再次抽牌
-    if (hasDrawnToday) {
-      return
-    }
-
-    setIsFlipping(true)
-    
-    // 翻转动画
-    setTimeout(async () => {
-      setIsFlipped(true)
-      setIsFlipping(false)
-      
-      // 执行每日抽牌
-      await drawDailyCard()
-      
-      // 通知父组件
-      if (onCardFlipped) {
-        onCardFlipped(true, card)
-      }
-    }, 300) // 动画时长的一半
-  }
-
-  // 执行每日抽牌
   const drawDailyCard = async () => {
     try {
       setLoadingFortune(true)
       const response = await tarotApi.drawDailyCard()
-      
+
       if (response.data?.success && response.data.data) {
         const drawResult = response.data.data
-        setCard({
+        const nextCard = {
           cardId: drawResult.cardId,
           cardNameCn: drawResult.cardNameCn,
           cardNameEn: drawResult.cardNameEn,
-          symbol: drawResult.symbol || '🎴',
-          imageUrl: drawResult.imageUrl
-        })
+          symbol: drawResult.symbol || '✦',
+          imageUrl: drawResult.imageUrl,
+        }
+        setCard(nextCard)
         setDailyFortune({
           date: drawResult.date,
           cardName: drawResult.cardNameCn,
@@ -156,196 +125,243 @@ export default function TarotCardFlip({ onCardFlipped }) {
           wealth: drawResult.wealth,
           health: drawResult.health,
           advice: drawResult.advice,
-          keyword: drawResult.keyword
+          keyword: drawResult.keyword,
         })
         setHasDrawnToday(true)
-        toast.success('抽牌成功！')
+        toast.success(t('抽牌成功', 'Card drawn successfully'))
+        onCardFlipped?.(true, nextCard)
       } else {
-        // 检查是否是业务错误（如今天已抽过）
-        const errorMsg = response.data?.message || '抽牌失败'
-        throw new Error(errorMsg)
+        throw new Error(response.data?.message || t('抽牌失败', 'Draw failed'))
       }
     } catch (error) {
       logger.error('Draw daily card error:', error)
-      // 更详细的错误处理
-      let errorMessage = '抽牌失败，请稍后重试'
-      
+      let errorMessage = t(
+        '抽牌失败，请稍后重试',
+        'Failed to draw the card, please try again later'
+      )
+
       if (error.response) {
-        // 服务器返回了错误响应
-        errorMessage = error.response.data?.message || error.response.data?.error || error.message || errorMessage
+        errorMessage =
+          error.response.data?.message ||
+          error.response.data?.error ||
+          error.message ||
+          errorMessage
       } else if (error.request) {
-        // 请求已发出但没有收到响应
-        errorMessage = '网络错误，请检查网络连接'
+        errorMessage = t(
+          '网络错误，请检查网络连接',
+          'Network error, please check your connection'
+        )
       } else {
-        // 其他错误
         errorMessage = error.message || errorMessage
       }
-      
+
       toast.error(errorMessage)
-      
-      // 抽牌失败，翻转回背面
       setIsFlipped(false)
     } finally {
       setLoadingFortune(false)
     }
   }
 
+  const handleCardClick = async () => {
+    if (isFlipping || loading) return
+
+    if (!isLoggedIn) {
+      toast.error(t('请先登录后再抽牌', 'Please sign in before drawing a card'))
+      return
+    }
+
+    if (hasDrawnToday) return
+
+    setIsFlipping(true)
+    setTimeout(async () => {
+      setIsFlipped(true)
+      setIsFlipping(false)
+      await drawDailyCard()
+    }, 300)
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex h-96 items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-spin">🎴</div>
-          <div className="text-gray-400">正在加载塔罗牌...</div>
+          <div className="mb-4 text-6xl text-[#dcb86f] animate-spin">✦</div>
+          <div className="text-[#8f7b66]">
+            {t('正在加载塔罗牌...', 'Loading tarot card...')}
+          </div>
         </div>
       </div>
     )
   }
 
-  if (!card) {
-    return null
-  }
+  if (!card) return null
+
+  const cardTitle = isEn
+    ? card.cardNameEn || card.cardNameCn
+    : card.cardNameCn || card.cardNameEn
 
   return (
-    <div className="relative w-full max-w-md mx-auto tarot-card-flip-container">
-      {/* 卡片容器 */}
-      <div 
-        className="relative w-full cursor-pointer tap-highlight no-select"
-        style={{ 
-          perspective: '1000px',
-          aspectRatio: '2/3',
-          maxWidth: '100%',
-          margin: '0 auto'
-        }}
+    <div className="tarot-card-flip-container relative mx-auto w-full max-w-md">
+      <div
+        className="tap-highlight no-select relative mx-auto w-full cursor-pointer"
+        style={{ perspective: '1000px', aspectRatio: '2/3', maxWidth: '100%' }}
         onClick={handleCardClick}
-        onTouchStart={(e) => {
-          // 移动端触摸反馈
-          e.currentTarget.style.transform = 'scale(0.98)'
+        onTouchStart={(event) => {
+          event.currentTarget.style.transform = 'scale(0.98)'
         }}
-        onTouchEnd={(e) => {
-          e.currentTarget.style.transform = 'scale(1)'
+        onTouchEnd={(event) => {
+          event.currentTarget.style.transform = 'scale(1)'
         }}
       >
-        {/* 翻转容器 */}
-        <div 
-          className="relative w-full h-full"
+        <div
+          className="relative h-full w-full"
           style={{
             transformStyle: 'preserve-3d',
             transition: 'transform 0.6s',
-            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
           }}
         >
-          {/* 卡片背面 */}
-          <div 
-            className="absolute inset-0 w-full h-full rounded-2xl bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 border-4 border-purple-400/50 shadow-2xl flex items-center justify-center"
+          <div
+            className="absolute inset-0 flex h-full w-full items-center justify-center rounded-[28px] border border-[#d0a85b]/28 bg-[linear-gradient(180deg,rgba(34,22,18,0.98),rgba(15,11,10,0.92))] shadow-[0_24px_60px_rgba(0,0,0,0.34)]"
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(0deg)'
+              transform: 'rotateY(0deg)',
             }}
           >
-            <div className="text-center px-4">
-              <div className="text-6xl md:text-8xl mb-3 md:mb-4 filter drop-shadow-2xl">🎴</div>
-              <div className="text-white text-lg md:text-xl font-bold mb-2">
-                {!isLoggedIn ? '请登录后抽牌' : hasDrawnToday ? '今日已抽牌' : '点击翻转抽牌'}
+            <div className="px-6 text-center">
+              <div className="mb-3 text-6xl text-[#dcb86f] drop-shadow-2xl md:mb-4 md:text-8xl">
+                ✦
               </div>
-              <div className="text-purple-200 text-xs md:text-sm">
-                {!isLoggedIn ? '登录后每天可抽一次' : hasDrawnToday ? '明天再来吧' : '查看今日运势'}
+              <div className="mb-2 text-lg font-bold text-[#f4ece1] md:text-xl">
+                {!isLoggedIn
+                  ? t('登录后抽牌', 'Please sign in first')
+                  : hasDrawnToday
+                    ? t('今日已抽牌', 'Already drawn today')
+                    : t('点击翻转抽牌', 'Tap to draw')}
+              </div>
+              <div className="text-xs text-[#bdaa94] md:text-sm">
+                {!isLoggedIn
+                  ? t('登录后每天可抽一次', 'Sign in to draw once per day')
+                  : hasDrawnToday
+                    ? t(
+                        '明天再来看看新的指引',
+                        'Come back tomorrow for a new message'
+                      )
+                    : t('查看今日运势', "Reveal today's guidance")}
               </div>
             </div>
           </div>
 
-          {/* 卡片正面 */}
-          <div 
-            className="absolute inset-0 w-full h-full rounded-2xl bg-white border-4 border-purple-400/50 shadow-2xl overflow-hidden"
+          <div
+            className="absolute inset-0 h-full w-full overflow-hidden rounded-[28px] border border-[#d0a85b]/28 bg-[#f4ece1] shadow-[0_24px_60px_rgba(0,0,0,0.34)]"
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)'
+              transform: 'rotateY(180deg)',
             }}
           >
             {card.imageUrl ? (
-              <img 
-                src={card.imageUrl} 
-                alt={card.cardNameCn}
-                className={`w-full h-full object-cover ${dailyFortune?.isReversed ? 'rotate-180' : ''}`}
-                onError={(e) => {
-                  // 如果图片加载失败，显示符号
-                  e.target.style.display = 'none'
+              <img
+                src={card.imageUrl}
+                alt={cardTitle}
+                className={`h-full w-full object-cover ${
+                  dailyFortune?.isReversed ? 'rotate-180' : ''
+                }`}
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none'
                 }}
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
-                <div className="text-center px-4">
-                  <div className="text-6xl md:text-8xl mb-3 md:mb-4">{card.symbol || '🎴'}</div>
-                  <div className="text-xl md:text-2xl font-bold text-gray-800">{card.cardNameCn}</div>
-                  {card.cardNameEn && (
-                    <div className="text-xs md:text-sm text-gray-600 mt-2">{card.cardNameEn}</div>
+              <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(180deg,#f4ece1_0%,#e6d9c8_100%)]">
+                <div className="px-4 text-center">
+                  <div className="mb-3 text-6xl text-[#a34224] md:mb-4 md:text-8xl">
+                    {card.symbol || '✦'}
+                  </div>
+                  <div className="text-xl font-bold text-[#221917] md:text-2xl">
+                    {cardTitle}
+                  </div>
+                  {card.cardNameEn && !isEn && (
+                    <div className="mt-2 text-xs text-[#7f6c5d] md:text-sm">
+                      {card.cardNameEn}
+                    </div>
                   )}
                 </div>
               </div>
             )}
-            
-            {/* 牌名和逆位标识 */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 md:p-4">
+
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 md:p-4">
               <div className="flex items-center justify-between">
-                <div className="text-white text-lg md:text-xl font-bold">{card.cardNameCn}</div>
+                <div className="text-lg font-bold text-white md:text-xl">
+                  {cardTitle}
+                </div>
                 {dailyFortune?.isReversed && (
-                  <div className="px-2 md:px-3 py-1 bg-red-500/80 rounded-full text-white text-xs md:text-sm font-semibold">
-                    逆位
+                  <div className="rounded-full border border-[#e19a84]/30 bg-[#7a3218]/70 px-2 py-1 text-xs font-semibold text-white md:px-3 md:text-sm">
+                    {t('逆位', 'Reversed')}
                   </div>
                 )}
               </div>
               {dailyFortune?.date && (
-                <div className="text-purple-200 text-xs md:text-sm mt-1">{dailyFortune.date}</div>
+                <div className="mt-1 text-xs text-[#e4d6c8] md:text-sm">
+                  {dailyFortune.date}
+                </div>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* 今日运势内容 */}
       {isFlipped && dailyFortune && (
-        <div className="mt-4 md:mt-6 animate-fade-in scroll-smooth-mobile">
-          <div className="bg-gradient-to-br from-purple-900/40 via-indigo-900/30 to-blue-900/40 rounded-2xl p-4 md:p-6 border border-purple-400/30 backdrop-blur-sm">
+        <div className="scroll-smooth-mobile mt-4 animate-fade-in md:mt-6">
+          <div className="panel-soft rounded-[26px] border border-white/10 p-4 md:p-6">
             {loadingFortune ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4 animate-spin">✨</div>
-                <div className="text-purple-200">正在解读今日运势...</div>
+              <div className="py-8 text-center">
+                <div className="mb-4 text-4xl text-[#dcb86f] animate-spin">
+                  ✦
+                </div>
+                <div className="text-[#bdaa94]">
+                  {t("正在解读今日运势...", "Reading today's guidance...")}
+                </div>
               </div>
             ) : (
               <>
-                <div className="text-center mb-4 md:mb-6">
-                  <div className="text-xl md:text-2xl font-bold text-white mb-2">今日运势</div>
-                  <div className="text-purple-200 text-xs md:text-sm">{dailyFortune.date}</div>
+                <div className="mb-4 text-center md:mb-6">
+                  <div className="mb-2 text-xl font-bold text-[#f4ece1] md:text-2xl">
+                    {t('今日运势', "Today's Guidance")}
+                  </div>
+                  <div className="text-xs text-[#8f7b66] md:text-sm">
+                    {dailyFortune.date}
+                  </div>
                 </div>
-                
+
                 <div className="space-y-3 md:space-y-4">
-                  {/* 综合运势解读 */}
-                  {dailyFortune.interpretation && (
-                    <div className="p-3 md:p-4 bg-white/10 rounded-xl border border-white/20">
-                      <div className="text-purple-300 font-semibold mb-2 text-sm md:text-base">综合运势</div>
-                      <div className="text-white leading-relaxed text-sm md:text-base">
+                  {safeText(dailyFortune.interpretation) && (
+                    <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-3 md:p-4">
+                      <div className="mb-2 text-sm font-semibold text-[#dcb86f] md:text-base">
+                        {t('综合运势', 'Overall Reading')}
+                      </div>
+                      <div className="text-sm leading-relaxed text-[#f4ece1] md:text-base">
                         {dailyFortune.interpretation}
                       </div>
                     </div>
                   )}
-                  
-                  {/* 感情/人际 */}
-                  {dailyFortune.love && (
-                    <div className="p-3 md:p-4 bg-pink-500/20 rounded-xl border border-pink-400/30">
-                      <div className="text-pink-200 font-semibold mb-2 text-sm md:text-base">感情/人际</div>
-                      <div className="text-pink-50 leading-relaxed text-sm md:text-base">
+
+                  {safeText(dailyFortune.love) && (
+                    <div className="rounded-[22px] border border-[#a34224]/24 bg-[#7a3218]/14 p-3 md:p-4">
+                      <div className="mb-2 text-sm font-semibold text-[#e19a84] md:text-base">
+                        {t('感情 / 人际', 'Love / Social')}
+                      </div>
+                      <div className="text-sm leading-relaxed text-[#f4ece1] md:text-base">
                         {dailyFortune.love}
                       </div>
                     </div>
                   )}
-                  
-                  {/* 建议 */}
-                  {dailyFortune.advice && (
-                    <div className="p-3 md:p-4 bg-yellow-500/20 rounded-xl border border-yellow-400/30">
-                      <div className="text-yellow-200 font-semibold mb-2 text-sm md:text-base">箴言</div>
-                      <div className="text-yellow-50 leading-relaxed text-sm md:text-base">
+
+                  {safeText(dailyFortune.advice) && (
+                    <div className="rounded-[22px] border border-[#d0a85b]/24 bg-[#6a4a1e]/14 p-3 md:p-4">
+                      <div className="mb-2 text-sm font-semibold text-[#f0d9a5] md:text-base">
+                        {t('建议', 'Advice')}
+                      </div>
+                      <div className="text-sm leading-relaxed text-[#f4ece1] md:text-base">
                         {dailyFortune.advice}
                       </div>
                     </div>
@@ -357,11 +373,17 @@ export default function TarotCardFlip({ onCardFlipped }) {
         </div>
       )}
 
-      {/* 翻转提示 */}
       {!isFlipped && (
-        <div className="mt-3 md:mt-4 text-center">
-          <div className="text-gray-400 text-xs md:text-sm animate-pulse">
-            {!isLoggedIn ? '请先登录' : hasDrawnToday ? '今日已抽牌，明天再来' : '点击卡片抽牌查看今日运势'}
+        <div className="mt-3 text-center md:mt-4">
+          <div className="animate-pulse text-xs text-[#8f7b66] md:text-sm">
+            {!isLoggedIn
+              ? t('请先登录', 'Please sign in first')
+              : hasDrawnToday
+                ? t('今日已抽牌，明天再来', 'Already drawn today, come back tomorrow')
+                : t(
+                    '点击卡牌抽牌，查看今日运势',
+                    "Tap the card to reveal today's guidance"
+                  )}
           </div>
         </div>
       )}

@@ -90,7 +90,7 @@ export function useSSE() {
       (data, event) => {
         logger.info('收到积分SSE事件:', { data, eventType: event.type })
         
-        if (data.type === 'CREDIT_CHANGED') {
+        if (data.type === 'CREDIT_CHANGED' || data.type === 'CREDIT_UPDATED') {
           // 刷新积分余额
           refreshCredits()
         }

@@ -2,6 +2,10 @@ package com.example.demo.yijing.service;
 
 import com.example.demo.dto.request.yijing.YijingGenerateHexagramRequest;
 import com.example.demo.dto.request.yijing.YijingInterpretRequest;
+import com.example.demo.dto.response.yijing.YijingDongBianDetailResponse;
+import com.example.demo.dto.response.yijing.YijingDongBianResponse;
+import com.example.demo.dto.response.yijing.YijingLiuYaoAnalysisResponse;
+import com.example.demo.dto.response.yijing.YijingYongShenResponse;
 import com.example.demo.yijing.model.Hexagram;
 import com.example.demo.yijing.model.HexagramResult;
 import lombok.RequiredArgsConstructor;
@@ -46,22 +50,14 @@ public class StandaloneYijingService {
             String category = inferCategory(question);
             LiuYaoYongShenService.YongShenInfo yongShenInfo = liuYaoYongShenService.getYongShen(category, isMale);
             
-            Map<String, Object> liuYaoAnalysis = new LinkedHashMap<>();
-            liuYaoAnalysis.put("用神信息", Map.of(
-                "首选用神", yongShenInfo.getPrimaryYongShen(),
-                "辅助参考", yongShenInfo.getAuxiliaryRefs(),
-                "核心判断要点", yongShenInfo.getJudgmentPoints()
-            ));
-            
             Map<String, Object> dongBianAnalysis = liuYaoDongBianService.analyzeDongBian(
                 result.getChangingLines(),
                 result.getOriginal() != null ? result.getOriginal().getChinese() : "",
                 result.getChanged() != null ? result.getChanged().getChinese() : "",
                 yongShenInfo.getPrimaryYongShen()
             );
-            liuYaoAnalysis.put("动变分析", dongBianAnalysis);
-            
-            result.setLiuYaoAnalysis(liuYaoAnalysis);
+
+            result.setLiuYaoAnalysis(buildLiuYaoAnalysisResponse(yongShenInfo, dongBianAnalysis));
         }
         
         // 梅花易数分析（仅当使用梅花易数方法时）
@@ -245,6 +241,97 @@ public class StandaloneYijingService {
         }
         
         return map;
+    }
+
+    private YijingLiuYaoAnalysisResponse buildLiuYaoAnalysisResponse(
+            LiuYaoYongShenService.YongShenInfo yongShenInfo,
+            Map<String, Object> dongBianAnalysis
+    ) {
+        return YijingLiuYaoAnalysisResponse.builder()
+                .yongShen(YijingYongShenResponse.builder()
+                        .primary(yongShenInfo == null ? null : yongShenInfo.getPrimaryYongShen())
+                        .auxiliary(yongShenInfo == null ? List.of() : yongShenInfo.getAuxiliaryRefs())
+                        .judgmentPoints(yongShenInfo == null ? null : yongShenInfo.getJudgmentPoints())
+                        .build())
+                .dongBian(buildDongBianResponse(dongBianAnalysis))
+                .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private YijingDongBianResponse buildDongBianResponse(Map<String, Object> source) {
+        if (source == null || source.isEmpty()) {
+            return null;
+        }
+
+        List<Integer> positions = new ArrayList<>();
+        Object positionsValue = source.get("动爻位置");
+        if (positionsValue instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Number number) {
+                    positions.add(number.intValue());
+                } else if (item != null) {
+                    try {
+                        positions.add(Integer.parseInt(String.valueOf(item).trim()));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+        }
+
+        List<YijingDongBianDetailResponse> details = new ArrayList<>();
+        Object detailsValue = source.get("动变分析");
+        if (detailsValue instanceof List<?> list) {
+            for (Object item : list) {
+                if (!(item instanceof Map<?, ?> map)) {
+                    continue;
+                }
+                Integer position = null;
+                Object positionValue = map.get("位置");
+                if (positionValue instanceof Number number) {
+                    position = number.intValue();
+                } else if (positionValue != null) {
+                    try {
+                        position = Integer.parseInt(String.valueOf(positionValue).trim());
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+
+                details.add(YijingDongBianDetailResponse.builder()
+                        .position(position)
+                        .description(objectToString(map.get("说明")))
+                        .build());
+            }
+        }
+
+        Integer changingLineCount = null;
+        Object countValue = source.get("动爻数量");
+        if (countValue instanceof Number number) {
+            changingLineCount = number.intValue();
+        } else if (countValue != null) {
+            try {
+                changingLineCount = Integer.parseInt(String.valueOf(countValue).trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        return YijingDongBianResponse.builder()
+                .changingLineCount(changingLineCount)
+                .changingLinePositions(positions)
+                .type(objectToString(source.get("type")))
+                .priority(objectToString(source.get("priority")))
+                .auxiliary(objectToString(source.get("auxiliary")))
+                .interpretation(objectToString(source.get("interpretation")))
+                .details(details)
+                .fortuneTendency(objectToString(source.get("吉凶倾向")))
+                .build();
+    }
+
+    private String objectToString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value).trim();
+        return text.isEmpty() ? null : text;
     }
 
     private Hexagram convertToHexagram(YijingInterpretRequest.HexagramData data) {

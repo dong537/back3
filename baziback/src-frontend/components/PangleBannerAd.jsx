@@ -1,91 +1,93 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { isMobile } from '../utils/mobile'
+import { resolvePageLocale } from '../utils/displayText'
+import { logger } from '../utils/logger'
 
-/**
- * 穿山甲轮播图广告组件
- * 参考文档：https://www.csjplatform.com/union/media/union/download/detail?id=195&docId=27627
- */
-export default function PangleBannerAd({ 
-  slotId, 
-  width = '100%', 
+const PANGLE_COPY = {
+  'zh-CN': {
+    sdkLoadFailed: 'SDK 加载失败',
+    adLoadFailed: '广告加载失败',
+    adLoading: '广告加载中...',
+    adLabel: '广告',
+  },
+  'en-US': {
+    sdkLoadFailed: 'SDK failed to load',
+    adLoadFailed: 'Failed to load ad',
+    adLoading: 'Loading ad...',
+    adLabel: 'Ad',
+  },
+}
+
+export default function PangleBannerAd({
+  slotId,
+  width = '100%',
   height = 'auto',
   className = '',
   onAdLoad,
-  onAdError 
+  onAdError,
 }) {
+  const { i18n } = useTranslation()
+  const locale = resolvePageLocale(i18n.language)
+  const copy = PANGLE_COPY[locale]
   const adContainerRef = useRef(null)
   const [adLoaded, setAdLoaded] = useState(false)
   const [adError, setAdError] = useState(false)
   const adInstanceRef = useRef(null)
 
   useEffect(() => {
-    // 检查是否在移动端
     if (!isMobile()) {
-      console.log('穿山甲广告：仅在移动端显示')
-      return
+      logger.info('Pangle banner is only shown on mobile devices')
+      return undefined
     }
 
-    // 检查是否已加载穿山甲SDK
-    if (typeof window === 'undefined' || !window.bytedance) {
-      console.warn('穿山甲SDK未加载，请确保已引入SDK脚本')
-      // 动态加载SDK（如果需要）
-      loadPangleSDK()
-      return
-    }
-
-    // 如果没有提供广告位ID，使用占位符
     if (!slotId) {
-      console.warn('未提供穿山甲广告位ID')
-      return
+      logger.warn('No Pangle slot id provided')
+      return undefined
     }
 
-    // 初始化广告
-    initAd()
+    if (typeof window === 'undefined' || !window.bytedance) {
+      logger.warn('Pangle SDK not loaded yet')
+      loadPangleSDK()
+    } else {
+      initAd()
+    }
 
-    // 清理函数
     return () => {
       if (adInstanceRef.current) {
         try {
           adInstanceRef.current.destroy?.()
-        } catch (e) {
-          console.error('销毁广告实例失败:', e)
+        } catch (error) {
+          logger.error('Destroy pangle ad instance failed:', error)
         }
       }
     }
-  }, [slotId])
+  }, [slotId, locale])
 
-  // 加载穿山甲SDK
   const loadPangleSDK = () => {
-    if (document.getElementById('pangle-sdk')) {
-      return
-    }
+    if (document.getElementById('pangle-sdk')) return
 
     const script = document.createElement('script')
     script.id = 'pangle-sdk'
-    script.src = 'https://sf16-fe-tos-sg.i18n-pglstatp.com/obj/pangle-sdk/pangle-sdk.js'
+    script.src =
+      'https://sf16-fe-tos-sg.i18n-pglstatp.com/obj/pangle-sdk/pangle-sdk.js'
     script.async = true
     script.onload = () => {
-      console.log('穿山甲SDK加载成功')
+      logger.info('Pangle SDK loaded')
       initAd()
     }
     script.onerror = () => {
-      console.error('穿山甲SDK加载失败')
+      logger.error('Pangle SDK failed to load')
       setAdError(true)
-      onAdError?.('SDK加载失败')
+      onAdError?.(copy.sdkLoadFailed)
     }
     document.head.appendChild(script)
   }
 
-  // 初始化广告
   const initAd = () => {
-    if (!window.bytedance || !adContainerRef.current || !slotId) {
-      return
-    }
+    if (!window.bytedance || !adContainerRef.current || !slotId) return
 
     try {
-      // 创建Banner广告实例
-      // 注意：实际使用时需要根据穿山甲SDK的最新API调整
-      // 如果SDK API不同，请参考最新文档调整
       const adInstance = window.bytedance?.createBannerAd?.({
         adUnitId: slotId,
         container: adContainerRef.current,
@@ -93,46 +95,43 @@ export default function PangleBannerAd({
           left: 0,
           top: 0,
           width: '100%',
-        }
+        },
       })
 
       adInstanceRef.current = adInstance
 
-      // 监听广告加载成功
       adInstance.onLoad(() => {
-        console.log('穿山甲广告加载成功')
+        logger.info('Pangle ad loaded successfully')
         setAdLoaded(true)
         onAdLoad?.()
       })
 
-      // 监听广告加载失败
-      adInstance.onError((err) => {
-        console.error('穿山甲广告加载失败:', err)
+      adInstance.onError((error) => {
+        logger.error('Pangle ad failed to load:', error)
         setAdError(true)
-        onAdError?.(err)
+        onAdError?.(error || copy.adLoadFailed)
       })
 
-      // 加载广告
       adInstance.load()
-
     } catch (error) {
-      console.error('初始化穿山甲广告失败:', error)
+      logger.error('Initialize Pangle ad failed:', error)
       setAdError(true)
-      onAdError?.(error)
+      onAdError?.(copy.adLoadFailed)
     }
   }
 
-  // 如果不在移动端，不显示广告
   if (typeof window !== 'undefined' && !isMobile()) {
     return null
   }
 
-  // 如果广告加载失败，显示占位图（可选）
   if (adError) {
     return (
-      <div className={`bg-gray-100 rounded-lg flex items-center justify-center ${className}`} style={{ minHeight: '150px' }}>
-        <div className="text-center text-gray-400 text-sm">
-          <p>广告加载失败</p>
+      <div
+        className={`panel-soft flex items-center justify-center ${className}`}
+        style={{ minHeight: '150px' }}
+      >
+        <div className="text-center text-sm text-[#8f7b66]">
+          <p>{copy.adLoadFailed}</p>
         </div>
       </div>
     )
@@ -140,29 +139,26 @@ export default function PangleBannerAd({
 
   return (
     <div className={`relative ${className}`} style={{ width, height }}>
-      {/* 广告容器 */}
-      <div 
+      <div
         ref={adContainerRef}
         className="w-full"
-        style={{ 
+        style={{
           minHeight: adLoaded ? 'auto' : '150px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
         }}
       >
-        {/* 加载中占位 */}
         {!adLoaded && !adError && (
-          <div className="w-full h-40 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg animate-pulse flex items-center justify-center">
-            <div className="text-gray-400 text-sm">广告加载中...</div>
+          <div className="flex h-40 w-full animate-pulse items-center justify-center rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(22,17,16,0.92),rgba(14,11,10,0.8))]">
+            <div className="text-sm text-[#8f7b66]">{copy.adLoading}</div>
           </div>
         )}
       </div>
-      
-      {/* 广告标识（可选） */}
+
       {adLoaded && (
-        <div className="absolute top-1 right-1 text-xs text-gray-400 bg-white/80 px-1 rounded">
-          广告
+        <div className="absolute right-2 top-2 rounded-full border border-[#d0a85b]/20 bg-[#6a4a1e]/20 px-2 py-0.5 text-[11px] text-[#dcb86f]">
+          {copy.adLabel}
         </div>
       )}
     </div>

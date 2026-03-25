@@ -1,5 +1,6 @@
 package com.example.demo.yijing.model;
 
+import com.example.demo.dto.response.yijing.YijingLiuYaoAnalysisResponse;
 import com.example.demo.entity.TbHexagramYao;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,7 +30,7 @@ public class HexagramResult {
     private List<TbHexagramYao> changedYaos;
     
     // 六爻分析结果
-    private Map<String, Object> liuYaoAnalysis;
+    private YijingLiuYaoAnalysisResponse liuYaoAnalysis;
     
     // 梅花易数分析结果
     private Map<String, Object> plumBlossomAnalysis;

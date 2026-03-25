@@ -1,18 +1,98 @@
-import { useState, useEffect } from 'react'
-import { X, Gift, Check, Lock, Info } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Check, Flame, Gift, Info, Lock, Wallet, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import Card from './Card'
 import Button from './Button'
-import { checkinApi, creditApi } from '../api'
 import { toast } from './Toast'
+import { checkinApi } from '../api'
 import { useAuth } from '../context/AuthContext'
 import { logger } from '../utils/logger'
+import { resolvePageLocale } from '../utils/displayText'
+import {
+  getBaseRewardForStreak,
+  getBonusRewardForStreak,
+  getNextRewardMilestone,
+  getTotalRewardForStreak,
+} from '../utils/checkinRewards'
 
-/**
- * 连续打卡奖励进度组件
- * 显示7天打卡进度和奖励
- */
+const CHECKIN_COPY = {
+  'zh-CN': {
+    loginFirst: '请先登录后再签到',
+    checkinFailed: '签到失败',
+    checkinFailedRetry: '签到失败，请稍后重试',
+    checkinSuccess: (reward, days) =>
+      `签到成功，获得 ${reward} 积分，当前已连续签到 ${days} 天。`,
+    weekdays: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+    title: '连续签到奖励',
+    currentCredits: '当前积分',
+    checkedStatus: (days) => `今天已完成签到，当前连续 ${days} 天。`,
+    nextRewardStatus: (days) => `再签到 ${days} 天即可达到下一个奖励节点。`,
+    freshCycle: '今天可以开始新的签到周期。',
+    nextMilestone: (day) => `下一个奖励节点：第 ${day} 天`,
+    loginPrompt: '请先登录后再签到',
+    goLogin: '稍后再说',
+    checkedToday: '今天已经签到',
+    checkedTodayReward: (points) => `今日已到账 ${points} 积分。`,
+    previewBaseReward: (points) => `本次基础奖励 ${points} 积分`,
+    previewBonusReward: (points) => `包含连续签到奖励 +${points} 积分`,
+    checkingIn: '签到中...',
+    checkinNow: '立即签到',
+    rulesTitle: '签到奖励规则',
+    day12: '第 1-2 天',
+    day36: '第 3-6 天',
+    day7Plus: '第 7 天及以后',
+    perDay10: '10 积分/天',
+    perDay20: '20 积分/天',
+    perDay30: '30 积分/天',
+    streak3: '连续签到 3 天',
+    streak7: '连续签到 7 天',
+    bonus20: '额外 +20 积分',
+    bonus50: '额外 +50 积分',
+    creditsUnit: '积分',
+  },
+  'en-US': {
+    loginFirst: 'Please sign in before checking in',
+    checkinFailed: 'Check-in failed',
+    checkinFailedRetry: 'Check-in failed. Please try again later.',
+    checkinSuccess: (reward, days) =>
+      `Check-in successful. Earned ${reward} credits and reached a ${days}-day streak.`,
+    weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    title: 'Streak Rewards',
+    currentCredits: 'Current credits',
+    checkedStatus: (days) =>
+      `Check-in completed today. Current streak: ${days} days.`,
+    nextRewardStatus: (days) =>
+      `Check in for ${days} more day(s) to reach the next reward milestone.`,
+    freshCycle: 'You can start a new check-in cycle today.',
+    nextMilestone: (day) => `Next milestone: Day ${day}`,
+    loginPrompt: 'Please sign in before checking in',
+    goLogin: 'Maybe later',
+    checkedToday: 'Already checked in today',
+    checkedTodayReward: (points) => `Received ${points} credits today.`,
+    previewBaseReward: (points) => `Base reward this time: ${points} credits`,
+    previewBonusReward: (points) => `Includes streak bonus: +${points} credits`,
+    checkingIn: 'Checking in...',
+    checkinNow: 'Check in now',
+    rulesTitle: 'Reward Rules',
+    day12: 'Days 1-2',
+    day36: 'Days 3-6',
+    day7Plus: 'Day 7 and after',
+    perDay10: '10 credits/day',
+    perDay20: '20 credits/day',
+    perDay30: '30 credits/day',
+    streak3: '3-day streak',
+    streak7: '7-day streak',
+    bonus20: 'Extra +20 credits',
+    bonus50: 'Extra +50 credits',
+    creditsUnit: 'credits',
+  },
+}
+
 export default function CheckinProgress({ isOpen, onClose }) {
   const { isLoggedIn } = useAuth()
+  const { i18n } = useTranslation()
+  const locale = resolvePageLocale(i18n.language)
+  const copy = CHECKIN_COPY[locale]
   const [loading, setLoading] = useState(false)
   const [todayStatus, setTodayStatus] = useState(null)
   const [weeklyProgress, setWeeklyProgress] = useState(null)
@@ -20,35 +100,31 @@ export default function CheckinProgress({ isOpen, onClose }) {
   const [currentBalance, setCurrentBalance] = useState(0)
 
   useEffect(() => {
-    if (isOpen && isLoggedIn) {
-      loadData()
+    if (!isOpen) return
+
+    if (!isLoggedIn) {
+      setTodayStatus(null)
+      setWeeklyProgress(null)
+      setStreakInfo(null)
+      setCurrentBalance(0)
+      return
     }
-  }, [isOpen, isLoggedIn])
+
+    void loadData()
+  }, [isLoggedIn, isOpen])
 
   const loadData = async () => {
     try {
       setLoading(true)
-      const [todayRes, weeklyRes, streakRes, balanceRes] = await Promise.all([
-        checkinApi.getTodayStatus().catch(e => ({ data: null })),
-        checkinApi.getWeeklyProgress().catch(e => ({ data: null })),
-        checkinApi.getStreakInfo().catch(e => ({ data: null })),
-        creditApi.getBalance().catch(e => ({ data: null }))
-      ])
+      const response = await checkinApi.getOverview()
+      const data = response.data?.data || {}
 
-      if (todayRes.data?.code === 200 || todayRes.data?.code === 0) {
-        setTodayStatus(todayRes.data.data || todayRes.data)
-      }
-      if (weeklyRes.data?.code === 200 || weeklyRes.data?.code === 0) {
-        setWeeklyProgress(weeklyRes.data.data || weeklyRes.data)
-      }
-      if (streakRes.data?.code === 200 || streakRes.data?.code === 0) {
-        setStreakInfo(streakRes.data.data || streakRes.data)
-      }
-      if (balanceRes.data?.code === 200 || balanceRes.data?.code === 0) {
-        setCurrentBalance(balanceRes.data.data?.balance || 0)
-      }
+      setTodayStatus(data.todayStatus || {})
+      setWeeklyProgress(data.weeklyProgress || {})
+      setStreakInfo(data.streakInfo || {})
+      setCurrentBalance(data.balance || 0)
     } catch (error) {
-      logger.error('Load checkin data error:', error)
+      logger.error('Load checkin progress failed:', error)
     } finally {
       setLoading(false)
     }
@@ -56,249 +132,219 @@ export default function CheckinProgress({ isOpen, onClose }) {
 
   const handleCheckin = async () => {
     if (!isLoggedIn) {
-      toast.warning('请先登录后再进行打卡')
+      toast.warning(copy.loginFirst)
       return
     }
 
     try {
       setLoading(true)
       const response = await checkinApi.doCheckin()
-      
-      // 处理响应数据 - 兼容多种响应格式
-      const responseData = response.data
-      const isSuccess = responseData?.success || responseData?.code === 200 || responseData?.code === 0
-      
-      if (isSuccess) {
-        const result = responseData.data || responseData
-        const message = result?.message || responseData?.message || `打卡成功！获得积分`
-        toast.success(message)
-        
-        // 刷新数据
-        await loadData()
-        
-        // 刷新积分余额
-        const balanceRes = await creditApi.getBalance()
-        if (balanceRes.data?.code === 200 || balanceRes.data?.code === 0) {
-          setCurrentBalance(balanceRes.data.data?.balance || 0)
-        }
-      } else {
-        throw new Error(responseData?.message || '打卡失败')
+      const result = response.data?.data
+
+      if (response.data?.code !== 200 || !result) {
+        throw new Error(response.data?.message || copy.checkinFailed)
       }
+
+      toast.success(
+        result.message ||
+          copy.checkinSuccess(result.totalReward || 0, result.streakDays || 0)
+      )
+
+      await loadData()
     } catch (error) {
-      logger.error('Checkin error:', error)
-      const errorMessage = error.response?.data?.message || error.message || '打卡失败，请稍后重试'
-      toast.error(errorMessage)
+      logger.error('Checkin failed:', error)
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          copy.checkinFailedRetry
+      )
     } finally {
       setLoading(false)
     }
   }
 
+  const weekDays = useMemo(() => {
+    const today = new Date()
+    const currentDay = today.getDay()
+    const monday = new Date(today)
+    monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1))
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(monday)
+      date.setDate(monday.getDate() + index)
+      const dateStr = toLocalDateString(date)
+      const checked = weeklyProgress?.checkins?.some((item) => {
+        const checkinDate = item.checkinDate || item.checkin_date
+        return checkinDate === dateStr
+      })
+
+      return {
+        day: index + 1,
+        date: dateStr,
+        isToday: dateStr === toLocalDateString(today),
+        isChecked: Boolean(checked),
+        label: copy.weekdays[index],
+      }
+    })
+  }, [weeklyProgress, copy])
+
   if (!isOpen) return null
 
-  const hasCheckedIn = todayStatus?.hasCheckedIn || false
-  // 如果今天已打卡，使用今天的连续天数；否则使用昨天的连续天数
-  const currentStreak = hasCheckedIn 
-    ? (todayStatus?.streakDays || 0)
-    : (streakInfo?.currentStreak || 0)
-  const daysToNextReward = streakInfo?.daysToNextReward || 0
-
-  // 计算7天的打卡状态（从本周一开始）
-  const weekDays = []
-  const today = new Date()
-  // 获取本周一
-  const dayOfWeek = today.getDay()
-  const monday = new Date(today)
-  monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
-  
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(monday)
-    date.setDate(monday.getDate() + i)
-    const dateStr = date.toISOString().split('T')[0]
-    const isToday = dateStr === today.toISOString().split('T')[0]
-    const isChecked = weeklyProgress?.checkins?.some(c => {
-      const checkinDate = c.checkinDate || c.checkin_date
-      return checkinDate === dateStr
-    }) || false
-    
-    weekDays.push({
-      day: i + 1,
-      date: dateStr,
-      isToday,
-      isChecked,
-      label: isToday ? '今天' : `第${i + 1}天`
-    })
-  }
-
-  // 奖励配置
-  const rewards = [
-    { day: 3, label: '连签3天', bonus: 20, icon: '🎁' },
-    { day: 7, label: '连签7天', bonus: 50, icon: '🎁' }
-  ]
+  const hasCheckedIn = Boolean(todayStatus?.hasCheckedIn)
+  const currentStreak = hasCheckedIn
+    ? todayStatus?.streakDays || 0
+    : streakInfo?.currentStreak || 0
+  const nextMilestone = getNextRewardMilestone(currentStreak)
+  const daysToNextReward = Math.max(0, nextMilestone - currentStreak)
+  const previewStreak = currentStreak + 1
+  const previewBaseReward = getBaseRewardForStreak(previewStreak)
+  const previewBonusReward = getBonusRewardForStreak(previewStreak)
+  const previewTotalReward = getTotalRewardForStreak(previewStreak)
+  const rewardDays = new Set([3, 7])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm safe-area-top safe-area-bottom">
-      <Card className="w-full max-w-md relative max-h-[90vh] overflow-y-auto">
+    <div className="safe-area-bottom safe-area-top fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md">
+      <Card className="panel relative max-h-[90vh] w-full max-w-md overflow-y-auto border-white/10 bg-[linear-gradient(180deg,rgba(22,17,16,0.96),rgba(14,11,10,0.88))]">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition z-10"
+          className="absolute right-4 top-4 z-10 rounded-full p-2 text-[#8f7b66] transition hover:bg-white/[0.05] hover:text-[#f4ece1]"
         >
           <X size={20} />
         </button>
 
         <div className="p-6">
-          {/* 标题 */}
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold mb-2">连续打卡奖励</h2>
+          <div className="mb-6 text-center">
+            <h2 className="mb-2 text-2xl font-bold text-[#f4ece1]">
+              {copy.title}
+            </h2>
             {isLoggedIn && (
-              <p className="text-sm text-gray-400">
-                当前积分：<span className="text-purple-400 font-semibold">{currentBalance}</span>
-              </p>
+              <div className="inline-flex items-center gap-2 text-sm text-[#bdaa94]">
+                <Wallet size={16} className="text-[#dcb86f]" />
+                <span>
+                  {copy.currentCredits} {currentBalance}
+                </span>
+              </div>
             )}
           </div>
 
-          {/* 7天打卡进度 */}
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              {weekDays.map((day, index) => {
-                const reward = rewards.find(r => r.day === day.day)
-                const isRewardDay = reward !== undefined
-                const canClaim = day.isChecked && isRewardDay
-                
+            <div className="mb-4 grid grid-cols-4 gap-3 sm:grid-cols-7">
+              {weekDays.map((day) => {
+                const isRewardDay = rewardDays.has(day.day)
+
                 return (
-                  <div key={day.day} className="flex flex-col items-center relative">
-                    {/* 奖励标签 */}
-                    {isRewardDay && (
-                      <div className={`absolute -top-6 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        canClaim ? 'bg-pink-500 text-white' : 'bg-pink-500/30 text-pink-300'
-                      }`}>
-                        {reward.label}
-                      </div>
-                    )}
-                    
-                    {/* 打卡图标 */}
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
-                      day.isChecked
-                        ? 'bg-green-500/20 border-green-500 text-green-400'
-                        : day.isToday && !hasCheckedIn
-                        ? 'bg-purple-500/20 border-purple-500 text-purple-400'
-                        : 'bg-gray-500/20 border-gray-500 text-gray-400'
-                    }`}>
+                  <div
+                    key={day.date}
+                    className="flex flex-col items-center gap-2"
+                  >
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all ${
+                        day.isChecked
+                          ? 'border-[#d0a85b]/40 bg-[#6a4a1e]/20 text-[#f0d9a5]'
+                          : day.isToday && !hasCheckedIn
+                            ? 'border-[#a34224]/40 bg-[#7a3218]/18 text-[#e19a84]'
+                            : 'border-white/10 bg-white/[0.03] text-[#8f7b66]'
+                      }`}
+                    >
                       {day.isChecked ? (
-                        <Check size={24} />
-                      ) : isRewardDay ? (
-                        <span className="text-2xl">{reward.icon}</span>
+                        <Check size={22} />
                       ) : (
-                        <span className="text-lg font-bold">{day.day}</span>
+                        <span className="text-sm font-semibold">{day.day}</span>
                       )}
                     </div>
-                    
-                    {/* 日期标签 */}
-                    <div className="mt-2 text-xs text-gray-400">
-                      {day.label}
-                    </div>
+                    <div className="text-xs text-[#8f7b66]">{day.label}</div>
+                    {isRewardDay && (
+                      <div className="rounded-full border border-[#d0a85b]/18 bg-[#6a4a1e]/16 px-2 py-0.5 text-[10px] text-[#dcb86f]">
+                        {day.day === 3 ? '+20' : '+50'}
+                      </div>
+                    )}
                   </div>
                 )
               })}
             </div>
 
-            {/* 提示信息 */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2 text-gray-300">
-                <Info size={16} />
+            <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-sm">
+              <div className="mb-2 flex items-center gap-2 text-[#e4d6c8]">
+                <Info size={16} className="text-[#dcb86f]" />
                 <span>
-                  {hasCheckedIn 
-                    ? `① 已打卡，连续${currentStreak}天`
+                  {hasCheckedIn
+                    ? copy.checkedStatus(currentStreak)
                     : currentStreak > 0
-                    ? `再打卡${daysToNextReward}天可领取奖励！`
-                    : '今天可以打卡'}
+                      ? copy.nextRewardStatus(daysToNextReward)
+                      : copy.freshCycle}
                 </span>
               </div>
-              <button className="text-purple-400 text-sm hover:text-purple-300">
-                明天提醒我 &gt;
-              </button>
+              <div className="flex items-center gap-2 text-[#dcb86f]">
+                <Flame size={16} />
+                <span>{copy.nextMilestone(nextMilestone)}</span>
+              </div>
             </div>
           </div>
 
-          {/* 打卡按钮 */}
           {!isLoggedIn ? (
-            <div className="text-center py-6">
-              <div className="flex items-center justify-center space-x-2 text-amber-400 mb-4">
+            <div className="py-6 text-center">
+              <div className="mb-4 flex items-center justify-center gap-2 text-[#dcb86f]">
                 <Lock size={20} />
-                <span className="text-sm">请先登录后再进行打卡</span>
+                <span className="text-sm">{copy.loginPrompt}</span>
               </div>
               <Button
                 onClick={onClose}
-                className="w-full"
+                className="w-full border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
                 size="lg"
                 variant="secondary"
               >
-                去登录
+                {copy.goLogin}
               </Button>
             </div>
           ) : hasCheckedIn ? (
-            <div className="text-center py-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/20 mb-4">
-                <Gift size={40} className="text-green-400" />
+            <div className="py-6 text-center">
+              <div className="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full border border-[#d0a85b]/20 bg-[#6a4a1e]/16">
+                <Gift size={40} className="text-[#dcb86f]" />
               </div>
-              <p className="text-lg font-bold mb-2">今日已打卡</p>
-              <p className="text-sm text-gray-400 mb-4">
-                连续打卡 {currentStreak} 天
+              <p className="mb-2 text-lg font-bold text-[#f4ece1]">
+                {copy.checkedToday}
               </p>
-              {daysToNextReward > 0 && (
-                <p className="text-sm text-purple-400">
-                  再打卡 {daysToNextReward} 天可获得额外奖励！
-                </p>
-              )}
+              <p className="text-sm text-[#8f7b66]">
+                {copy.checkedTodayReward(todayStatus?.pointsEarned || 0)}
+              </p>
             </div>
           ) : (
-            <div className="text-center py-6">
+            <div className="py-6 text-center">
               <div className="mb-6">
-                <div className="text-4xl font-bold text-purple-400 mb-2">
-                  +{getRewardForStreak(currentStreak + 1)} 积分
+                <div className="mb-2 text-4xl font-bold text-[#f0d9a5]">
+                  +{previewTotalReward} {copy.creditsUnit}
                 </div>
-                {currentStreak + 1 === 3 && (
-                  <p className="text-sm text-pink-400">连续3天额外奖励20积分！</p>
-                )}
-                {currentStreak + 1 === 7 && (
-                  <p className="text-sm text-pink-400">连续7天额外奖励50积分！</p>
+                <p className="text-sm text-[#8f7b66]">
+                  {copy.previewBaseReward(previewBaseReward)}
+                </p>
+                {previewBonusReward > 0 && (
+                  <p className="mt-2 text-sm text-[#e19a84]">
+                    {copy.previewBonusReward(previewBonusReward)}
+                  </p>
                 )}
               </div>
               <Button
                 onClick={handleCheckin}
                 className="w-full"
                 size="lg"
-                disabled={loading}
+                loading={loading}
               >
                 <Gift size={20} />
-                <span>{loading ? '打卡中...' : '立即打卡'}</span>
+                <span>{loading ? copy.checkingIn : copy.checkinNow}</span>
               </Button>
             </div>
           )}
 
-          {/* 奖励规则说明 */}
-          <div className="mt-6 pt-6 border-t border-white/10">
-            <h3 className="text-sm font-medium mb-3">打卡奖励规则</h3>
+          <div className="mt-6 border-t border-white/10 pt-6">
+            <h3 className="mb-3 text-sm font-medium text-[#f4ece1]">
+              {copy.rulesTitle}
+            </h3>
             <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">第1-2天</span>
-                <span className="text-purple-400">10 积分/天</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">第3-6天</span>
-                <span className="text-purple-400">20 积分/天</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">第7天及以上</span>
-                <span className="text-purple-400">30 积分/天</span>
-              </div>
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
-                <span className="text-pink-400">连续3天额外奖励</span>
-                <span className="text-pink-400 font-semibold">+20 积分</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-pink-400">连续7天额外奖励</span>
-                <span className="text-pink-400 font-semibold">+50 积分</span>
-              </div>
+              <RuleRow label={copy.day12} value={copy.perDay10} />
+              <RuleRow label={copy.day36} value={copy.perDay20} />
+              <RuleRow label={copy.day7Plus} value={copy.perDay30} />
+              <RuleRow label={copy.streak3} value={copy.bonus20} highlighted />
+              <RuleRow label={copy.streak7} value={copy.bonus50} highlighted />
             </div>
           </div>
         </div>
@@ -307,11 +353,30 @@ export default function CheckinProgress({ isOpen, onClose }) {
   )
 }
 
-/**
- * 根据连续天数计算基础奖励
- */
-function getRewardForStreak(streakDays) {
-  if (streakDays >= 7) return 30
-  if (streakDays >= 3) return 20
-  return 10
+function RuleRow({ label, value, highlighted = false }) {
+  return (
+    <div
+      className={`flex items-center justify-between ${
+        highlighted ? 'border-t border-white/5 pt-2' : ''
+      }`}
+    >
+      <span className={highlighted ? 'text-[#e19a84]' : 'text-[#8f7b66]'}>
+        {label}
+      </span>
+      <span
+        className={
+          highlighted ? 'font-semibold text-[#f0d9a5]' : 'text-[#dcb86f]'
+        }
+      >
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function toLocalDateString(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }

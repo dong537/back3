@@ -10,7 +10,7 @@ export default function Card({
   return (
     <div 
       className={clsx(
-        'glass rounded-2xl p-6',
+        'glass rounded-[28px] p-6 text-[#f4ece1]',
         hover && 'card-hover',
         glow && 'animate-glow',
         className
@@ -32,7 +32,7 @@ export function CardHeader({ children, className = '' }) {
 
 export function CardTitle({ children, className = '' }) {
   return (
-    <h3 className={clsx('text-xl font-bold text-white', className)}>
+    <h3 className={clsx('text-xl font-semibold tracking-[0.02em] text-[#f8eee2]', className)}>
       {children}
     </h3>
   )
@@ -40,7 +40,7 @@ export function CardTitle({ children, className = '' }) {
 
 export function CardDescription({ children, className = '' }) {
   return (
-    <p className={clsx('text-gray-400 mt-1', className)}>
+    <p className={clsx('mt-1 text-sm leading-6 text-[#bdaa94]', className)}>
       {children}
     </p>
   )

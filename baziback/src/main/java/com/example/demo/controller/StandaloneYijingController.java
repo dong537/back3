@@ -2,6 +2,10 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.request.yijing.YijingGenerateHexagramRequest;
 import com.example.demo.dto.request.yijing.YijingInterpretRequest;
+import com.example.demo.dto.request.yijing.YijingSceneImageRequest;
+import com.example.demo.dto.response.yijing.YijingSceneImageResponse;
+import com.example.demo.exception.BusinessException;
+import com.example.demo.service.GeminiService;
 import com.example.demo.yijing.service.StandaloneYijingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +26,7 @@ import java.util.Map;
 public class StandaloneYijingController {
 
     private final StandaloneYijingService standaloneYijingService;
+    private final GeminiService geminiService;
 
     @PostMapping("/hexagram/generate")
     public ResponseEntity<Map<String, Object>> generateHexagram(
@@ -31,6 +36,9 @@ public class StandaloneYijingController {
         try {
             Map<String, Object> result = standaloneYijingService.generateHexagram(request);
             return ResponseEntity.ok(toResponse(true, "卦象生成成功", result));
+        } catch (BusinessException e) {
+            return ResponseEntity.status(e.getStatus())
+                    .body(toResponse(false, e.getMessage(), e.getData()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(toResponse(false, e.getMessage(), null));
@@ -140,6 +148,35 @@ public class StandaloneYijingController {
             log.error("快速占卜失败", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(toResponse(false, "占卜失败: " + e.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/scene-image")
+    public ResponseEntity<Map<String, Object>> generateSceneImage(
+            @Validated @RequestBody YijingSceneImageRequest request) {
+        log.info("生成易经场景图 - 问题: {}, 方法: {}", request.getQuestion(), request.getMethod());
+
+        try {
+            YijingSceneImageResponse result = geminiService.generateYijingSceneImage(request);
+            log.info(
+                    "易经场景图响应摘要 | generationMode={}, imageSupported={}, hasImageUrl={}, hasImageBase64={}, model={}",
+                    result.getGenerationMode(),
+                    result.getImageSupported(),
+                    result.getImageUrl() != null && !result.getImageUrl().isBlank(),
+                    result.getImageBase64() != null && !result.getImageBase64().isBlank(),
+                    result.getModel()
+            );
+            return ResponseEntity.ok(toResponse(true, "场景图生成成功", result));
+        } catch (BusinessException e) {
+            return ResponseEntity.status(e.getStatus())
+                    .body(toResponse(false, e.getMessage(), e.getData()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(toResponse(false, e.getMessage(), null));
+        } catch (Exception e) {
+            log.error("生成易经场景图失败", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(toResponse(false, "生成易经场景图失败: " + e.getMessage(), null));
         }
     }
 

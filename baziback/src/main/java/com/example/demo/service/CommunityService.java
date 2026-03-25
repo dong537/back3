@@ -28,6 +28,7 @@ public class CommunityService {
     private final FavoriteMapper favoriteMapper;
     private final UserMapper userMapper;
     private final ObjectMapper objectMapper;
+    private final AchievementService achievementService;
     
     // ==================== 帖子相关 ====================
     
@@ -212,6 +213,11 @@ public class CommunityService {
             return false;
         } else {
             favoriteMapper.insert(userId, postId);
+            try {
+                achievementService.checkFavoriteAchievements(userId);
+            } catch (Exception e) {
+                log.error("检查社区收藏成就失败: userId={}, postId={}", userId, postId, e);
+            }
             return true;
         }
     }

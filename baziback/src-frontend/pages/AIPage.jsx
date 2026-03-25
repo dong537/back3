@@ -1,15 +1,116 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Brain, Send, Sparkles, Trash2, StopCircle, ArrowLeft, Coins } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import {
+  Brain,
+  Send,
+  Sparkles,
+  Trash2,
+  StopCircle,
+  ArrowLeft,
+  Coins,
+} from 'lucide-react'
 import { logger } from '../utils/logger'
 import { points } from '../utils/referral'
 import { POINTS_COST } from '../utils/pointsConfig'
 import { toast } from '../components/Toast'
 import { useAuth } from '../context/AuthContext'
+import { resolvePageLocale, safeText, safeNumber } from '../utils/displayText'
+
+const AI_PAGE_COPY = {
+  'zh-CN': {
+    back: '返回',
+    title: 'AI 智能对话',
+    assistantTitle: 'AI 智能助手',
+    assistantDesc: '可以询问八字、卦象、塔罗等玄学相关问题。',
+    costLabel: '每次对话消耗',
+    unit: '积分',
+    getMorePoints: '获取更多积分',
+    inputPlaceholder: '输入您的问题...',
+    thinkingSummary: '查看思维过程',
+    thinking: '思考中...',
+    thinkingFull: '正在思考...',
+    requestFailed: '请求失败，请稍后重试',
+    stopped: '已停止生成',
+    clear: '清空',
+    insufficientPoints: (cost, credits) =>
+      `积分不足，AI 对话需要 ${cost} 积分，当前余额：${credits}`,
+    insufficientPointsGuest: (cost) => `积分不足，AI 对话需要 ${cost} 积分`,
+    spentPoints: (cost) => `消耗 ${cost} 积分`,
+    spendFailed: '积分扣除失败',
+    sendFailed: '请求失败',
+    spendLabel: 'AI 智能对话',
+    quickQuestions: [
+      '帮我分析一下八字',
+      '解读一下今天的运势',
+      '做一次塔罗感情占卜',
+    ],
+    promptIntro: '【用户问题】',
+    promptRules: '【重要格式要求】',
+    promptRule1: '仅输出纯文本，不使用任何 Markdown 或富文本格式。',
+    promptRule2: '禁止出现标题、项目符号、代码块、链接或装饰性符号。',
+    promptRule3: '使用自然段落和换行组织内容，必要时可使用数字序号。',
+    promptRule4: '请用专业、友好的语气回答用户的问题。',
+  },
+  'en-US': {
+    back: 'Back',
+    title: 'AI Chat',
+    assistantTitle: 'AI Assistant',
+    assistantDesc: 'Ask about Bazi, hexagrams, Tarot, and other mystic topics.',
+    costLabel: 'Each chat costs',
+    unit: 'credits',
+    getMorePoints: 'Get more credits',
+    inputPlaceholder: 'Type your question...',
+    thinkingSummary: 'View thinking process',
+    thinking: 'Thinking...',
+    thinkingFull: 'Thinking...',
+    requestFailed: 'Request failed. Please try again later.',
+    stopped: 'Generation stopped.',
+    clear: 'Clear',
+    insufficientPoints: (cost, credits) =>
+      `Not enough credits. AI chat needs ${cost} credits, current balance: ${credits}`,
+    insufficientPointsGuest: (cost) =>
+      `Not enough credits. AI chat needs ${cost} credits.`,
+    spentPoints: (cost) => `Spent ${cost} credits`,
+    spendFailed: 'Failed to deduct credits',
+    sendFailed: 'Request failed',
+    spendLabel: 'AI chat',
+    quickQuestions: [
+      'Help me analyze my Bazi chart',
+      "Interpret today's fortune for me",
+      'Do a Tarot love reading',
+    ],
+    promptIntro: '[User Question]',
+    promptRules: '[Formatting Requirements]',
+    promptRule1:
+      'Reply in plain text only. Do not use Markdown or rich-text formatting.',
+    promptRule2:
+      'Do not use headings, bullet markers, code fences, links, or decorative symbols in the answer.',
+    promptRule3:
+      'Organize the answer with natural paragraphs and line breaks. Use numbered sections when useful.',
+    promptRule4: 'Answer in a professional and friendly tone.',
+  },
+}
+
+function buildPrompt(userMessage, copy) {
+  return `${copy.promptIntro}
+${userMessage}
+
+${copy.promptRules}
+${copy.promptRule1}
+${copy.promptRule2}
+${copy.promptRule3}
+
+${copy.promptRule4}`
+}
 
 export default function AIPage() {
   const navigate = useNavigate()
-  const { credits, isLoggedIn, refreshCredits, spendCredits, canSpendCredits } = useAuth()
+  const { i18n } = useTranslation()
+  const locale = resolvePageLocale(i18n.language)
+  const copy = AI_PAGE_COPY[locale]
+  const { credits, isLoggedIn, refreshCredits, spendCredits, canSpendCredits } =
+    useAuth()
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([])
   const [isStreaming, setIsStreaming] = useState(false)
@@ -21,14 +122,12 @@ export default function AIPage() {
   const abortControllerRef = useRef(null)
   const scrollTimeoutRef = useRef(null)
 
-  // 页面加载时同步一次后端积分余额
   useEffect(() => {
     if (isLoggedIn) {
       refreshCredits()
     }
   }, [isLoggedIn, refreshCredits])
 
-  // 优化滚动：使用 requestAnimationFrame 而不是频繁调用
   const scrollToBottom = useCallback(() => {
     if (scrollTimeoutRef.current) {
       cancelAnimationFrame(scrollTimeoutRef.current)
@@ -38,10 +137,19 @@ export default function AIPage() {
     })
   }, [])
 
-  // 只在消息列表变化时滚动，不在 currentThinking/currentResponse 变化时滚动
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
+
+  useEffect(
+    () => () => {
+      if (scrollTimeoutRef.current) {
+        cancelAnimationFrame(scrollTimeoutRef.current)
+      }
+      abortControllerRef.current?.abort()
+    },
+    []
+  )
 
   const handleStop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -51,100 +159,119 @@ export default function AIPage() {
   }, [])
 
   const handleSend = useCallback(async () => {
-    if (!input.trim() || isStreaming) return
+    const trimmedInput = safeText(input)
+    if (!trimmedInput || isStreaming) return
 
-    // 检查积分
     const cost = POINTS_COST.AI_CHAT
+    const currentCredits = safeNumber(credits, 0)
     if (isLoggedIn) {
       if (!canSpendCredits(cost)) {
-        toast.error(`积分不足，AI对话需要 ${cost} 积分，当前余额：${credits}`)
+        toast.error(copy.insufficientPoints(cost, currentCredits))
         return
       }
-    } else {
-      if (!points.canSpend(cost)) {
-        toast.error(`积分不足，AI对话需要 ${cost} 积分`)
-        return
-      }
+    } else if (!points.canSpend(cost)) {
+      toast.error(copy.insufficientPointsGuest(cost))
+      return
     }
 
-    const userMessage = input.trim()
     setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }])
+    setMessages((prev) => [...prev, { role: 'user', content: trimmedInput }])
     setIsStreaming(true)
     setCurrentThinking('')
     setCurrentResponse('')
 
-    const formattedMessage = `【用户问题】
-${userMessage}
-
-【重要格式要求】
-仅输出纯文本，不使用任何 Markdown 或富文本格式。
-禁止出现以下符号：井号、星号、反引号、下划线、波浪号、大于号、小于号、方括号、圆括号内的链接格式、竖线，以及以连字符作为项目符号的列表。
-使用自然段落和换行来组织内容，用数字序号（如1、2、3）代替符号列表。
-
-请用专业、友好的语气回答用户的问题。`
+    const controller = new AbortController()
+    abortControllerRef.current = controller
 
     try {
-      // ✅ 改用普通 HTTP 请求（不使用流式）
       const token = sessionStorage.getItem('token')
-      logger.info('开始发送 AI 对话请求...', { hasToken: !!token })
-      
+      logger.info('Starting AI chat request...', { hasToken: !!token, locale })
+
       const response = await fetch('/api/deepseek/reasoning', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
+          'X-Language': locale,
+          'Accept-Language': locale,
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({ message: formattedMessage }),
+        body: JSON.stringify({ message: buildPrompt(trimmedInput, copy) }),
+        signal: controller.signal,
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        logger.error(`HTTP ${response.status}: ${response.statusText}`, { errorText })
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        const errorText = safeText(
+          await response.text(),
+          `${response.status} ${response.statusText}`
+        )
+        logger.error(`HTTP ${response.status}: ${response.statusText}`, {
+          errorText,
+        })
+        throw new Error(
+          errorText || `${response.status} ${response.statusText}`
+        )
       }
 
       const data = await response.json()
-      logger.info('收到 AI 响应', { success: data.success, contentLength: data.content?.length })
+      const assistantContent = safeText(data?.content)
+      logger.info('Received AI response', {
+        success: data?.success,
+        contentLength: assistantContent.length,
+      })
 
-      if (data.success && data.content) {
-        // 扣除积分
-        if (isLoggedIn) {
-          const spendResult = await spendCredits(cost, 'AI智能对话')
-          if (spendResult.success) {
-            toast.success(`消耗 ${cost} 积分`)
-          } else {
-            toast.error(spendResult.message || '积分扣除失败')
-          }
-        } else {
-          const spendResult = points.spend(cost, 'AI智能对话')
-          if (spendResult.success) {
-            setUserPoints(spendResult.newTotal)
-            toast.success(`消耗 ${cost} 积分`)
-          }
-        }
-        
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: data.content,
-          thinking: ''
-        }])
-      } else {
-        throw new Error(data.message || '请求失败')
+      if (!data?.success || !assistantContent) {
+        throw new Error(safeText(data?.message, copy.sendFailed))
       }
+
+      if (isLoggedIn) {
+        const spendResult = await spendCredits(cost, copy.spendLabel)
+        if (spendResult.success) {
+          toast.success(copy.spentPoints(cost))
+        } else {
+          toast.error(safeText(spendResult.message, copy.spendFailed))
+        }
+      } else {
+        const spendResult = points.spend(cost, copy.spendLabel)
+        if (spendResult.success) {
+          setUserPoints(spendResult.newTotal)
+          toast.success(copy.spentPoints(cost))
+        }
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: assistantContent, thinking: '' },
+      ])
     } catch (error) {
-      logger.error('AI 对话错误:', error)
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: error.message || '请求失败，请稍后重试',
-        thinking: ''
-      }])
+      if (error?.name === 'AbortError') {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: copy.stopped, thinking: '' },
+        ])
+      } else {
+        const errorMessage = safeText(error?.message, copy.requestFailed)
+        logger.error('AI chat error:', error)
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: errorMessage, thinking: '' },
+        ])
+      }
     } finally {
+      abortControllerRef.current = null
       setIsStreaming(false)
       setCurrentThinking('')
       setCurrentResponse('')
     }
-  }, [input, isStreaming, isLoggedIn, credits, canSpendCredits, spendCredits])
+  }, [
+    input,
+    isStreaming,
+    isLoggedIn,
+    credits,
+    canSpendCredits,
+    spendCredits,
+    copy,
+    locale,
+  ])
 
   const clearChat = () => {
     setMessages([])
@@ -152,72 +279,83 @@ ${userMessage}
     setCurrentResponse('')
   }
 
-  const quickQuestions = ['帮我分析一下八字', '解读一下今天的运势', '塔罗牌占卜感情']
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white flex flex-col">
-      {/* 顶部导航栏 */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 safe-area-top">
-        <div className="px-4 py-3 flex items-center justify-between">
+    <div className="page-shell flex min-h-screen flex-col pb-32" data-theme="default">
+      <div className="sticky top-0 z-50 -mx-4 mb-4 border-b border-white/10 bg-[#0f0a09]/80 backdrop-blur-xl">
+        <div className="app-sticky-inner flex items-center justify-between gap-3 py-3">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="rounded-xl p-2 transition-colors hover:bg-white/10"
+            aria-label={copy.back}
+            title={copy.back}
           >
-            <ArrowLeft size={20} className="text-gray-700" />
+            <ArrowLeft size={20} className="text-[#f4ece1]" />
           </button>
-          <h1 className="text-lg font-bold text-gray-800">AI智能对话</h1>
+          <h1 className="text-lg font-bold text-[#f4ece1]">{copy.title}</h1>
           <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1 bg-amber-100 px-3 py-1 rounded-full">
-              <Coins size={16} className="text-amber-600" />
-              <span className="text-sm font-bold text-amber-700">
-                {isLoggedIn ? (credits ?? 0) : userPoints}
+            <div className="flex items-center space-x-1 rounded-full border border-[#d0a85b]/25 bg-[#7a3218]/16 px-3 py-1.5">
+              <Coins size={16} className="text-[#d0a85b]" />
+              <span className="text-sm font-bold text-[#dcb86f]">
+                {isLoggedIn
+                  ? safeNumber(credits, 0)
+                  : safeNumber(userPoints, 0)}
               </span>
             </div>
-            <button 
+            <button
               onClick={clearChat}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="rounded-xl p-2 transition-colors hover:bg-white/10"
+              title={copy.clear}
+              aria-label={copy.clear}
             >
-              <Trash2 size={20} className="text-gray-500" />
+              <Trash2 size={20} className="text-[#bdaa94]" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* 消息列表区域 - 可滚动 */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="app-page-shell-narrow flex-1 py-4">
         {messages.length === 0 && !isStreaming ? (
-          <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
-            <div className="w-20 h-20 mb-4 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center shadow-lg">
-              <Brain className="w-10 h-10 text-white" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">AI智能助手</h2>
-            <p className="text-gray-500 text-sm mb-2">可以询问八字、卦象、塔罗等玄学问题</p>
-            <p className="text-amber-600 text-xs mb-6">每次对话消耗 {POINTS_COST.AI_CHAT} 积分</p>
-            
-            {/* 快捷问题 */}
-            <div className="w-full max-w-sm space-y-2">
-              {quickQuestions.map((q, i) => (
-                <button
-                  key={i}
-                  onClick={() => setInput(q)}
-                  className="block w-full px-4 py-3 bg-white rounded-xl border border-gray-200 text-sm text-gray-700 hover:bg-purple-50 hover:border-purple-300 transition-colors text-left"
-                >
-                  {q}
-                </button>
-              ))}
+          <div className="page-hero mt-4">
+            <div className="page-hero-inner !max-w-3xl !px-5 !py-8 sm:!px-8">
+              <div className="mb-4 flex justify-center">
+                <div className="mystic-icon-badge h-20 w-20 rounded-full">
+                  <Brain className="h-10 w-10 text-white" />
+                </div>
+              </div>
+              <h2 className="page-title !mt-0 text-center !text-3xl md:!text-4xl">
+                {copy.assistantTitle}
+              </h2>
+              <p className="page-subtitle max-w-2xl">{copy.assistantDesc}</p>
+              <div className="mt-5 flex justify-center">
+                <span className="mystic-chip normal-case tracking-[0.18em]">
+                  {copy.costLabel} {POINTS_COST.AI_CHAT} {copy.unit}
+                </span>
+              </div>
+
+              <div className="mx-auto mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-3">
+                {copy.quickQuestions.map((question) => (
+                  <button
+                    key={question}
+                    onClick={() => setInput(question)}
+                    className="panel-soft block w-full border border-white/10 px-4 py-4 text-left text-sm text-[#e4d6c8] transition-all hover:border-[#d0a85b]/24 hover:bg-white/[0.06]"
+                  >
+                    {question}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
           <div className="space-y-4 pb-4">
-            {messages.map((msg, i) => (
-              <MessageItem key={i} msg={msg} />
+            {messages.map((msg, index) => (
+              <MessageItem key={`${msg.role}-${index}`} msg={msg} copy={copy} />
             ))}
 
-            {/* 正在流式输出 */}
             {isStreaming && (
-              <StreamingMessage 
-                currentThinking={currentThinking} 
-                currentResponse={currentResponse} 
+              <StreamingMessage
+                currentThinking={currentThinking}
+                currentResponse={currentResponse}
+                copy={copy}
               />
             )}
 
@@ -226,131 +364,149 @@ ${userMessage}
         )}
       </div>
 
-      {/* 输入区域 - 固定在底部 */}
-      <div className="sticky bottom-0 border-t border-gray-200 bg-white p-4 safe-area-bottom">
-        {/* 积分提示 */}
-        <div className="flex items-center justify-between mb-2 px-1">
-          <span className="text-xs text-gray-500">
-            每次对话消耗 <span className="text-amber-600 font-medium">{POINTS_COST.AI_CHAT}</span> 积分
-          </span>
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="text-xs text-purple-600 font-medium"
-          >
-            获取更多积分 →
-          </button>
-        </div>
-        <div className="flex gap-3 items-end max-w-4xl mx-auto">
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              placeholder="输入您的问题..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              rows={1}
-              className="w-full px-4 py-3 bg-gray-100 border-0 rounded-2xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
-              style={{ minHeight: '48px', maxHeight: '120px' }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSend()
-                }
-              }}
-              onInput={(e) => {
-                e.target.style.height = 'auto'
-                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
-              }}
-              disabled={isStreaming}
-            />
+      <div className="safe-area-bottom sticky bottom-0 z-40 -mx-4 border-t border-white/10 bg-[#0f0a09]/88 px-4 py-4 backdrop-blur-xl">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <span className="text-xs text-[#8f7b66]">
+            {copy.costLabel}{' '}
+              <span className="font-medium text-[#dcb86f]">
+                {POINTS_COST.AI_CHAT}
+              </span>{' '}
+              {copy.unit}
+            </span>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="text-xs font-medium text-[#dcb86f] transition-colors hover:text-[#f0d9a5]"
+            >
+              {copy.getMorePoints}
+            </button>
           </div>
-          
-          {isStreaming ? (
-            <button 
-              onClick={handleStop}
-              className="w-12 h-12 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors shadow-lg"
-            >
-              <StopCircle size={22} />
-            </button>
-          ) : (
-            <button 
-              onClick={handleSend} 
-              disabled={!input.trim()}
-              className={`w-12 h-12 flex items-center justify-center rounded-full transition-all shadow-lg ${
-                input.trim() 
-                  ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600' 
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              <Send size={20} />
-            </button>
-          )}
+          <div className="mx-auto flex max-w-4xl items-end gap-3">
+            <div className="relative flex-1">
+              <textarea
+                ref={inputRef}
+                placeholder={copy.inputPlaceholder}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                rows={1}
+                className="mystic-input w-full resize-none rounded-[24px] px-4 py-3 text-sm"
+                style={{ minHeight: '48px', maxHeight: '120px' }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSend()
+                  }
+                }}
+                onInput={(e) => {
+                  e.target.style.height = 'auto'
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`
+                }}
+                disabled={isStreaming}
+              />
+            </div>
+
+            {isStreaming ? (
+              <button
+                onClick={handleStop}
+                className="flex h-12 w-12 items-center justify-center rounded-full border border-[#a34224]/40 bg-[#7a3218]/22 text-[#f4ece1] transition-all hover:bg-[#7a3218]/34"
+              >
+                <StopCircle size={22} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!safeText(input)}
+                className={`flex h-12 w-12 items-center justify-center rounded-full transition-all ${
+                  safeText(input)
+                    ? 'btn-primary-theme px-0 py-0 text-white'
+                    : 'cursor-not-allowed border border-white/10 bg-white/[0.05] text-[#8f7b66]'
+                }`}
+              >
+                <Send size={20} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-// 优化的消息项组件 - 使用 React.memo 避免不必要的重新渲染
-const MessageItem = React.memo(({ msg }) => (
-  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-    <div className="max-w-[85%]">
-      {msg.role === 'assistant' && msg.thinking && (
-        <details className="mb-2 bg-purple-50 rounded-xl overflow-hidden border border-purple-200">
-          <summary className="px-4 py-2 cursor-pointer text-sm text-purple-600 hover:bg-purple-100 transition-colors">
-            <Brain className="w-4 h-4 inline mr-2" />
-            查看思维过程
-          </summary>
-          <div className="px-4 py-3 bg-purple-50 text-sm text-gray-600 whitespace-pre-wrap max-h-48 overflow-y-auto border-t border-purple-200">
-            {msg.thinking}
+const MessageItem = React.memo(function MessageItem({ msg, copy }) {
+  const content = safeText(msg?.content)
+  const thinking = safeText(msg?.thinking)
+
+  return (
+    <div
+      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+    >
+      <div className="max-w-[85%]">
+        {msg.role === 'assistant' && thinking && (
+          <details className="panel-soft mb-2 overflow-hidden border border-white/10">
+            <summary className="cursor-pointer px-4 py-2 text-sm text-[#dcb86f] transition-colors hover:bg-white/[0.05]">
+              <Brain className="mr-2 inline h-4 w-4" />
+              {copy.thinkingSummary}
+            </summary>
+            <div className="max-h-48 overflow-y-auto whitespace-pre-wrap border-t border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-[#bdaa94]">
+              {thinking}
+            </div>
+          </details>
+        )}
+        <div
+          className={`rounded-2xl px-4 py-3 ${
+            msg.role === 'user'
+              ? 'bg-[linear-gradient(135deg,#a34224_0%,#cd7840_52%,#e3bf73_100%)] text-white shadow-[0_18px_36px_rgba(163,66,36,0.22)]'
+              : 'border border-white/10 bg-white/[0.04] text-[#f4ece1]'
+          }`}
+        >
+          <div className="whitespace-pre-wrap text-sm leading-relaxed">
+            {content}
           </div>
-        </details>
-      )}
-      <div className={`rounded-2xl px-4 py-3 ${
-        msg.role === 'user' 
-          ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white' 
-          : 'bg-white border border-gray-200 text-gray-800 shadow-sm'
-      }`}>
-        <div className="whitespace-pre-wrap leading-relaxed text-sm">{msg.content}</div>
+        </div>
       </div>
     </div>
-  </div>
-))
+  )
+})
 
-MessageItem.displayName = 'MessageItem'
+const StreamingMessage = React.memo(function StreamingMessage({
+  currentThinking,
+  currentResponse,
+  copy,
+}) {
+  const thinking = safeText(currentThinking)
+  const response = safeText(currentResponse)
 
-// 优化的流式消息组件
-const StreamingMessage = React.memo(({ currentThinking, currentResponse }) => (
-  <div className="flex justify-start">
-    <div className="max-w-[85%]">
-      {currentThinking && (
-        <div className="mb-2 bg-purple-50 rounded-xl p-3 border border-purple-200">
-          <div className="flex items-center text-sm text-purple-600 mb-2">
-            <Brain className="w-4 h-4 mr-2 animate-pulse" />
-            思考中...
+  return (
+    <div className="flex justify-start">
+      <div className="max-w-[85%]">
+        {thinking && (
+          <div className="panel-soft mb-2 border border-white/10 p-3">
+            <div className="mb-2 flex items-center text-sm text-[#dcb86f]">
+              <Brain className="mr-2 h-4 w-4 animate-pulse" />
+              {copy.thinking}
+            </div>
+            <div className="max-h-32 overflow-y-auto whitespace-pre-wrap text-sm text-[#bdaa94]">
+              {thinking}
+            </div>
           </div>
-          <div className="text-sm text-gray-600 whitespace-pre-wrap max-h-32 overflow-y-auto">
-            {currentThinking}
+        )}
+        {response && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+            <div className="whitespace-pre-wrap text-sm leading-relaxed text-[#f4ece1]">
+              {response}
+              <span className="ml-1 inline-block h-4 w-1 animate-pulse bg-[#d0a85b]" />
+            </div>
           </div>
-        </div>
-      )}
-      {currentResponse && (
-        <div className="bg-white rounded-2xl px-4 py-3 border border-gray-200 shadow-sm">
-          <div className="whitespace-pre-wrap leading-relaxed text-sm text-gray-800">
-            {currentResponse}
-            <span className="inline-block w-1 h-4 bg-purple-500 ml-1 animate-pulse" />
+        )}
+        {!thinking && !response && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+            <div className="flex items-center space-x-2 text-[#bdaa94]">
+              <Sparkles className="h-4 w-4 animate-pulse text-[#d0a85b]" />
+              <span className="text-sm">{copy.thinkingFull}</span>
+            </div>
           </div>
-        </div>
-      )}
-      {!currentThinking && !currentResponse && (
-        <div className="bg-white rounded-2xl px-4 py-3 border border-gray-200 shadow-sm">
-          <div className="flex items-center space-x-2 text-gray-500">
-            <Sparkles className="w-4 h-4 animate-pulse text-purple-500" />
-            <span className="text-sm">正在思考...</span>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
-  </div>
-))
-
-StreamingMessage.displayName = 'StreamingMessage'
+  )
+})

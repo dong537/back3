@@ -4,9 +4,6 @@ import com.example.demo.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * 统一鉴权工具：从 Authorization header 中解析 userId
- */
 @Component
 @RequiredArgsConstructor
 public class AuthUtil {
@@ -16,7 +13,7 @@ public class AuthUtil {
     public Long requireUserId(String authorizationHeader) {
         Long userId = tryGetUserId(authorizationHeader);
         if (userId == null) {
-            throw new UnauthorizedException("未登录或token无效");
+            throw new UnauthorizedException(I18nHelper.message("auth.token.invalid", "未登录或 token 无效"));
         }
         return userId;
     }
@@ -34,7 +31,7 @@ public class AuthUtil {
                 return jwtUtil.extractUserId(token);
             }
         } catch (Exception ignored) {
-            // ignore
+            // ignore invalid token parsing here and let caller decide how to handle it
         }
         return null;
     }

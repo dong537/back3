@@ -70,4 +70,16 @@ public class CheckinController {
         Map<String, Object> result = checkinService.getStreakInfo(userId);
         return Result.success(result);
     }
+
+    /**
+     * 获取签到概览，减少前端多次往返请求
+     * GET /api/checkin/overview
+     */
+    @GetMapping("/overview")
+    public Result<Map<String, Object>> getOverview(
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        Long userId = authUtil.requireUserId(token);
+        Map<String, Object> result = checkinService.getOverview(userId);
+        return Result.success(result);
+    }
 }

@@ -49,6 +49,9 @@ public interface DailyCheckinMapper {
      */
     @Select("SELECT streak_days FROM tb_daily_checkin WHERE user_id = #{userId} ORDER BY checkin_date DESC LIMIT 1")
     Integer findCurrentStreak(@Param("userId") Long userId);
+
+    @Select("SELECT COALESCE(MAX(streak_days), 0) FROM tb_daily_checkin WHERE user_id = #{userId}")
+    Integer findMaxStreak(@Param("userId") Long userId);
     
     /**
      * 查询用户本周签到记录

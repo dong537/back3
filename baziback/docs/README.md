@@ -18,6 +18,8 @@
 ### 开发文档
 - [八字模块](../src/main/java/com/example/demo/bazi/README.md) - 八字排盘模块说明
 - [MCP 服务](../mcp-server/README.md) - MCP 服务说明
+- [易经场景图生成逻辑](./YIJING_SCENE_IMAGE_FLOW.md) - 易经场景图请求、解析、失败处理与排查说明
+- [Gemini 调用链路详解](./GEMINI_CALL_CHAIN.md) - Gemini 在本项目中的入口、配置、请求构造、响应解析与排障说明
 
 ---
 

@@ -8,6 +8,7 @@ import com.example.demo.dto.request.star.ZodiacInfoRequest;
 import com.example.demo.dto.response.star.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 /**
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
  * 提供星座信息查询、运势分析、配对等功能
  */
 @Service
+@ConditionalOnProperty(name = "mcp.enabled", havingValue = "true")
 @RequiredArgsConstructor  // 自动生成构造函数注入
 @Slf4j
 public class ZodiacService {

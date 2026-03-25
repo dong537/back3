@@ -9,16 +9,16 @@ export default function Input({
   return (
     <div className="space-y-2">
       {label && (
-        <label className="block text-sm font-medium text-gray-300">
+        <label className="block text-sm font-medium text-[#cdb79a]">
           {label}
         </label>
       )}
       <input
         className={clsx(
-          'w-full px-4 py-3 rounded-lg',
-          'bg-white/5 border border-white/10',
-          'text-white placeholder-gray-500',
-          'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent',
+          'w-full rounded-[18px] border px-4 py-3',
+          'border-white/10 bg-white/[0.04]',
+          'text-[#f4ece1] placeholder-[#8f7b66]',
+          'focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#a34224]/30',
           'transition-all duration-300',
           error && 'border-red-500',
           className
@@ -42,17 +42,17 @@ export function Textarea({
   return (
     <div className="space-y-2">
       {label && (
-        <label className="block text-sm font-medium text-gray-300">
+        <label className="block text-sm font-medium text-[#cdb79a]">
           {label}
         </label>
       )}
       <textarea
         rows={rows}
         className={clsx(
-          'w-full px-4 py-3 rounded-lg resize-none',
-          'bg-white/5 border border-white/10',
-          'text-white placeholder-gray-500',
-          'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent',
+          'w-full resize-none rounded-[18px] border px-4 py-3',
+          'border-white/10 bg-white/[0.04]',
+          'text-[#f4ece1] placeholder-[#8f7b66]',
+          'focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#a34224]/30',
           'transition-all duration-300',
           error && 'border-red-500',
           className
@@ -76,16 +76,16 @@ export function Select({
   return (
     <div className="space-y-2">
       {label && (
-        <label className="block text-sm font-medium text-gray-300">
+        <label className="block text-sm font-medium text-[#cdb79a]">
           {label}
         </label>
       )}
       <select
         className={clsx(
-          'w-full px-4 py-3 rounded-lg',
-          'bg-white/5 border border-white/10',
-          'text-white',
-          'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent',
+          'w-full rounded-[18px] border px-4 py-3',
+          'border-white/10 bg-white/[0.04]',
+          'text-[#f4ece1]',
+          'focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#a34224]/30',
           'transition-all duration-300',
           error && 'border-red-500',
           className
@@ -93,7 +93,7 @@ export function Select({
         {...props}
       >
         {options.map(({ value, label }) => (
-          <option key={value} value={value} className="bg-gray-800">
+          <option key={value} value={value} className="bg-[#140f0f]">
             {label}
           </option>
         ))}

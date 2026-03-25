@@ -10,10 +10,13 @@ export default function Button({
   ...props 
 }) {
   const variants = {
-    primary: 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white',
-    secondary: 'bg-white/10 hover:bg-white/20 text-white',
-    outline: 'border border-purple-500 text-purple-400 hover:bg-purple-500/10',
-    ghost: 'hover:bg-white/10 text-gray-300',
+    primary:
+      'border border-[#f3d8a8]/10 bg-[linear-gradient(135deg,#a34224_0%,#cd7840_52%,#e3bf73_100%)] text-[#fff7eb] shadow-[0_18px_40px_rgba(163,66,36,0.26)] hover:brightness-105',
+    secondary:
+      'border border-white/10 bg-white/[0.04] text-[#f4ece1] hover:border-[#d0a85b]/25 hover:bg-white/[0.07]',
+    outline:
+      'border border-[#d0a85b]/40 text-[#dcb86f] hover:bg-[#d0a85b]/10',
+    ghost: 'border border-transparent text-[#c7b6a2] hover:bg-white/[0.05] hover:text-[#f4ece1]',
   }
 
   const sizes = {
@@ -26,7 +29,7 @@ export default function Button({
     <button
       disabled={disabled || loading}
       className={clsx(
-        'rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2',
+        'flex items-center justify-center space-x-2 rounded-[18px] font-medium tracking-[0.02em] transition-all duration-300',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         'btn-glow tap-highlight',
         'active:scale-95',

@@ -1,75 +1,78 @@
 package com.example.demo.mapper;
 
 import com.example.demo.entity.TbCalculationRecord;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
-/**
- * 测算记录 Mapper
- */
 @Mapper
 public interface CalculationRecordMapper {
 
-    /**
-     * 插入新记录
-     */
-    @Insert("INSERT INTO tb_calculation_record (user_id, record_type, record_title, question, summary, data, create_time, update_time) " +
-            "VALUES (#{userId}, #{recordType}, #{recordTitle}, #{question}, #{summary}, #{data}, NOW(), NOW())")
+    String BASE_COLUMNS =
+            "id, " +
+            "user_id AS userId, " +
+            "record_type AS recordType, " +
+            "record_title AS recordTitle, " +
+            "question, " +
+            "summary, " +
+            "input_data AS inputData, " +
+            "result_data AS data, " +
+            "created_at AS createTime, " +
+            "updated_at AS updateTime";
+
+    @Insert("INSERT INTO tb_calculation_record " +
+            "(user_id, record_type, record_title, question, input_data, result_data, summary, created_at, updated_at) " +
+            "VALUES (#{userId}, #{recordType}, #{recordTitle}, #{question}, #{inputData}, #{data}, #{summary}, NOW(), NOW())")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(TbCalculationRecord record);
 
-    /**
-     * 根据ID查询
-     */
-    @Select("SELECT * FROM tb_calculation_record WHERE id = #{id}")
+    @Select("SELECT " + BASE_COLUMNS + " FROM tb_calculation_record WHERE id = #{id}")
     TbCalculationRecord selectById(Long id);
 
-    /**
-     * 根据用户ID查询所有记录
-     */
-    @Select("SELECT * FROM tb_calculation_record WHERE user_id = #{userId} ORDER BY create_time DESC")
+    @Select("SELECT " + BASE_COLUMNS + " FROM tb_calculation_record WHERE id = #{id} AND user_id = #{userId}")
+    TbCalculationRecord selectByIdAndUserId(@Param("id") Long id, @Param("userId") Long userId);
+
+    @Select("SELECT " + BASE_COLUMNS + " FROM tb_calculation_record WHERE user_id = #{userId} ORDER BY created_at DESC")
     List<TbCalculationRecord> selectByUserId(Long userId);
 
-    /**
-     * 根据用户ID和类型查询记录
-     */
-    @Select("SELECT * FROM tb_calculation_record WHERE user_id = #{userId} AND record_type = #{recordType} ORDER BY create_time DESC")
-    List<TbCalculationRecord> selectByUserIdAndType(Long userId, String recordType);
+    @Select("SELECT " + BASE_COLUMNS + " FROM tb_calculation_record WHERE user_id = #{userId} AND record_type = #{recordType} ORDER BY created_at DESC")
+    List<TbCalculationRecord> selectByUserIdAndType(@Param("userId") Long userId, @Param("recordType") String recordType);
 
-    /**
-     * 分页查询用户记录
-     */
-    @Select("SELECT * FROM tb_calculation_record WHERE user_id = #{userId} ORDER BY create_time DESC LIMIT #{offset}, #{limit}")
-    List<TbCalculationRecord> selectByUserIdPaged(Long userId, int offset, int limit);
+    @Select("SELECT " + BASE_COLUMNS + " FROM tb_calculation_record " +
+            "WHERE user_id = #{userId} " +
+            "ORDER BY created_at DESC LIMIT #{offset}, #{limit}")
+    List<TbCalculationRecord> selectByUserIdPaged(@Param("userId") Long userId,
+                                                  @Param("offset") int offset,
+                                                  @Param("limit") int limit);
 
-    /**
-     * 更新记录
-     */
-    @Update("UPDATE tb_calculation_record SET record_title = #{recordTitle}, question = #{question}, summary = #{summary}, data = #{data}, update_time = NOW() WHERE id = #{id}")
-    int update(TbCalculationRecord record);
+    @Select("SELECT " + BASE_COLUMNS + " FROM tb_calculation_record " +
+            "WHERE user_id = #{userId} AND record_type = #{recordType} " +
+            "ORDER BY created_at DESC LIMIT #{offset}, #{limit}")
+    List<TbCalculationRecord> selectByUserIdAndTypePaged(@Param("userId") Long userId,
+                                                         @Param("recordType") String recordType,
+                                                         @Param("offset") int offset,
+                                                         @Param("limit") int limit);
 
-    /**
-     * 删除记录
-     */
-    @Delete("DELETE FROM tb_calculation_record WHERE id = #{id}")
-    int delete(Long id);
+    @Update("UPDATE tb_calculation_record " +
+            "SET record_title = #{recordTitle}, question = #{question}, summary = #{summary}, input_data = #{inputData}, result_data = #{data}, updated_at = NOW() " +
+            "WHERE id = #{id} AND user_id = #{userId}")
+    int updateByUserId(TbCalculationRecord record);
 
-    /**
-     * 删除用户的记录
-     */
+    @Delete("DELETE FROM tb_calculation_record WHERE id = #{id} AND user_id = #{userId}")
+    int deleteByIdAndUserId(@Param("id") Long id, @Param("userId") Long userId);
+
     @Delete("DELETE FROM tb_calculation_record WHERE user_id = #{userId}")
     int deleteByUserId(Long userId);
 
-    /**
-     * 统计用户记录数
-     */
     @Select("SELECT COUNT(*) FROM tb_calculation_record WHERE user_id = #{userId}")
     int countByUserId(Long userId);
 
-    /**
-     * 统计用户某类型的记录数
-     */
     @Select("SELECT COUNT(*) FROM tb_calculation_record WHERE user_id = #{userId} AND record_type = #{recordType}")
-    int countByUserIdAndType(Long userId, String recordType);
+    int countByUserIdAndType(@Param("userId") Long userId, @Param("recordType") String recordType);
 }

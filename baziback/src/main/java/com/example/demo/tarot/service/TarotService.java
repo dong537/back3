@@ -74,8 +74,12 @@ public class TarotService {
                 boolean reversed = new Random().nextInt(100) < 30;
 
                 DrawResult.Card resultCard = new DrawResult.Card();
+                TbTarotCard detailCard = tarotCardMapper.findByCardId(card.getCardId());
                 resultCard.setIndex(card.getCardId());
+                resultCard.setCardId(card.getCardId());
                 resultCard.setName(card.getCardNameCn());
+                resultCard.setCardNameCn(card.getCardNameCn());
+                resultCard.setCardNameEn(detailCard != null ? detailCard.getCardNameEn() : null);
                 resultCard.setReversed(reversed);
                 resultCard.setSymbol(getCardSymbol(card));
                 if (position != null) {
@@ -299,7 +303,10 @@ public class TarotService {
         @lombok.AllArgsConstructor
         public static class Card {
             private Integer index;
+            private Integer cardId;
             private String name;
+            private String cardNameCn;
+            private String cardNameEn;
             private Boolean reversed;
             private String symbol;
             private String position;

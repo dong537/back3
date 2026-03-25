@@ -1,12 +1,21 @@
 package com.example.demo.controller;
 
+import com.example.demo.common.Result;
 import com.example.demo.entity.TbCalculationRecord;
 import com.example.demo.service.CalculationRecordService;
-import com.example.demo.common.Result;
 import com.example.demo.util.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,41 +33,28 @@ public class CalculationRecordController {
     private final CalculationRecordService calculationRecordService;
     private final AuthUtil authUtil;
 
-    /**
-     * 保存测算记录
-     */
     @PostMapping
     public Result<TbCalculationRecord> saveRecord(
             @RequestHeader(value = "Authorization", required = false) String token,
             @RequestBody TbCalculationRecord record) {
-        // 从token中获取用户ID并设置到record中
         Long userId = authUtil.tryGetUserId(token);
         if (userId != null) {
             record.setUserId(userId);
         } else {
-            // 如果未登录，记录警告日志
-            log.warn("保存记录时用户未登录，recordType={}, recordTitle={}", 
+            log.warn("保存记录时用户未登录, recordType={}, recordTitle={}",
                     record.getRecordType(), record.getRecordTitle());
         }
-        TbCalculationRecord saved = calculationRecordService.saveRecord(record);
-        return Result.success(saved);
+        return Result.success(calculationRecordService.saveRecord(record));
     }
 
-    /**
-     * 获取记录详情
-     */
     @GetMapping("/{id}")
-    public Result<TbCalculationRecord> getRecord(@PathVariable Long id) {
-        TbCalculationRecord record = calculationRecordService.getRecord(id);
-        if (record == null) {
-            return Result.error("记录不存在");
-        }
-        return Result.success(record);
+    public Result<TbCalculationRecord> getRecord(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @PathVariable Long id) {
+        Long userId = authUtil.requireUserId(token);
+        return Result.success(calculationRecordService.getUserRecord(userId, id));
     }
 
-    /**
-     * 获取当前用户的所有记录
-     */
     @GetMapping
     public Result<List<TbCalculationRecord>> getUserRecords(
             @RequestHeader(value = "Authorization", required = false) String token,
@@ -66,63 +62,38 @@ public class CalculationRecordController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long userId = authUtil.requireUserId(token);
-        
-        if (userId == null) {
-            return Result.error("用户未登录");
-        }
-
-        List<TbCalculationRecord> records;
-        if (recordType != null && !recordType.isEmpty()) {
-            records = calculationRecordService.getUserRecordsByType(userId, recordType);
-        } else {
-            records = calculationRecordService.getUserRecordsPaged(userId, page, size);
-        }
-        
-        return Result.success(records);
+        return Result.success(calculationRecordService.getUserRecordsPaged(userId, recordType, page, size));
     }
 
-    /**
-     * 更新记录
-     */
     @PutMapping("/{id}")
     public Result<TbCalculationRecord> updateRecord(
+            @RequestHeader(value = "Authorization", required = false) String token,
             @PathVariable Long id,
             @RequestBody TbCalculationRecord record) {
-        record.setId(id);
-        TbCalculationRecord updated = calculationRecordService.updateRecord(record);
-        return Result.success(updated);
+        Long userId = authUtil.requireUserId(token);
+        return Result.success(calculationRecordService.updateUserRecord(userId, id, record));
     }
 
-    /**
-     * 删除记录
-     */
     @DeleteMapping("/{id}")
-    public Result<Void> deleteRecord(@PathVariable Long id) {
-        calculationRecordService.deleteRecord(id);
+    public Result<Void> deleteRecord(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @PathVariable Long id) {
+        Long userId = authUtil.requireUserId(token);
+        calculationRecordService.deleteUserRecord(userId, id);
         return Result.success();
     }
 
-    /**
-     * 获取用户记录统计
-     */
     @GetMapping("/stats")
     public Result<Map<String, Integer>> getStats(
             @RequestHeader(value = "Authorization", required = false) String token) {
         Long userId = authUtil.requireUserId(token);
 
-        int total = calculationRecordService.getUserRecordCount(userId);
-        int baziCount = calculationRecordService.getUserRecordCountByType(userId, "bazi");
-        int tarotCount = calculationRecordService.getUserRecordCountByType(userId, "tarot");
-        int yijingCount = calculationRecordService.getUserRecordCountByType(userId, "yijing");
-        int compatibilityCount = calculationRecordService.getUserRecordCountByType(userId, "compatibility");
-
         Map<String, Integer> stats = new HashMap<>();
-        stats.put("total", total);
-        stats.put("bazi", baziCount);
-        stats.put("tarot", tarotCount);
-        stats.put("yijing", yijingCount);
-        stats.put("compatibility", compatibilityCount);
-
+        stats.put("total", calculationRecordService.getUserRecordCount(userId));
+        stats.put("bazi", calculationRecordService.getUserRecordCountByType(userId, "bazi"));
+        stats.put("tarot", calculationRecordService.getUserRecordCountByType(userId, "tarot"));
+        stats.put("yijing", calculationRecordService.getUserRecordCountByType(userId, "yijing"));
+        stats.put("compatibility", calculationRecordService.getUserRecordCountByType(userId, "compatibility"));
         return Result.success(stats);
     }
 }

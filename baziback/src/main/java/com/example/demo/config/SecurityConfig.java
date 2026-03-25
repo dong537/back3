@@ -30,11 +30,11 @@ public class SecurityConfig {
     private static final String[] PUBLIC_API_PATTERNS = {
             "/api/user/login",
             "/api/user/register",
+            "/api/gemini/probe/**",
             "/api/yijing/**",
             "/api/tarot/**",
             "/api/zodiac/**",
             "/api/bazi/**",
-            "/api/ai/**",
             "/api/daily-lucky/**",
             "/api/daily-fortune-detail/**",
             "/api/standalone/yijing/**",
@@ -44,11 +44,11 @@ public class SecurityConfig {
     private static final List<String> PUBLIC_API_PREFIXES = List.of(
             "/api/user/login",
             "/api/user/register",
+            "/api/gemini/probe/",
             "/api/yijing/",
             "/api/tarot/",
             "/api/zodiac/",
             "/api/bazi/",
-            "/api/ai/",
             "/api/daily-lucky/",
             "/api/daily-fortune-detail/",
             "/api/standalone/yijing/",
@@ -94,7 +94,6 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/api/achievement/sse", "/api/credit/sse", "/api/deepseek/reasoning-stream").authenticated()
                         .pathMatchers(PUBLIC_API_PATTERNS).permitAll()
-                        .pathMatchers("/api/deepseek/**").permitAll()
                         .pathMatchers("/api/**").authenticated()
                         .anyExchange().permitAll()
                 )

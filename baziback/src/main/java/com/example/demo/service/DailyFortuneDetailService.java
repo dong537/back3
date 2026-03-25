@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.example.demo.util.AuthUtil;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +47,13 @@ public class DailyFortuneDetailService {
      * @param userId 可选的用户ID
      * @return 随机抽取的运势详情
      */
+    @Cacheable(
+            cacheNames = "dailyFortuneDetail",
+            key = "'today:' + T(java.time.LocalDate).now() + ':' + #userId",
+            condition = "#userId != null",
+            unless = "#result == null",
+            sync = true
+    )
     public DailyFortuneDetail getTodayFortuneDetail(Long userId) {
         long total;
         try {
@@ -97,6 +105,7 @@ public class DailyFortuneDetailService {
      * 创建或更新每日运势详情
      */
     @Transactional
+    @CacheEvict(cacheNames = "dailyFortuneDetail", allEntries = true)
     public DailyFortuneDetail saveDailyFortuneDetail(DailyFortuneDetail detail) {
         if (detail == null) {
             throw new BusinessException("每日运势详情数据不能为空");
@@ -157,6 +166,7 @@ public class DailyFortuneDetailService {
      * 批量保存每日运势详情
      */
     @Transactional
+    @CacheEvict(cacheNames = "dailyFortuneDetail", allEntries = true)
     public int batchSave(List<DailyFortuneDetail> details) {
         if (details == null || details.isEmpty()) {
             return 0;

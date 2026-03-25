@@ -1,20 +1,23 @@
-import { lazy, Suspense, useState, useEffect } from 'react'
-import { Routes, Route } from 'react-router-dom'
-import { useAuth } from './context/AuthContext';
-import Layout from './components/Layout';
-import PrivateRoute from './components/PrivateRoute';
-import { ToastContainer } from './components/Toast';
-import PangleSplashAd from './components/PangleSplashAd';
-import { useSSE } from './hooks/useSSE';
+import { lazy, Suspense, useState } from 'react'
+import { Route, Routes } from 'react-router-dom'
+import { useAuth } from './context/AuthContext'
+import Layout from './components/Layout'
+import PrivateRoute from './components/PrivateRoute'
+import { ToastContainer } from './components/Toast'
+import PangleSplashAd from './components/PangleSplashAd'
+import { pangleConfig } from './config/pangle'
+import { useSSE } from './hooks/useSSE'
+import useAppLocale from './hooks/useAppLocale'
 
-// ✅ 使用 lazy 加载页面组件 - 实现代码分割
 const Home = lazy(() => import('./pages/Home'))
 const YijingPage = lazy(() => import('./pages/YijingPage'))
 const TarotPage = lazy(() => import('./pages/TarotPage'))
 const TarotCardDetailPage = lazy(() => import('./pages/TarotCardDetailPage'))
 const FavoritesPage = lazy(() => import('./pages/FavoritesPage'))
 const BaziPage = lazy(() => import('./pages/BaziPage'))
-const BaziInterpretationDetailPage = lazy(() => import('./pages/BaziInterpretationDetailPage'))
+const BaziInterpretationDetailPage = lazy(
+  () => import('./pages/BaziInterpretationDetailPage')
+)
 const AIPage = lazy(() => import('./pages/AIPage'))
 const GeminiFacePage = lazy(() => import('./pages/GeminiFacePage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
@@ -22,8 +25,12 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const SelfPage = lazy(() => import('./pages/SelfPage'))
 const ReferralPage = lazy(() => import('./pages/ReferralPage'))
 const DailyTestPage = lazy(() => import('./pages/DailyTestPage'))
-const CalculationRecordPage = lazy(() => import('./pages/CalculationRecordPage'))
-const BaziCompatibilityPage = lazy(() => import('./pages/BaziCompatibilityPage'))
+const CalculationRecordPage = lazy(
+  () => import('./pages/CalculationRecordPage')
+)
+const BaziCompatibilityPage = lazy(
+  () => import('./pages/BaziCompatibilityPage')
+)
 const AchievementPage = lazy(() => import('./pages/AchievementPage'))
 const MessagesPage = lazy(() => import('./pages/MessagesPage'))
 const PostDetailPage = lazy(() => import('./pages/PostDetailPage'))
@@ -32,38 +39,41 @@ const CreditShopPage = lazy(() => import('./pages/CreditShopPage'))
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 const UserAgreementPage = lazy(() => import('./pages/UserAgreementPage'))
 
-// ✅ 加载中的占位符
-function LoadingFallback() {
+function LoadingFallback({ locale = 'zh-CN' }) {
+  const copy = locale === 'en-US' ? 'Loading...' : '加载中...'
+
   return (
-    <div className="flex items-center justify-center h-screen bg-gradient-to-b from-blue-50 to-white">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">加载中...</p>
+    <div className="page-shell flex items-center justify-center">
+      <div className="panel-soft w-full max-w-sm px-8 py-10 text-center">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[24px] bg-[linear-gradient(135deg,#a34224_0%,#cd7840_52%,#e3bf73_100%)] shadow-[0_18px_40px_rgba(163,66,36,0.24)]">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/25 border-t-[#fff7eb]" />
+        </div>
+        <div className="text-xs uppercase tracking-[0.36em] text-[#dcb86f]">
+          Mystic Loading
+        </div>
+        <p className="mt-2 text-sm text-[#bdaa94]">{copy}</p>
       </div>
     </div>
   )
 }
 
 function App() {
-  const { isLoading } = useAuth();
+  const { isLoading } = useAuth()
+  const { locale } = useAppLocale()
   const [splashAdClosed, setSplashAdClosed] = useState(false)
-  
-  // 建立全局SSE连接，监听成就解锁和积分变化
+
   useSSE()
 
-  // 获取开屏广告位ID
-  const splashAdSlotId = import.meta.env.VITE_PANGLE_SPLASH_SLOT_ID || import.meta.env.VITE_PANGLE_SLOT_ID
+  const splashAdSlotId = pangleConfig.splashSlotId
 
   const handleSplashAdClose = () => {
     setSplashAdClosed(true)
   }
 
-  // 如果正在加载，显示加载状态
   if (isLoading) {
-    return <LoadingFallback />
+    return <LoadingFallback locale={locale} />
   }
 
-  // 如果开屏广告未关闭，显示开屏广告
   if (!splashAdClosed && splashAdSlotId) {
     return (
       <PangleSplashAd
@@ -73,11 +83,10 @@ function App() {
         skipCountdown={3}
         onAdClose={handleSplashAdClose}
         onAdClick={(ad) => {
-          console.log('开屏广告被点击:', ad)
+          console.log('Splash ad clicked:', ad)
         }}
         onAdError={(error) => {
-          console.error('开屏广告加载失败:', error)
-          // 广告加载失败时，延迟关闭以显示品牌信息
+          console.error('Splash ad failed to load:', error)
           setTimeout(handleSplashAdClose, 2000)
         }}
       />
@@ -87,29 +96,56 @@ function App() {
   return (
     <>
       <ToastContainer />
-      <Suspense fallback={<LoadingFallback />}>
-        <Routes>
+      <Suspense fallback={<LoadingFallback locale={locale} />}>
+        <Routes key={locale}>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="yijing" element={<YijingPage />} />
             <Route path="tarot" element={<TarotPage />} />
-            <Route path="tarot/card/:cardName" element={<TarotCardDetailPage />} />
+            <Route
+              path="tarot/card/:cardName"
+              element={<TarotCardDetailPage />}
+            />
             <Route path="favorites" element={<FavoritesPage />} />
             <Route path="bazi" element={<BaziPage />} />
-            <Route path="bazi/interpretation/:id" element={<BaziInterpretationDetailPage />} />
+            <Route
+              path="bazi/interpretation/:id"
+              element={<BaziInterpretationDetailPage />}
+            />
             <Route path="ai" element={<AIPage />} />
-            <Route path="ai/face" element={<PrivateRoute><GeminiFacePage /></PrivateRoute>} />
+            <Route
+              path="ai/face"
+              element={
+                <PrivateRoute>
+                  <GeminiFacePage />
+                </PrivateRoute>
+              }
+            />
             <Route path="self" element={<SelfPage />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="referral" element={<ReferralPage />} />
             <Route path="daily-test" element={<DailyTestPage />} />
             <Route path="records" element={<CalculationRecordPage />} />
             <Route path="compatibility" element={<BaziCompatibilityPage />} />
-            <Route path="achievement" element={<PrivateRoute><AchievementPage /></PrivateRoute>} />
+            <Route
+              path="achievement"
+              element={
+                <PrivateRoute>
+                  <AchievementPage />
+                </PrivateRoute>
+              }
+            />
             <Route path="messages" element={<MessagesPage />} />
             <Route path="post/:id" element={<PostDetailPage />} />
             <Route path="zodiac" element={<ZodiacPage />} />
-            <Route path="credit-shop" element={<PrivateRoute><CreditShopPage /></PrivateRoute>} />
+            <Route
+              path="credit-shop"
+              element={
+                <PrivateRoute>
+                  <CreditShopPage />
+                </PrivateRoute>
+              }
+            />
             <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="user-agreement" element={<UserAgreementPage />} />
             <Route path="login" element={<LoginPage />} />
