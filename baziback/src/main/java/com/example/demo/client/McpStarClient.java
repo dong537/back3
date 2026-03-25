@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
@@ -30,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
+@ConditionalOnProperty(name = "mcp.enabled", havingValue = "true")
 @Slf4j
 public class McpStarClient {
 
@@ -83,7 +85,70 @@ public class McpStarClient {
         Map<String, Object> args = new HashMap<>();
         args.put("zodiac", request.getZodiac());
         Optional.ofNullable(request.getCategory()).ifPresent(value -> args.put("category", value));
-        return callTool("get_daily_horoscope", args, new TypeReference<>() {});
+
+        // Star MCP 的 get_daily_horoscope 在部分情况下会返回 text 而非 json。
+        // 之前 parseToolResponse 遇到 text 会当作错误抛出，导致前端 500。
+        // 这里改为：优先尝试 json；若返回为 text，则解析出 score/fortune 并返回结构化结果。
+        try {
+            return callTool("get_daily_horoscope", args, new TypeReference<>() {});
+        } catch (McpApiException ex) {
+            String text = callToolForText("get_daily_horoscope", args);
+            return parseDailyHoroscopeText(request, text);
+        }
+    }
+
+    private DailyHoroscopeResponse parseDailyHoroscopeText(DailyHoroscopeRequest request, String text) {
+        if (!org.springframework.util.StringUtils.hasText(text)) {
+            throw new McpApiException("Star MCP返回空内容");
+        }
+
+        Integer score = null;
+        // 匹配：运势指数：★★★★★ 或 运势指数：5/5
+        java.util.regex.Matcher m1 = java.util.regex.Pattern
+                .compile("运势指数\\s*[:：]\\s*([★]{1,10})")
+                .matcher(text);
+        if (m1.find()) {
+            score = m1.group(1).length();
+        } else {
+            java.util.regex.Matcher m2 = java.util.regex.Pattern
+                    .compile("运势指数\\s*[:：]\\s*(\\d{1,2})\\s*/\\s*(\\d{1,2})")
+                    .matcher(text);
+            if (m2.find()) {
+                int v = Integer.parseInt(m2.group(1));
+                int max = Integer.parseInt(m2.group(2));
+                if (max > 0) {
+                    score = Math.max(1, Math.min(10, (int) Math.round(v * 10.0 / max)));
+                }
+            }
+        }
+
+        // fortune：尽量取“今日运势”段落，否则返回全文
+        String fortune = extractSection(text, "今日运势");
+        if (!org.springframework.util.StringUtils.hasText(fortune)) {
+            fortune = extractSection(text, "建议");
+        }
+        if (!org.springframework.util.StringUtils.hasText(fortune)) {
+            fortune = text.trim();
+        }
+
+        return DailyHoroscopeResponse.builder()
+                .zodiac(request.getZodiac())
+                .category(request.getCategory())
+                .date(request.getDate() == null ? null : request.getDate().toString())
+                .fortune(fortune.trim())
+                .score(score)
+                .build();
+    }
+
+    private String extractSection(String text, String title) {
+        // 支持：**今日运势：** 或 今日运势：
+        String t = title.replaceAll("([\\[\\]\\(\\)\\{\\}\\+\\*\\?\\.^$|\\\\])", "\\\\$1");
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("(?:\\*\\*)?" + t + "(?:\\*\\*)?\\s*[:：]\\s*(?<body>[\\s\\S]*?)(?:\\n\\s*\\n|\\n(?:\\*\\*)?\\S+?:|$)");
+        java.util.regex.Matcher m = p.matcher(text);
+        if (m.find()) {
+            return m.group("body");
+        }
+        return null;
     }
 
     /**

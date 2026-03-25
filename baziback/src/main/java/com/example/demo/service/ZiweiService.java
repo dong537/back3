@@ -6,9 +6,11 @@ import com.example.demo.dto.request.ziwei.*;
 import com.example.demo.dto.response.ziwei.McpZiweiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnProperty(name = "mcp.enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Slf4j
 public class ZiweiService {

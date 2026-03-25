@@ -22,7 +22,9 @@ public class Hexagram {
     private String lower;
     private String symbol;
     private String judgment;
+    private String judgmentExplanation;
     private String image;
+    private String imageExplanation;
     private String meaning;
     private List<String> keywords;
     private String element;
@@ -39,6 +41,12 @@ public class Hexagram {
         private Integer position;
         private String type;
         private String text;
+        private String textExplanation;
         private String meaning;
+        private String stem;
+        private String branch;
+        private String liuQin;
+        private Boolean isShi;
+        private Boolean isYing;
     }
 }

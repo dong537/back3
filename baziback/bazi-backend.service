@@ -1,0 +1,13 @@
+[Unit]
+Description=Bazi Backend Service
+After=network.target
+
+[Service]
+User=admin
+WorkingDirectory=/opt/bazi-app
+ExecStart=/usr/bin/java -jar /opt/bazi-app/bazi-0.0.1-SNAPSHOT.jar
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

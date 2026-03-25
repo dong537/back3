@@ -1,16 +1,25 @@
 #!/usr/bin/env node
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  Tool,
-} from '@modelcontextprotocol/sdk/types.js';
+import express, { Request, Response } from 'express';
+import cors from 'cors';
 import axios from 'axios';
+import { randomUUID } from 'crypto';
 
-// 配置后端服务地址
+// 配置
+const PORT = parseInt(process.env.MCP_PORT || '3001', 10);
 const BACKEND_URL = process.env.YIJING_BACKEND_URL || 'http://localhost:8088';
+
+// Express 应用
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// MCP 工具类型定义
+interface Tool {
+  name: string;
+  description: string;
+  inputSchema: object;
+}
 
 // 定义 MCP 工具
 const TOOLS: Tool[] = [
@@ -113,29 +122,11 @@ const TOOLS: Tool[] = [
   },
 ];
 
-// 创建 MCP 服务器
-const server = new Server(
-  {
-    name: 'yijing-divination-server',
-    version: '1.0.0',
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
+// 存储 SSE 连接的 session
+const sessions = new Map<string, Response>();
 
-// 处理工具列表请求
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: TOOLS,
-  };
-});
-
-// 处理工具调用请求
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+// 调用工具的核心逻辑
+async function callTool(name: string, args: any): Promise<any> {
   const params = args || {};
 
   try {
@@ -149,14 +140,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             seed: params.seed,
           }
         );
-
         return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
         };
       }
 
@@ -169,14 +154,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             question: params.question,
           }
         );
-
         return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
         };
       }
 
@@ -184,29 +163,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const response = await axios.get(
           `${BACKEND_URL}/api/yijing/hexagram/${params.id}`
         );
-
         return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
         };
       }
 
       case 'yijing_list_hexagrams': {
-        const response = await axios.get(
-          `${BACKEND_URL}/api/yijing/hexagrams`
-        );
-
+        const response = await axios.get(`${BACKEND_URL}/api/yijing/hexagrams`);
         return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
         };
       }
 
@@ -218,14 +183,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             method: params.method || 'time',
           }
         );
-
         return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
         };
       }
 
@@ -235,27 +194,190 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   } catch (error: any) {
     const errorMessage = error.response?.data?.message || error.message;
     return {
-      content: [
-        {
-          type: 'text',
-          text: `错误: ${errorMessage}`,
-        },
-      ],
+      content: [{ type: 'text', text: `错误: ${errorMessage}` }],
       isError: true,
     };
   }
+}
+
+// 发送 SSE 消息
+function sendSSE(res: Response, data: any) {
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+// 存储心跳定时器
+const heartbeats = new Map<string, NodeJS.Timeout>();
+
+// SSE 端点 - 建立连接并返回 sessionId
+app.get('/sse', (req: Request, res: Response) => {
+  const sessionId = randomUUID();
+  
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('X-Accel-Buffering', 'no');
+  
+  // 立即刷新响应头
+  res.flushHeaders();
+  
+  // 发送 endpoint 信息
+  sendSSE(res, { 
+    jsonrpc: '2.0',
+    method: 'endpoint',
+    params: { 
+      endpoint: `/message?sessionId=${sessionId}` 
+    }
+  });
+  
+  // 设置心跳，每 15 秒发送一次保持连接
+  const heartbeat = setInterval(() => {
+    res.write(': heartbeat\n\n');
+  }, 15000);
+  
+  sessions.set(sessionId, res);
+  heartbeats.set(sessionId, heartbeat);
+  console.log(`SSE 连接建立: ${sessionId}`);
+  
+  req.on('close', () => {
+    const hb = heartbeats.get(sessionId);
+    if (hb) clearInterval(hb);
+    heartbeats.delete(sessionId);
+    sessions.delete(sessionId);
+    console.log(`SSE 连接关闭: ${sessionId}`);
+  });
+});
+
+// 消息端点 - 接收 JSON-RPC 请求
+app.post('/message', async (req: Request, res: Response) => {
+  const sessionId = req.query.sessionId as string;
+  const sseRes = sessions.get(sessionId);
+  
+  const { jsonrpc, id, method, params } = req.body;
+  
+  try {
+    let result: any;
+    
+    if (method === 'initialize') {
+      result = {
+        protocolVersion: '2024-11-05',
+        capabilities: { tools: {} },
+        serverInfo: { name: 'yijing-tarot-mcp', version: '1.0.0' },
+      };
+    } else if (method === 'tools/list') {
+      result = { tools: TOOLS };
+    } else if (method === 'tools/call') {
+      result = await callTool(params.name, params.arguments);
+    } else {
+      throw new Error(`Unknown method: ${method}`);
+    }
+    
+    const response = { jsonrpc: '2.0', id, result };
+    
+    // 如果有 SSE 连接，通过 SSE 发送
+    if (sseRes) {
+      sendSSE(sseRes, response);
+    }
+    
+    res.json(response);
+  } catch (error: any) {
+    const errorResponse = {
+      jsonrpc: '2.0',
+      id,
+      error: { code: -32603, message: error.message },
+    };
+    
+    if (sseRes) {
+      sendSSE(sseRes, errorResponse);
+    }
+    
+    res.json(errorResponse);
+  }
+});
+
+// 兼容模式：POST /mcp 直接返回 SSE 响应（ModelScope 风格）
+app.post('/mcp', async (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  const { jsonrpc, id, method, params } = req.body;
+  
+  try {
+    let result: any;
+    
+    if (method === 'initialize') {
+      result = {
+        protocolVersion: '2024-11-05',
+        capabilities: { tools: {} },
+        serverInfo: { name: 'yijing-tarot-mcp', version: '1.0.0' },
+      };
+    } else if (method === 'tools/list') {
+      result = { tools: TOOLS };
+    } else if (method === 'tools/call') {
+      result = await callTool(params.name, params.arguments);
+    } else {
+      throw new Error(`Unknown method: ${method}`);
+    }
+    
+    sendSSE(res, { jsonrpc: '2.0', id, result });
+    res.end();
+  } catch (error: any) {
+    sendSSE(res, {
+      jsonrpc: '2.0',
+      id,
+      error: { code: -32603, message: error.message },
+    });
+    res.end();
+  }
+});
+
+// Streamable HTTP 端点 - 纯 JSON 响应（不是 SSE）
+app.post('/http', async (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  const { jsonrpc, id, method, params } = req.body;
+  
+  try {
+    let result: any;
+    
+    if (method === 'initialize') {
+      result = {
+        protocolVersion: '2024-11-05',
+        capabilities: { tools: {} },
+        serverInfo: { name: 'yijing-tarot-mcp', version: '1.0.0' },
+      };
+    } else if (method === 'tools/list') {
+      result = { tools: TOOLS };
+    } else if (method === 'tools/call') {
+      result = await callTool(params.name, params.arguments);
+    } else {
+      throw new Error(`Unknown method: ${method}`);
+    }
+    
+    res.json({ jsonrpc: '2.0', id, result });
+  } catch (error: any) {
+    res.json({
+      jsonrpc: '2.0',
+      id,
+      error: { code: -32603, message: error.message },
+    });
+  }
+});
+
+// 健康检查
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok', backend: BACKEND_URL });
 });
 
 // 启动服务器
-async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  
-  console.error('易经占卜 MCP 服务已启动');
-  console.error(`后端地址: ${BACKEND_URL}`);
-}
-
-main().catch((error) => {
-  console.error('服务启动失败:', error);
-  process.exit(1);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 易经塔罗 MCP 服务已启动`);
+  console.log(`   端口: ${PORT}`);
+  console.log(`   后端: ${BACKEND_URL}`);
+  console.log(`   HTTP 端点: http://0.0.0.0:${PORT}/http`);
+  console.log(`   SSE 端点: http://0.0.0.0:${PORT}/sse`);
+  console.log(`   MCP 端点: http://0.0.0.0:${PORT}/mcp`);
 });

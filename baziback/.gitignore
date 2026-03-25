@@ -1,59 +1,67 @@
-# Compiled class files
+# 编译输出
 target/
+dist/
+build/
 *.class
+*.jar
+*.war
 
-# Log files
+# 依赖
+node_modules/
+.m2/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# 日志
 logs/
 *.log
 
-# Package files
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
-
-# MCP build output
-mcp-dist/
-node_modules/
-
-# IDE files
-.idea/
-*.iml
-.vscode/
-*.swp
-*.swo
-.project
-.classpath
-.settings/
-
-# Maven
-.mvn/
-mvnw
-mvnw.cmd
-
-# OS files
+# 系统文件
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Environment & secrets
-*.env
+# 环境配置
+.env
 .env.local
+.env.production
+.env.development
 application-local.yml
 application-prod.yml
+application-dev.yml
+local.properties
 
-# Node modules (MCP server)
-node_modules/
-mcp-server/node_modules/
-mcp-server/dist/
-
-# Temp files
+# 临时文件
 *.tmp
+*.temp
 *.bak
-~*
+*.backup
+dist.zip
 
-# Test output
-test-output/
-surefire-reports/
+# 移动端构建
+android/app/build/
+ios/build/
+ios/Pods/
+
+# 签名密钥（敏感信息）
+android/app/*.jks
+android/app/*.keystore
+android/app/密钥信息.txt
+
+# 数据库
+*.db
+*.sqlite
+
+# 测试
+coverage/
+.nyc_output/
+
+# 其他
+*.orig
+.cache/

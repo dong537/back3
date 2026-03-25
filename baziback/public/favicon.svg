@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9333ea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1b4b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#312e81;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景圆形 -->
+  <circle cx="256" cy="256" r="240" fill="url(#grad2)" stroke="url(#grad1)" stroke-width="8"/>
+  
+  <!-- 太极图 -->
+  <g transform="translate(256, 256)">
+    <!-- 大圆 -->
+    <circle cx="0" cy="0" r="180" fill="url(#grad1)"/>
+    
+    <!-- 上半部分（白色） -->
+    <path d="M -180 0 A 180 180 0 0 1 180 0 Z" fill="#ffffff"/>
+    
+    <!-- 下半部分（深色） -->
+    <path d="M -180 0 A 180 180 0 0 0 180 0 Z" fill="#1e1b4b"/>
+    
+    <!-- 上小圆（深色） -->
+    <circle cx="0" cy="-90" r="45" fill="#1e1b4b"/>
+    <circle cx="0" cy="-90" r="20" fill="#ffffff"/>
+    
+    <!-- 下小圆（白色） -->
+    <circle cx="0" cy="90" r="45" fill="#ffffff"/>
+    <circle cx="0" cy="90" r="20" fill="#1e1b4b"/>
+  </g>
+  
+  <!-- 八卦符号装饰 -->
+  <g transform="translate(256, 256)" opacity="0.3">
+    <!-- 乾卦（天） -->
+    <g transform="translate(-120, -120)">
+      <line x1="-10" y1="-20" x2="-10" y2="20" stroke="#9333ea" stroke-width="3"/>
+      <line x1="0" y1="-20" x2="0" y2="20" stroke="#9333ea" stroke-width="3"/>
+      <line x1="10" y1="-20" x2="10" y2="20" stroke="#9333ea" stroke-width="3"/>
+    </g>
+    <!-- 坤卦（地） -->
+    <g transform="translate(120, 120)">
+      <line x1="-10" y1="-20" x2="-10" y2="0" stroke="#ec4899" stroke-width="3"/>
+      <line x1="-10" y1="0" x2="-10" y2="20" stroke="#ec4899" stroke-width="3" stroke-dasharray="2,2"/>
+      <line x1="0" y1="-20" x2="0" y2="0" stroke="#ec4899" stroke-width="3"/>
+      <line x1="0" y1="0" x2="0" y2="20" stroke="#ec4899" stroke-width="3" stroke-dasharray="2,2"/>
+      <line x1="10" y1="-20" x2="10" y2="0" stroke="#ec4899" stroke-width="3"/>
+      <line x1="10" y1="0" x2="10" y2="20" stroke="#ec4899" stroke-width="3" stroke-dasharray="2,2"/>
+    </g>
+  </g>
+  
+  <!-- 外圈装饰 -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="url(#grad1)" stroke-width="4" opacity="0.5"/>
+  <circle cx="256" cy="256" r="200" fill="none" stroke="url(#grad1)" stroke-width="2" opacity="0.3"/>
+</svg>

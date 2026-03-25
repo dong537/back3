@@ -1,9 +1,13 @@
-# 应用基础配置
 spring:
   application:
     name: demo1
   main:
-    web-application-type: servlet
+    web-application-type: reactive
+    allow-bean-definition-overriding: true
+  webflux:
+    base-path: /
+  codec:
+    max-in-memory-size: 10MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL:jdbc:mysql://localhost:3306/bazi?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
@@ -24,81 +28,95 @@ jackson:
   time-zone: Asia/Shanghai
   date-format: yyyy-MM-dd HH:mm:ss
 
-# 服务器配置
 server:
   port: ${SERVER_PORT:8088}
+  netty:
+    connection-timeout: 60s
 
-# JWT配置
 jwt:
-  secret: ${JWT_SECRET:your-secret-key-at-least-256-bits-long-for-hs256-algorithm-security}
+  secret: ${JWT_SECRET:change-this-jwt-secret-to-a-secure-32-byte-minimum-value}
   expiration: ${JWT_EXPIRATION:86400000}
 
-# MCP相关配置（各模块端点与密钥）
 mcp:
+  enabled: ${MCP_ENABLED:false}
   bazi:
     api:
       endpoint: ${MCP_BAZI_ENDPOINT:https://mcp.api-inference.modelscope.net/43918d5be1c140/mcp}
-      api-key: ${MCP_BAZI_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
+      api-key: ${MCP_BAZI_KEY:}
     max-retry: 2
     retry-interval-seconds: 1
-  ziwei:
-    api:
-      endpoint: ${MCP_ZIWEI_ENDPOINT:https://mcp.api-inference.modelscope.net/449d88faac0b4c/mcp}
-      api-key: ${MCP_ZIWEI_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
-    max-retry: 3
-    retry-interval-seconds: 1
   star:
+    enabled: ${MCP_STAR_ENABLED:false}
     api:
       endpoint: ${MCP_STAR_ENDPOINT:https://mcp.api-inference.modelscope.net/8e403bb31c6c48/mcp}
-      api-key: ${MCP_STAR_KEY:ms-f2a2acdc-0fb2-4e79-a151-a6f6c38f7284}
+      api-key: ${MCP_STAR_KEY:}
     max-retry: 3
     retry-interval-seconds: 1
 
-# DeepSeek AI配置
 deepseek:
   api:
-    key: ${DEEPSEEK_API_KEY:sk-4e61a90941564ab683ccab665308d56b}
+    key: ${DEEPSEEK_API_KEY:sk-370d7060082b4d02a4710f8127e11a47}
     endpoint: ${DEEPSEEK_API_ENDPOINT:https://api.deepseek.com/v1/chat/completions}
   model: deepseek-chat
   temperature: 0.5
   system-prompt: |
-    你是一位精通传统八字命理且擅长现代人格分析的专家。请根据以下八字信息，生成一份**结构化的个性报告**，内容需分模块解读，每个模块结合八字的十神、五行、格局进行专业分析，同时融入现代生活场景（职场、恋爱、理财等），语言风格专业且通俗易懂，结构参考如下示例：
-    ### 日主状态分析
-    - （如：
-    甲木日主，如寒冬中的参天大树，生于丑月土旺之时，形成"财多身弱"格局。此命局有以下几个关键特征：
-    身弱难担财：八字中土（财星）极重，日主甲木无根，如同小树难以承载厚重黄金
-    寒湿缺火：命局五行缺火，急需丙丁火调候暖局
-    官印暗藏：地支酉丑半合金局，辰中藏癸水正印，为潜在助力）
-    ### 财运事业分析
-    正偏财混杂，求财辛苦但晚年有成
-    月柱正财透出：出身家境不错，能得父辈助力
-    时柱偏财当头：晚年有发财机会，但需防财来财去   
-    ### 感情分析
-    如：夫妻宫为偏财，配偶务实但需经营
-      配偶特征：对方注重实际，可能在家境或能力上优于您
-      婚姻提醒：
-      辰辰自刑，内心易有矛盾，需加强沟通
-      财星为忌，易为感情物质问题烦恼
-      晚婚更佳（28岁后），心智成熟后婚姻更稳定
-    ### 人际关系
-    （如  善用天乙贵人：关键时刻有贵人相助 ， 发挥十灵智慧：您天生悟性高，善用此优势 ，注意华盖星：虽有艺术天赋，但需防过于孤僻）
-    ### 潜在MBTI性格
-    根据八字性格特点，分析最接近的MBTI类型，并分维度（I/E、S/N、T/F、J/P）解释对应八字元素，最后总结该类型的特质。
-    ### 命理总结
-    描述八字的吉凶、人生意义、人生状态、人生方向、人生建议
-    ### 流年具体点拨
-    ### 三大关键
-    ### 重要提醒
+    浣犳槸涓€浣嶇簿閫氫紶缁熷叓瀛楀懡鐞嗕笖鎿呴暱鐜颁唬浜烘牸鍒嗘瀽鐨勪笓瀹躲€傝鏍规嵁鐢ㄦ埛鎻愪緵鐨勫叓瀛椾俊鎭紝鐢熸垚涓€浠界粨鏋勬竻鏅扮殑涓€ф姤鍛娿€傚唴瀹归渶鍒嗘ā鍧楄В璇伙紝姣忎釜妯″潡缁撳悎鍏瓧鐨勫崄绁炪€佷簲琛屻€佹牸灞€杩涜涓撲笟鍒嗘瀽锛屽悓鏃惰瀺鍏ョ幇浠ｇ敓娲诲満鏅紙鑱屽満銆佹亱鐖便€佺悊璐㈢瓑锛夛紝璇█椋庢牸涓撲笟涓旈€氫織鏄撴噦銆?
+    杈撳嚭鏍煎紡瑕佹眰锛?    1 浠呰緭鍑虹函鏂囨湰锛屼笉浣跨敤浠讳綍 Markdown 鎴栧瘜鏂囨湰鏍煎紡
+    2 绂佹鍑虹幇甯歌 Markdown 绗﹀彿涓庢牸寮忥紝鍖呮嫭浣嗕笉闄愪簬锛氫簳鍙枫€佹槦鍙枫€佸弽寮曞彿銆佷笅鍒掔嚎銆佹尝娴彿銆佸ぇ浜庡彿銆佸皬浜庡彿銆佹柟鎷彿銆佸渾鎷彿鍐呯殑閾炬帴鏍煎紡銆佺珫绾匡紝浠ュ強浠ヨ繛瀛楃浣滀负椤圭洰绗﹀彿鐨勫垪琛?    3 浣跨敤涓枃鏍囬涓庡垎娈垫潵缁勭粐缁撴瀯锛屽彲浠ヤ娇鐢ㄦ暟瀛楀簭鍙?1 2 3
 
-# 日志级别配置（适配项目实际包名）
+    寤鸿缁撴瀯濡備笅锛?    鏃ヤ富鐘舵€佸垎鏋?    鎻忚堪鏃ヤ富寮哄急銆佹牸灞€鐗圭偣銆佽皟鍊欏彇鐢ㄧ瓑锛屽苟鐢ㄧ敓娲诲寲姣斿柣瑙ｉ噴銆?
+    璐㈣繍浜嬩笟鍒嗘瀽
+    缁撳悎璐㈡槦銆佸畼鏉€銆佸嵃姣斻€佽杩愯秼鍔匡紝璇存槑姹傝储鏂瑰紡銆佽亴涓氫晶閲嶃€侀闄╃偣涓庡缓璁€?
+    鎰熸儏鍒嗘瀽
+    缁撳悎澶瀹€佸崄绁炵粍鍚堛€佷簲琛屽亸鍚戯紝璇存槑鎷╁伓鍊惧悜銆佺浉澶勬ā寮忋€佹矡閫氶噸鐐逛笌鏃堕棿寤鸿銆?
+    浜洪檯鍏崇郴
+    璇存槑璐典汉杩愩€佸皬浜洪闄┿€佸洟闃熷崗浣滈鏍笺€侀€傚悎鐨勭ぞ浜よ竟鐣屻€?
+    娼滃湪鎬ф牸绫诲瀷鍙傝€?    鏍规嵁鍏瓧鎬ф牸鐗圭偣锛岀粰鍑烘洿鎺ヨ繎鐨勬€ф牸鍊惧悜鍙傝€冿紝骞惰В閲婂師鍥犮€?
+    鍛界悊鎬荤粨
+    鎬荤粨鏁翠綋鍚夊嚩渚ч噸銆佷汉鐢熶富绾裤€佷紭鍔夸笌鐭澘銆佸彲鎵ц寤鸿銆?
+    娴佸勾鍏蜂綋鐐规嫧
+    缁撳悎褰撳墠骞翠唤涓庢湭鏉ヤ竴鍒颁笁骞磋秼鍔匡紝缁欏嚭鍙惤鍦扮殑鎻愰啋銆?
+    涓夊ぇ鍏抽敭
+    鎻愮偧涓夋潯鏈€閲嶈寤鸿銆?
+    閲嶈鎻愰啋
+    寮鸿皟鍛界悊浠呬緵鍙傝€冿紝寤鸿浠ョ幇瀹炶鍔ㄤ笌鍋ュ悍蹇冩€佷负鍏堛€?
+
+gemini:
+  api:
+    key: ${ONE_API_KEY:${GEMINI_API_KEY:sk-iOIqwYXa7QKkQpOe3315B0F9E79344Fd98Ae6e12B44a3902}}
+    base-url: ${ONE_API_BASE_URL:${GEMINI_API_BASE_URL:http://104.197.139.51:3000/v1}}
+  text-model: ${ONE_API_GEMINI_MODEL:${GEMINI_TEXT_MODEL:gemini-3-flash-preview}}
+  vision-model: ${ONE_API_GEMINI_VISION_MODEL:${GEMINI_VISION_MODEL:gemini-3-flash-preview}}
+  vision-models: ${ONE_API_GEMINI_VISION_MODELS:${GEMINI_VISION_MODELS:gemini-2.0-flash,gemini-2.0-flash-exp,gemini-2.0-flash-lite-preview-02-05,gemini-2.0-flash-thinking-exp-01-21,gemini-2.0-pro-exp-02-05,gemini-3-flash-preview,gemini-3-pro-preview,gemini-3-pro-image-preview,gemini-3.1-pro-preview}}
+  image-model: ${ONE_API_GEMINI_IMAGE_MODEL:${GEMINI_IMAGE_MODEL:${ONE_API_GEMINI_VISION_MODEL:${GEMINI_VISION_MODEL:gemini-3-pro-image-preview}}}}
+  image-models: ${ONE_API_GEMINI_IMAGE_MODELS:${GEMINI_IMAGE_MODELS:gemini-2.0-flash,gemini-2.0-flash-exp,gemini-2.0-flash-lite-preview-02-05,gemini-2.0-flash-thinking-exp-01-21,gemini-2.0-pro-exp-02-05,gemini-3-flash-preview,gemini-3-pro-preview,gemini-3-pro-image-preview,gemini-3.1-pro-preview}}
+  vision-payload-formats: ${ONE_API_GEMINI_VISION_PAYLOAD_FORMATS:${GEMINI_VISION_PAYLOAD_FORMATS:openai-image-url,openai-image-url-string}}
+  temperature: ${GEMINI_TEMPERATURE:0.2}
+  max-tokens: ${GEMINI_MAX_TOKENS:2000}
+  max-image-bytes: ${GEMINI_MAX_IMAGE_BYTES:5242880}
+
+scene-image:
+  provider: ${SCENE_IMAGE_PROVIDER:${IMAGE_PROVIDER:one-api-chat-completions}}
+  protocol: ${SCENE_IMAGE_PROTOCOL:${IMAGE_PROTOCOL:chat-completions}}
+  api:
+    key: ${SCENE_IMAGE_API_KEY:${IMAGE_API_KEY:${ONE_API_IMAGE_KEY:${ONE_API_KEY:${GEMINI_API_KEY:sk-iOIqwYXa7QKkQpOe3315B0F9E79344Fd98Ae6e12B44a3902}}}}}
+    base-url: ${SCENE_IMAGE_API_BASE_URL:${IMAGE_API_BASE_URL:${ONE_API_BASE_URL:${GEMINI_API_BASE_URL:http://104.197.139.51:3000/v1}}}}
+  model: ${SCENE_IMAGE_MODEL:${IMAGE_MODEL:${ONE_API_GEMINI_IMAGE_MODEL:${GEMINI_IMAGE_MODEL:gemini-3-pro-image-preview}}}}
+  models: ${SCENE_IMAGE_MODELS:${IMAGE_MODELS:${ONE_API_GEMINI_IMAGE_MODELS:${GEMINI_IMAGE_MODELS:gemini-3-pro-image-preview}}}}
+  response-format: ${SCENE_IMAGE_RESPONSE_FORMAT:${IMAGE_RESPONSE_FORMAT:b64_json}}
+  size: ${SCENE_IMAGE_SIZE:${IMAGE_SIZE:1024x1024}}
+  count: ${SCENE_IMAGE_COUNT:${IMAGE_COUNT:1}}
+  chat-max-tokens: ${SCENE_IMAGE_CHAT_MAX_TOKENS:${IMAGE_CHAT_MAX_TOKENS:4096}}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:5173,https://lldd.click}
+  debug: ${APP_DEBUG:false}
+  free-features: ${APP_FREE_FEATURES:true}
+
 logging:
   level:
-    com:
-      example:
-        demo:
-          service: INFO  # 修正为项目实际包路径com.example.demo
-    org:
-      springframework:
-        web: WARN
+    com.example.demo: DEBUG
+    org.springframework.web: DEBUG
   charset:
-    console: UTF-8  # 移除冗余文字，保持格式正确
+    console: UTF-8

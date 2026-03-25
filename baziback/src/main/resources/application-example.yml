@@ -1,75 +1,123 @@
-# Spring Boot 配置示例文件
-# 请复制此文件为 application.yml 并填入实际配置值
+# 应用配置示例文件
+# 复制此文件为 application.yml 并填入实际值
+# 或使用环境变量覆盖
 
 spring:
   application:
-    name: bazi-backend
-  
-  # 数据源配置
+    name: demo1
+  main:
+    web-application-type: reactive
+    allow-bean-definition-overriding: true
+  codec:
+    max-in-memory-size: 10MB
   datasource:
-    url: jdbc:mysql://localhost:3306/your_database?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: your_username
-    password: your_password
     driver-class-name: com.mysql.cj.jdbc.Driver
-  
-  # JPA配置
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-  
-  # 缓存配置
-  cache:
-    type: caffeine
-    caffeine:
-      spec: maximumSize=1000,expireAfterWrite=30m
+    url: ${DB_URL:jdbc:mysql://localhost:3306/bazi?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  messages:
+    encoding: UTF-8
 
-# JWT配置
-jwt:
-  secret: your-secret-key-at-least-256-bits-long-please-change-this-in-production
-  expiration: 86400000  # 24小时（毫秒）
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
 
-# DeepSeek API配置
-deepseek:
-  api:
-    key: ${DEEPSEEK_API_KEY:your-deepseek-api-key}
-    endpoint: https://api.deepseek.com/v1/chat/completions
-  system-prompt: |
-    你是一位精通《周易》、六爻预测与命理学的专家。
-    请根据用户提供的八字信息，进行详细的命理分析。
-
-# MCP服务配置
-mcp:
-  protocol-version: 2025-03-26
-  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
-  origin: https://www.modelscope.cn
-  referer: https://www.modelscope.cn/
-  max-retry: 3
-  retry-interval-seconds: 1
-  session-init-timeout-seconds: 30
-  
-  # 八字服务配置
-  bazi:
-    api:
-      endpoint: ${MCP_BAZI_ENDPOINT:https://your-mcp-endpoint}
-      api-key: ${MCP_BAZI_API_KEY:your-mcp-api-key}
+jackson:
+  serialization:
+    write-dates-as-timestamps: false
+  deserialization:
+    adjust-dates-to-context-time-zone: false
+  time-zone: Asia/Shanghai
+  date-format: yyyy-MM-dd HH:mm:ss
 
 # 服务器配置
 server:
-  port: 8080
-  servlet:
-    context-path: /
-  compression:
-    enabled: true
+  port: ${SERVER_PORT:8088}
 
-# 日志配置
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:change-this-jwt-secret-to-a-secure-32-byte-minimum-value}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# MCP相关配置
+mcp:
+  enabled: ${MCP_ENABLED:false}
+  bazi:
+    api:
+      endpoint: ${MCP_BAZI_ENDPOINT:https://mcp.api-inference.modelscope.net/43918d5be1c140/mcp}
+      api-key: ${MCP_BAZI_KEY}  # 必须通过环境变量提供
+    max-retry: 2
+    retry-interval-seconds: 1
+  ziwei:
+    api:
+      endpoint: ${MCP_ZIWEI_ENDPOINT:https://mcp.api-inference.modelscope.net/449d88faac0b4c/mcp}
+      api-key: ${MCP_ZIWEI_KEY}  # 必须通过环境变量提供
+    max-retry: 3
+    retry-interval-seconds: 1
+  star:
+    enabled: ${MCP_STAR_ENABLED:false}
+    api:
+      endpoint: ${MCP_STAR_ENDPOINT:https://mcp.api-inference.modelscope.net/8e403bb31c6c48/mcp}
+      api-key: ${MCP_STAR_KEY}  # 必须通过环境变量提供
+    max-retry: 3
+    retry-interval-seconds: 1
+
+# DeepSeek AI配置
+deepseek:
+  api:
+    key: ${DEEPSEEK_API_KEY}  # 必须通过环境变量提供
+    endpoint: ${DEEPSEEK_API_ENDPOINT:https://api.deepseek.com/v1/chat/completions}
+  model: deepseek-chat
+  temperature: 0.5
+
+gemini:
+  api:
+    key: ${ONE_API_KEY:${GEMINI_API_KEY:your_one_api_key_here}}
+    base-url: ${ONE_API_BASE_URL:${GEMINI_API_BASE_URL:http://104.197.139.51:3000/v1}}
+  text-model: ${ONE_API_GEMINI_MODEL:${GEMINI_TEXT_MODEL:gemini-3-flash-preview}}
+  vision-model: ${ONE_API_GEMINI_VISION_MODEL:${GEMINI_VISION_MODEL:gemini-3-flash-preview}}
+  vision-models: ${ONE_API_GEMINI_VISION_MODELS:${GEMINI_VISION_MODELS:gemini-2.0-flash,gemini-2.0-flash-exp,gemini-2.0-flash-lite-preview-02-05,gemini-2.0-flash-thinking-exp-01-21,gemini-2.0-pro-exp-02-05,gemini-3-flash-preview,gemini-3-pro-preview,gemini-3-pro-image-preview,gemini-3.1-pro-preview}}
+  image-model: ${ONE_API_GEMINI_IMAGE_MODEL:${GEMINI_IMAGE_MODEL:${ONE_API_GEMINI_VISION_MODEL:${GEMINI_VISION_MODEL:gemini-3-pro-image-preview}}}}
+  image-models: ${ONE_API_GEMINI_IMAGE_MODELS:${GEMINI_IMAGE_MODELS:gemini-2.0-flash,gemini-2.0-flash-exp,gemini-2.0-flash-lite-preview-02-05,gemini-2.0-flash-thinking-exp-01-21,gemini-2.0-pro-exp-02-05,gemini-3-flash-preview,gemini-3-pro-preview,gemini-3-pro-image-preview,gemini-3.1-pro-preview}}
+  vision-payload-formats: ${ONE_API_GEMINI_VISION_PAYLOAD_FORMATS:${GEMINI_VISION_PAYLOAD_FORMATS:openai-image-url,openai-image-url-string}}
+  temperature: ${GEMINI_TEMPERATURE:0.2}
+  max-tokens: ${GEMINI_MAX_TOKENS:2000}
+  max-image-bytes: ${GEMINI_MAX_IMAGE_BYTES:5242880}
+
+scene-image:
+  provider: ${SCENE_IMAGE_PROVIDER:${IMAGE_PROVIDER:one-api-chat-completions}}
+  protocol: ${SCENE_IMAGE_PROTOCOL:${IMAGE_PROTOCOL:chat-completions}}
+  api:
+    key: ${SCENE_IMAGE_API_KEY:${IMAGE_API_KEY:${ONE_API_IMAGE_KEY:${ONE_API_KEY:${GEMINI_API_KEY:your_one_api_key_here}}}}}
+    base-url: ${SCENE_IMAGE_API_BASE_URL:${IMAGE_API_BASE_URL:${ONE_API_BASE_URL:${GEMINI_API_BASE_URL:http://104.197.139.51:3000/v1}}}}
+  model: ${SCENE_IMAGE_MODEL:${IMAGE_MODEL:${ONE_API_GEMINI_IMAGE_MODEL:${GEMINI_IMAGE_MODEL:gemini-3-pro-image-preview}}}}
+  models: ${SCENE_IMAGE_MODELS:${IMAGE_MODELS:${ONE_API_GEMINI_IMAGE_MODELS:${GEMINI_IMAGE_MODELS:gemini-3-pro-image-preview}}}}
+  response-format: ${SCENE_IMAGE_RESPONSE_FORMAT:${IMAGE_RESPONSE_FORMAT:b64_json}}
+  size: ${SCENE_IMAGE_SIZE:${IMAGE_SIZE:1024x1024}}
+  count: ${SCENE_IMAGE_COUNT:${IMAGE_COUNT:1}}
+  chat-max-tokens: ${SCENE_IMAGE_CHAT_MAX_TOKENS:${IMAGE_CHAT_MAX_TOKENS:4096}}
+
+# 应用配置
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  debug: ${APP_DEBUG:false}
+  free-features: ${APP_FREE_FEATURES:true}
+
+# 日志级别配置
 logging:
   level:
-    root: INFO
-    com.example.demo: DEBUG
-    org.springframework.web: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    com:
+      example:
+        demo: ${LOG_LEVEL:INFO}  # 生产环境使用 INFO
+    org:
+      springframework:
+        web: ${LOG_LEVEL:INFO}
+  charset:
+    console: UTF-8

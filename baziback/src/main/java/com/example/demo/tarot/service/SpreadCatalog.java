@@ -28,6 +28,26 @@ public class SpreadCatalog {
                 new SpreadPosition("ADVICE", "行动指引", "推进策略与边界/沟通建议")
         ));
 
+        // 权杖二 - 关系观望（2张牌）
+        catalog.put(SpreadType.WANDS_TWO, List.of(
+                new SpreadPosition("SELF", "自我立场", "你在关系中的位置与态度"),
+                new SpreadPosition("OTHER", "对方/外界", "对方或外界环境的状态")
+        ));
+
+        // 圣杯骑士 - 情感消息（3张牌）
+        catalog.put(SpreadType.CUPS_KNIGHT, List.of(
+                new SpreadPosition("MESSAGE", "情感消息", "即将到来的情感信息"),
+                new SpreadPosition("SOURCE", "消息来源", "消息的来源与背景"),
+                new SpreadPosition("RESPONSE", "应对建议", "如何回应这个消息")
+        ));
+
+        // 宝剑三 - 情绪疗愈（3张牌）
+        catalog.put(SpreadType.SWORDS_THREE, List.of(
+                new SpreadPosition("WOUND", "伤痛根源", "情绪伤痛的核心来源"),
+                new SpreadPosition("HEALING", "疗愈之道", "治愈的方向与方法"),
+                new SpreadPosition("GROWTH", "成长礼物", "从伤痛中获得的成长")
+        ));
+
         catalog.put(SpreadType.CELTIC_CROSS, List.of(
                 new SpreadPosition("1_PRESENT", "现状", "问题核心处境"),
                 new SpreadPosition("2_CHALLENGE", "阻碍/助力", "主要挑战或推动力"),
@@ -39,6 +59,62 @@ public class SpreadCatalog {
                 new SpreadPosition("8_ENV", "环境/他人", "外界条件"),
                 new SpreadPosition("9_HOPE_FEAR", "希望与恐惧", "内心拉扯"),
                 new SpreadPosition("10_OUTCOME", "结果趋势", "综合走向（非定论）")
+        ));
+
+        // 马赛大十字 - 多维分析（5张牌，十字形排列）
+        catalog.put(SpreadType.MARSEILLE_CROSS, List.of(
+                new SpreadPosition("CENTER", "核心", "问题的核心本质"),
+                new SpreadPosition("LEFT", "过去影响", "过去对现状的影响"),
+                new SpreadPosition("RIGHT", "未来趋势", "事态发展的方向"),
+                new SpreadPosition("TOP", "显意识", "你意识到的层面"),
+                new SpreadPosition("BOTTOM", "潜意识", "你未意识到的层面")
+        ));
+
+        // 命运之轮 - 周期运势（4张牌，代表四季/四个阶段）
+        catalog.put(SpreadType.WHEEL_OF_FORTUNE, List.of(
+                new SpreadPosition("SPRING", "萌芽期", "新开始与播种"),
+                new SpreadPosition("SUMMER", "成长期", "发展与扩张"),
+                new SpreadPosition("AUTUMN", "收获期", "成果与回报"),
+                new SpreadPosition("WINTER", "沉淀期", "反思与准备")
+        ));
+
+        // 二擎六辉 - 年度规划（8张牌）
+        catalog.put(SpreadType.TWO_PILLARS_SIX_STARS, List.of(
+                new SpreadPosition("PILLAR_LIGHT", "光明之柱", "年度主要支撑力量"),
+                new SpreadPosition("PILLAR_SHADOW", "阴影之柱", "年度主要挑战"),
+                new SpreadPosition("STAR_LOVE", "爱情之星", "感情运势"),
+                new SpreadPosition("STAR_CAREER", "事业之星", "事业运势"),
+                new SpreadPosition("STAR_WEALTH", "财富之星", "财运走向"),
+                new SpreadPosition("STAR_HEALTH", "健康之星", "健康状况"),
+                new SpreadPosition("STAR_GROWTH", "成长之星", "个人成长"),
+                new SpreadPosition("STAR_LUCK", "幸运之星", "贵人与机遇")
+        ));
+
+        // 星盘全息 - 全局洞察（12张牌，对应12宫位）
+        catalog.put(SpreadType.ASTRO_HOLOGRAM, List.of(
+                new SpreadPosition("HOUSE_1", "第一宫·自我", "自我形象与个性"),
+                new SpreadPosition("HOUSE_2", "第二宫·财富", "物质与价值观"),
+                new SpreadPosition("HOUSE_3", "第三宫·沟通", "思维与交流"),
+                new SpreadPosition("HOUSE_4", "第四宫·家庭", "家庭与根基"),
+                new SpreadPosition("HOUSE_5", "第五宫·创造", "创造力与娱乐"),
+                new SpreadPosition("HOUSE_6", "第六宫·健康", "健康与日常"),
+                new SpreadPosition("HOUSE_7", "第七宫·伴侣", "合作与婚姻"),
+                new SpreadPosition("HOUSE_8", "第八宫·转化", "深层转化与共享资源"),
+                new SpreadPosition("HOUSE_9", "第九宫·远行", "高等学习与远方"),
+                new SpreadPosition("HOUSE_10", "第十宫·事业", "社会地位与成就"),
+                new SpreadPosition("HOUSE_11", "第十一宫·社群", "友谊与理想"),
+                new SpreadPosition("HOUSE_12", "第十二宫·灵性", "潜意识与灵性")
+        ));
+
+        // 神圣时间线 - 重要节点（7张牌）
+        catalog.put(SpreadType.SACRED_TIMELINE, List.of(
+                new SpreadPosition("ORIGIN", "起源", "事件的起点与根源"),
+                new SpreadPosition("TURNING_1", "第一转折", "第一个关键转折点"),
+                new SpreadPosition("PRESENT", "当下", "现在所处的位置"),
+                new SpreadPosition("TURNING_2", "第二转折", "即将到来的转折"),
+                new SpreadPosition("CLIMAX", "高潮", "事件的高潮时刻"),
+                new SpreadPosition("RESOLUTION", "解决", "问题的解决方式"),
+                new SpreadPosition("DESTINY", "命运", "最终的命运走向")
         ));
 
         catalog.put(SpreadType.HORSESHOE, List.of(

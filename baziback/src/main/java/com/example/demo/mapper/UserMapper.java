@@ -47,4 +47,13 @@ public interface UserMapper {
      */
     @Select("SELECT * FROM tb_user WHERE id = #{id}")
     User findById(Long id);
+    
+    /**
+     * 更新用户积分（同时更新current_points和total_points）
+     */
+    @Update("UPDATE tb_user SET " +
+            "current_points = current_points + #{points}, " +
+            "total_points = total_points + CASE WHEN #{points} > 0 THEN #{points} ELSE 0 END " +
+            "WHERE id = #{userId}")
+    int updatePoints(@Param("userId") Long userId, @Param("points") Integer points);
 }

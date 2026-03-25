@@ -1,17 +1,22 @@
 package com.example.demo.controller;
 
+import com.example.demo.common.Result;
 import com.example.demo.dto.request.user.LoginRequest;
 import com.example.demo.dto.request.user.RegisterRequest;
 import com.example.demo.service.UserService;
+import com.example.demo.util.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 用户管理控制器
@@ -20,42 +25,41 @@ import java.util.Map;
 @Slf4j
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
+@CrossOrigin
 public class UserController {
 
     private final UserService userService;
+    private final AuthUtil authUtil;
 
     /**
      * 用户注册
-     * POST http://localhost:8080/api/user/register
-     */                              
+     */
     @PostMapping("/register")
-    public Map<String, Object> register(@Validated @RequestBody RegisterRequest request) {
+    public Result<?> register(@Validated @RequestBody RegisterRequest request) {
         log.info("收到注册请求: username={}", request.getUsername());
-        return userService.register(request);
+        return Result.success(userService.register(request));
     }
+
     /**
      * 用户登录
-     * POST http://localhost:8080/api/user/login
      */
-    @PostMapping("/login")
-    public Map<String, Object> login(@Validated @RequestBody LoginRequest request,
-                                     ServerHttpRequest serverHttpRequest) {
+    @PostMapping(value = "/login", consumes = "application/json", produces = "application/json")
+    public Result<?> login(@Validated @RequestBody LoginRequest request,
+                           ServerHttpRequest serverHttpRequest) {
         String ip = getClientIP(serverHttpRequest);
         log.info("收到登录请求: username={}, ip={}", request.getUsername(), ip);
-        return userService.login(request, ip);
+        return Result.success(userService.login(request, ip));
     }
 
     /**
      * 获取用户信息
-     * GET http://localhost:8080/api/user/info
      */
     @GetMapping("/info")
-    public Map<String, Object> getUserInfo(@RequestHeader(value = "Authorization", required = false) String token) {
-        if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
-        return userService.getUserInfo(token);
+    public Result<?> getUserInfo(@RequestHeader(value = "Authorization", required = false) String token) {
+        Long userId = authUtil.requireUserId(token);
+        return Result.success(userService.getUserInfo(userId));
     }
+
     /**
      * 获取客户端IP地址
      */
@@ -63,8 +67,7 @@ public class UserController {
         if (request == null) {
             return "unknown";
         }
-        HttpHeaders headers = request.getHeaders();
-        String forwardedIp = headers.getFirst("X-Forwarded-For");
+        String forwardedIp = request.getHeaders().getFirst("X-Forwarded-For");
         if (forwardedIp != null) {
             String trimmed = forwardedIp.trim();
             if (!trimmed.isEmpty()) {
@@ -72,13 +75,18 @@ public class UserController {
                 return commaIndex > 0 ? trimmed.substring(0, commaIndex).trim() : trimmed;
             }
         }
-        String realIp = headers.getFirst("X-Real-IP");
+        String realIp = request.getHeaders().getFirst("X-Real-IP");
         if (StringUtils.hasText(realIp)) {
             return realIp;
         }
-        var remoteAddress = request.getRemoteAddress();
-        if (remoteAddress != null && remoteAddress.getAddress() != null) {
-            return remoteAddress.getAddress().getHostAddress();
+        try {
+            var remoteAddress = request.getRemoteAddress();
+            if (remoteAddress != null) {
+                String hostString = remoteAddress.getHostString();
+                return hostString != null ? hostString : "unknown";
+            }
+        } catch (Exception e) {
+            // 忽略获取IP地址时的异常，返回默认值
         }
         return "unknown";
     }

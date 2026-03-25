@@ -1,0 +1,23 @@
+# 项目结构快速参考
+
+## 核心目录
+- `src/main/java/` - 后端 Java 代码
+- `src-frontend/` - 前端 React 代码
+- `database/` - 数据库脚本
+- `deploy/` - 部署相关
+- `android/` - Android 应用
+- `ios/` - iOS 应用
+
+## 快速查找
+- API 接口: `src/main/java/com/example/demo/controller/`
+- 业务逻辑: `src/main/java/com/example/demo/service/`
+- 数据库实体: `src/main/java/com/example/demo/entity/`
+- 前端页面: `src-frontend/pages/`
+- 前端组件: `src-frontend/components/`
+- 数据库脚本: `database/`
+
+## 配置文件
+- `pom.xml` - Maven 配置
+- `package.json` - Node.js 配置
+- `application.yml` - Spring Boot 配置
+- `vite.config.js` - Vite 配置
