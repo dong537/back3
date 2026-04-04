@@ -22,6 +22,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -138,6 +139,7 @@ public class GeminiService {
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final TokenTracker tokenTracker;
 
     public YijingSceneImageResponse generateYijingSceneImage(YijingSceneImageRequest request) throws Exception {
         validateSceneImageGenerationConfiguration();
@@ -414,8 +416,10 @@ public class GeminiService {
                         formatIndex + 1,
                         payloadFormatsToTry.size());
 
+                LocalDateTime visionCallStart = LocalDateTime.now();
                 HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
+                    tokenTracker.trackFromResponse(response.body(), candidateModel, "gemini-" + scenario, visionCallStart);
                     return new VisionExecutionResult(candidateModel, requestUri, response.body());
                 }
 
@@ -487,8 +491,10 @@ public class GeminiService {
             log.info("Calling scene image generation | provider={}, protocol={}, model={}, uri={}",
                     resolveSceneImageProviderName(), protocol, candidateModel, requestUri);
 
+            LocalDateTime sceneCallStart = LocalDateTime.now();
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
+                tokenTracker.trackFromResponse(response.body(), candidateModel, "gemini-scene-image", sceneCallStart);
                 try {
                     SceneImageExecutionResult executionResult = parseSceneImageResponseResult(response.body(), candidateModel, requestUri, protocol);
                     if ("prompt_only".equals(executionResult.generationMode())) {
@@ -603,8 +609,10 @@ public class GeminiService {
                         requestUri
                 );
 
+                LocalDateTime secondStageCallStart = LocalDateTime.now();
                 HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
+                    tokenTracker.trackFromResponse(response.body(), candidateModel, "gemini-scene-image-stage2", secondStageCallStart);
                     try {
                         GeneratedImagePayload payload = parseSceneImageResponse(response.body(), protocol);
                         if (StringUtils.hasText(payload.imageBase64()) || StringUtils.hasText(payload.imageUrl())) {
@@ -684,6 +692,7 @@ public class GeminiService {
 
         log.info("Calling Gemini {} probe via One-API | model={}, uri={}", probeType, model, requestUri);
 
+        LocalDateTime probeCallStart = LocalDateTime.now();
         HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
             String responseBody = response.body();
@@ -695,6 +704,7 @@ public class GeminiService {
             );
         }
 
+        tokenTracker.trackFromResponse(response.body(), model, "gemini-probe-" + probeType, probeCallStart);
         String content = parseRawResponseText(response.body());
         return GeminiProbeResponse.builder()
                 .model(model)

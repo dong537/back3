@@ -43,16 +43,17 @@ public class AgentpitOAuthController {
 
     /**
      * SSO 入口：全页面重定向到 AgentPit 授权页
-     * 用户已在 AgentPit 登录时会自动跳回，无需用户交互
+     * 使用 prompt=none 尝试静默授权（不弹确认页）
+     * 如果 AgentPit 不支持 prompt=none，会忽略该参数并正常显示授权页
      */
     @GetMapping("/sso")
     public Mono<Void> ssoAuthorize(
             @RequestParam(required = false, defaultValue = "/") String returnUrl,
             ServerHttpResponse response) {
-        // 将 returnUrl 编码到 state 中，回调时用于重定向
         String state = SSO_STATE_PREFIX + returnUrl;
-        String url = agentpitOAuthService.buildAuthorizeUrl(state);
-        log.info("AgentPit OAuth SSO 模式重定向到授权页: {}, returnUrl: {}", url, returnUrl);
+        // prompt=none: 静默授权，已登录且已授权过的用户直接回调，无需确认
+        String url = agentpitOAuthService.buildAuthorizeUrl(state, "none");
+        log.info("AgentPit OAuth SSO 静默授权重定向: {}, returnUrl: {}", url, returnUrl);
         response.setStatusCode(HttpStatus.FOUND);
         response.getHeaders().setLocation(URI.create(url));
         return response.setComplete();

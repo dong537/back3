@@ -110,8 +110,8 @@ scene-image:
 
 agentpit:
   oauth:
-    client-id: ${AGENTPIT_OAUTH_CLIENT_ID:cmn5vk3l1001560777k8fb1vh}
-    client-secret: ${AGENTPIT_OAUTH_CLIENT_SECRET:cmn5vk3l100166077koz4m9ed}
+    client-id: ${AGENTPIT_OAUTH_CLIENT_ID:cmnkiszzv003b60t9kfs52kn9}
+    client-secret: ${AGENTPIT_OAUTH_CLIENT_SECRET:cmnkiszzv003c60t9oalntnw2}
     redirect-uri: ${AGENTPIT_OAUTH_CALLBACK_URL:https://destiny.agentpit.io/api/auth/agentpit/callback}
     authorize-url: ${AGENTPIT_OAUTH_AUTHORIZATION_URL:https://www.agentpit.io/api/oauth/authorize}
     token-url: ${AGENTPIT_OAUTH_TOKEN_URL:https://www.agentpit.io/api/oauth/token}
