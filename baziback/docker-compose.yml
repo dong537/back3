@@ -58,6 +58,14 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_API_BASE_URL: ${GEMINI_API_BASE_URL:-}
       MCP_ENABLED: ${MCP_ENABLED:-false}
+      AGENTPIT_OAUTH_AUTHORIZATION_URL: ${AGENTPIT_OAUTH_AUTHORIZATION_URL:-https://go.second.me/oauth/}
+      AGENTPIT_OAUTH_TOKEN_URL: ${AGENTPIT_OAUTH_TOKEN_URL:-https://api.mindverse.com/gate/lab/api/oauth/token/code}
+      AGENTPIT_OAUTH_USERINFO_URL: ${AGENTPIT_OAUTH_USERINFO_URL:-https://api.mindverse.com/gate/lab/api/secondme/user/info}
+      AGENTPIT_OAUTH_CLIENT_ID: ${AGENTPIT_OAUTH_CLIENT_ID:-}
+      AGENTPIT_OAUTH_CLIENT_SECRET: ${AGENTPIT_OAUTH_CLIENT_SECRET:-}
+      AGENTPIT_OAUTH_CALLBACK_URL: ${AGENTPIT_OAUTH_CALLBACK_URL:-https://me.candaigo.com/api/auth/agentpit/callback}
+      AGENTPIT_OAUTH_SCOPE: ${AGENTPIT_OAUTH_SCOPE:-user.info}
+      AGENTPIT_OAUTH_USE_PKCE: ${AGENTPIT_OAUTH_USE_PKCE:-false}
     ports:
       - "${BACKEND_PORT:-8088}:8088"
 

@@ -2,6 +2,7 @@ package com.example.demo.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,6 +14,7 @@ import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.authentication.AuthenticationWebFilter;
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.web.server.ServerAuthenticationEntryPoint;
@@ -30,6 +32,8 @@ public class SecurityConfig {
     private static final String[] PUBLIC_API_PATTERNS = {
             "/api/user/login",
             "/api/user/register",
+            "/api/auth/agentpit",
+            "/api/auth/agentpit/**",
             "/api/gemini/probe/**",
             "/api/yijing/**",
             "/api/tarot/**",
@@ -44,6 +48,7 @@ public class SecurityConfig {
     private static final List<String> PUBLIC_API_PREFIXES = List.of(
             "/api/user/login",
             "/api/user/register",
+            "/api/auth/agentpit",
             "/api/gemini/probe/",
             "/api/yijing/",
             "/api/tarot/",
@@ -69,6 +74,19 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(0)
+    public SecurityWebFilterChain publicAgentpitSecurityWebFilterChain(ServerHttpSecurity http) {
+        return http
+                .securityMatcher(ServerWebExchangeMatchers.pathMatchers("/api/auth/agentpit", "/api/auth/agentpit/**"))
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
+                .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
+                .authorizeExchange(exchanges -> exchanges.anyExchange().permitAll())
+                .build();
+    }
+
+    @Bean
+    @Order(1)
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         AuthenticationWebFilter jwtFilter = new AuthenticationWebFilter(jwtAuthenticationManager);
         jwtFilter.setServerAuthenticationConverter(jwtAuthenticationConverter);

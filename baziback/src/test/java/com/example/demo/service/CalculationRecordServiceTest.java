@@ -26,6 +26,9 @@ class CalculationRecordServiceTest {
     @Mock
     private AchievementService achievementService;
 
+    @Mock
+    private ReferralService referralService;
+
     @InjectMocks
     private CalculationRecordService calculationRecordService;
 
@@ -67,5 +70,6 @@ class CalculationRecordServiceTest {
         assertEquals("未命名记录", record.getRecordTitle());
         assertEquals("{}", record.getData());
         verify(calculationRecordMapper).insert(record);
+        verify(referralService).recordFirstDivination(7L);
     }
 }

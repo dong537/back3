@@ -1,0 +1,43 @@
+{
+  "name": "yijing-tarot-openclaw",
+  "version": "1.0.0",
+  "description": "OpenClaw bundle for the baziback I Ching and tarot MCP tools.",
+  "author": {
+    "name": "lldong",
+    "email": "[TODO: author-email]",
+    "url": "https://github.com/dong537"
+  },
+  "homepage": "https://github.com/dong537/back3/tree/master/baziback",
+  "repository": "https://github.com/dong537/back3",
+  "license": "MIT",
+  "keywords": [
+    "openclaw",
+    "mcp",
+    "yijing",
+    "tarot",
+    "divination",
+    "baziback"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Yijing Tarot",
+    "shortDescription": "Run baziback divination tools inside OpenClaw.",
+    "longDescription": "Connects OpenClaw to baziback's stdio MCP server so the assistant can run I Ching and tarot workflows against your local backend.",
+    "developerName": "lldong",
+    "category": "Lifestyle",
+    "capabilities": [
+      "Interactive",
+      "Read"
+    ],
+    "websiteURL": "https://github.com/dong537/back3/tree/master/baziback",
+    "privacyPolicyURL": "https://github.com/dong537/back3/tree/master/baziback",
+    "termsOfServiceURL": "https://github.com/dong537/back3/tree/master/baziback",
+    "defaultPrompt": [
+      "Run a quick I Ching divination for my question.",
+      "Draw a tarot spread and explain the result.",
+      "Look up a hexagram or tarot card from baziback."
+    ],
+    "brandColor": "#A45B35"
+  }
+}

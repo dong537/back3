@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Heart, Zap, Trophy, User } from 'lucide-react'
+import { Home, Heart, Eye, Trophy, User } from 'lucide-react'
 import useAppLocale from '../hooks/useAppLocale'
 
 const BOTTOM_NAV_COPY = {
@@ -21,8 +21,8 @@ const BOTTOM_NAV_COPY = {
 
 const bottomNavItems = [
   { path: '/', icon: Home, id: 'home' },
+  { path: '/ai/face', icon: Eye, id: 'face' },
   { path: '/favorites', icon: Heart, id: 'favorites' },
-  { path: '/ai', icon: Zap, id: 'ask' },
   { path: '/achievement', icon: Trophy, id: 'achievement' },
   { path: '/self', icon: User, id: 'self' },
 ]
@@ -30,7 +30,10 @@ const bottomNavItems = [
 export default function BottomNavigation() {
   const location = useLocation()
   const { locale } = useAppLocale()
-  const copy = BOTTOM_NAV_COPY[locale]
+  const copy = {
+    ...BOTTOM_NAV_COPY[locale],
+    face: locale === 'en-US' ? 'Face' : '\u9762\u76f8',
+  }
 
   const isActive = (path) => {
     if (path === '/') {
@@ -61,8 +64,6 @@ export default function BottomNavigation() {
                 >
                   {active && path === '/' ? (
                     <div className="h-2 w-2 rounded-full bg-white" />
-                  ) : active && path === '/ai' ? (
-                    <Icon size={18} className="text-white" strokeWidth={2.5} />
                   ) : (
                     <Icon size={20} className={active ? 'text-[#f0d9a5]' : 'text-[#8f7b66]'} strokeWidth={active ? 2.5 : 2} />
                   )}

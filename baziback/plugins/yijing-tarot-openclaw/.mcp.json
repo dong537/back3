@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "yijing-tarot": {
+      "command": "node",
+      "args": [
+        "./scripts/start-stdio-mcp.mjs"
+      ],
+      "env": {
+        "YIJING_BACKEND_URL": "http://localhost:8088"
+      }
+    }
+  }
+}

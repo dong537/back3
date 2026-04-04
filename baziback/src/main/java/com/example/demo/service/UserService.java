@@ -69,8 +69,6 @@ public class UserService {
     }
 
     public Map<String, Object> login(LoginRequest request, String ip) {
-        Map<String, Object> result = new HashMap<>();
-
         User user = userMapper.findByUsername(request.getUsername());
         if (user == null) {
             throw new UnauthorizedException(I18nHelper.message("auth.invalid.credentials", "用户名或密码错误"));
@@ -82,6 +80,20 @@ public class UserService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new UnauthorizedException(I18nHelper.message("auth.invalid.credentials", "用户名或密码错误"));
+        }
+
+        return loginWithUser(user, ip);
+    }
+
+    public Map<String, Object> loginWithUser(User user, String ip) {
+        Map<String, Object> result = new HashMap<>();
+
+        if (user == null) {
+            throw new UnauthorizedException(I18nHelper.message("auth.user.not_found", "用户不存在"));
+        }
+
+        if (user.getStatus() == 0) {
+            throw new UnauthorizedException(I18nHelper.message("auth.account.disabled", "账号已被禁用，请联系管理员"));
         }
 
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());

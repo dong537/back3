@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import axios from 'axios';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -7,61 +8,60 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
-import axios from 'axios';
 
-// 配置后端服务地址
-const BACKEND_URL = process.env.YIJING_BACKEND_URL || 'http://localhost:8088';
+const BACKEND_URL = (process.env.YIJING_BACKEND_URL || 'http://localhost:8088').replace(/\/+$/, '');
 
-// 定义 MCP 工具
 const TOOLS: Tool[] = [
   {
     name: 'yijing_generate_hexagram',
-    description: '生成易经卦象。支持多种起卦方法：时间起卦(time)、随机起卦(random)、数字起卦(number)、金钱卦(coin)、梅花易数(plum_blossom)',
+    description:
+      'Generate an I Ching hexagram from a question using time, random, number, coin, or plum blossom methods.',
     inputSchema: {
       type: 'object',
       properties: {
         question: {
           type: 'string',
-          description: '占卜的问题或意图',
+          description: 'The user question or intent for divination.',
         },
         method: {
           type: 'string',
           enum: ['time', 'random', 'number', 'coin', 'plum_blossom'],
-          description: '起卦方法',
+          description: 'Hexagram generation method.',
           default: 'time',
         },
         seed: {
           type: 'string',
-          description: '数字起卦时使用的种子（仅method为number时需要）',
+          description: 'Optional seed used when method is number.',
         },
       },
-      required: ['question', 'method'],
+      required: ['question'],
     },
   },
   {
     name: 'yijing_interpret_hexagram',
-    description: '解读易经卦象。根据卦象ID、动爻和问题提供详细的解读',
+    description:
+      'Interpret an I Ching hexagram with optional changing lines for a specific question.',
     inputSchema: {
       type: 'object',
       properties: {
         hexagramId: {
           type: 'number',
-          description: '卦象ID (1-64)',
+          description: 'Hexagram id from 1 to 64.',
           minimum: 1,
           maximum: 64,
         },
         changingLines: {
           type: 'array',
+          description: 'Optional changing line positions from 1 to 6.',
           items: {
             type: 'number',
             minimum: 1,
             maximum: 6,
           },
-          description: '动爻位置数组 (1-6)',
         },
         question: {
           type: 'string',
-          description: '占卜的问题',
+          description: 'The user question to interpret against the hexagram.',
         },
       },
       required: ['hexagramId', 'question'],
@@ -69,13 +69,13 @@ const TOOLS: Tool[] = [
   },
   {
     name: 'yijing_get_hexagram',
-    description: '获取指定卦象的详细信息，包括卦辞、象辞、爻辞等',
+    description: 'Fetch detailed information for a specific I Ching hexagram.',
     inputSchema: {
       type: 'object',
       properties: {
         id: {
           type: 'number',
-          description: '卦象ID (1-64)',
+          description: 'Hexagram id from 1 to 64.',
           minimum: 1,
           maximum: 64,
         },
@@ -85,7 +85,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: 'yijing_list_hexagrams',
-    description: '获取所有64卦的列表，包含基本信息',
+    description: 'List all 64 I Ching hexagrams with their basic metadata.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -93,31 +93,113 @@ const TOOLS: Tool[] = [
   },
   {
     name: 'yijing_quick_divination',
-    description: '快速占卜 - 一次性完成起卦和解读。这是最便捷的占卜方式',
+    description:
+      'Run a one-step I Ching divination flow that generates the hexagram and returns the direct result.',
     inputSchema: {
       type: 'object',
       properties: {
         question: {
           type: 'string',
-          description: '占卜的问题',
+          description: 'The user question for divination.',
         },
         method: {
           type: 'string',
-          enum: ['time', 'random', 'coin'],
-          description: '起卦方法',
+          enum: ['time', 'random', 'coin', 'number', 'plum_blossom'],
+          description: 'Hexagram generation method.',
           default: 'time',
+        },
+        seed: {
+          type: 'string',
+          description: 'Optional seed when using the number method.',
         },
       },
       required: ['question'],
     },
   },
+  {
+    name: 'tarot_get_spreads',
+    description: 'List supported tarot spreads from the project backend.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'tarot_draw_cards',
+    description:
+      'Draw tarot cards for a question. Supports different spread types such as SINGLE and other backend-defined spreads.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          description: 'Question or theme for the tarot reading.',
+        },
+        spreadType: {
+          type: 'string',
+          description: 'Tarot spread type. Defaults to SINGLE.',
+          default: 'SINGLE',
+        },
+      },
+      required: ['question'],
+    },
+  },
+  {
+    name: 'tarot_quick_draw',
+    description: 'Run a quick single-card tarot reading for a question.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          description: 'Question or theme for the tarot reading.',
+        },
+      },
+      required: ['question'],
+    },
+  },
+  {
+    name: 'tarot_get_card_detail',
+    description: 'Fetch detailed information for a tarot card by card id.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        cardId: {
+          type: 'number',
+          description: 'Tarot card id used by the backend.',
+        },
+      },
+      required: ['cardId'],
+    },
+  },
+  {
+    name: 'tarot_list_cards',
+    description: 'List all tarot cards with their basic metadata.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'tarot_get_daily_fortune',
+    description: 'Get the daily fortune summary for a tarot card id.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        cardId: {
+          type: 'number',
+          description: 'Tarot card id used by the backend.',
+        },
+      },
+      required: ['cardId'],
+    },
+  },
 ];
 
-// 创建 MCP 服务器
 const server = new Server(
   {
     name: 'yijing-tarot-mcp',
-    version: '1.0.0',
+    version: '1.1.0',
   },
   {
     capabilities: {
@@ -126,136 +208,147 @@ const server = new Server(
   }
 );
 
-// 处理工具列表请求
-server.setRequestHandler(ListToolsRequestSchema, async () => {
+function toTextResult(payload: unknown) {
   return {
-    tools: TOOLS,
+    content: [
+      {
+        type: 'text' as const,
+        text: JSON.stringify(payload, null, 2),
+      },
+    ],
   };
-});
+}
 
-// 处理工具调用请求
+function toErrorResult(error: unknown) {
+  const axiosError = error as {
+    response?: { data?: { message?: string } | string };
+    message?: string;
+  };
+  const responseData = axiosError.response?.data;
+  const fallback =
+    typeof responseData === 'string'
+      ? responseData
+      : responseData && typeof responseData === 'object' && 'message' in responseData
+        ? String(responseData.message)
+        : axiosError.message || 'Unknown MCP error';
+
+  return {
+    content: [
+      {
+        type: 'text' as const,
+        text: `Error: ${fallback}`,
+      },
+    ],
+    isError: true,
+  };
+}
+
+async function callTool(name: string, args: Record<string, unknown>) {
+  switch (name) {
+    case 'yijing_generate_hexagram':
+      return toTextResult(
+        (
+          await axios.post(`${BACKEND_URL}/api/yijing/hexagram/generate`, {
+            question: args.question,
+            method: args.method || 'time',
+            seed: args.seed,
+          })
+        ).data
+      );
+
+    case 'yijing_interpret_hexagram':
+      return toTextResult(
+        (
+          await axios.post(`${BACKEND_URL}/api/yijing/hexagram/interpret`, {
+            hexagramId: args.hexagramId,
+            changingLines: args.changingLines || [],
+            question: args.question,
+          })
+        ).data
+      );
+
+    case 'yijing_get_hexagram':
+      return toTextResult(
+        (await axios.get(`${BACKEND_URL}/api/yijing/hexagram/${args.id}`)).data
+      );
+
+    case 'yijing_list_hexagrams':
+      return toTextResult((await axios.get(`${BACKEND_URL}/api/yijing/hexagrams`)).data);
+
+    case 'yijing_quick_divination':
+      return toTextResult(
+        (
+          await axios.post(`${BACKEND_URL}/api/standalone/yijing/quick-divination`, {
+            question: args.question,
+            method: args.method || 'time',
+            seed: args.seed || '',
+          })
+        ).data
+      );
+
+    case 'tarot_get_spreads':
+      return toTextResult((await axios.get(`${BACKEND_URL}/api/tarot/spreads`)).data);
+
+    case 'tarot_draw_cards':
+      return toTextResult(
+        (
+          await axios.post(`${BACKEND_URL}/api/tarot/draw`, {
+            question: args.question || '',
+            spreadType: args.spreadType || 'SINGLE',
+          })
+        ).data
+      );
+
+    case 'tarot_quick_draw':
+      return toTextResult(
+        (
+          await axios.post(`${BACKEND_URL}/api/tarot/quick-draw`, {
+            question: args.question || '',
+          })
+        ).data
+      );
+
+    case 'tarot_get_card_detail':
+      return toTextResult(
+        (await axios.get(`${BACKEND_URL}/api/tarot/card/${args.cardId}`)).data
+      );
+
+    case 'tarot_list_cards':
+      return toTextResult((await axios.get(`${BACKEND_URL}/api/tarot/cards`)).data);
+
+    case 'tarot_get_daily_fortune':
+      return toTextResult(
+        (await axios.get(`${BACKEND_URL}/api/tarot/daily-fortune/${args.cardId}`)).data
+      );
+
+    default:
+      throw new Error(`Unknown tool: ${name}`);
+  }
+}
+
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: TOOLS,
+}));
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-  const params = args || {};
 
   try {
-    switch (name) {
-      case 'yijing_generate_hexagram': {
-        const response = await axios.post(
-          `${BACKEND_URL}/api/yijing/hexagram/generate`,
-          {
-            question: params.question,
-            method: params.method || 'time',
-            seed: params.seed,
-          }
-        );
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'yijing_interpret_hexagram': {
-        const response = await axios.post(
-          `${BACKEND_URL}/api/yijing/hexagram/interpret`,
-          {
-            hexagramId: params.hexagramId,
-            changingLines: params.changingLines || [],
-            question: params.question,
-          }
-        );
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'yijing_get_hexagram': {
-        const response = await axios.get(
-          `${BACKEND_URL}/api/yijing/hexagram/${params.id}`
-        );
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'yijing_list_hexagrams': {
-        const response = await axios.get(
-          `${BACKEND_URL}/api/yijing/hexagrams`
-        );
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
-        };
-      }
-
-      case 'yijing_quick_divination': {
-        const response = await axios.post(
-          `${BACKEND_URL}/api/standalone/yijing/quick-divination`,
-          {
-            question: params.question,
-            method: params.method || 'time',
-          }
-        );
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(response.data, null, 2),
-            },
-          ],
-        };
-      }
-
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.message || error.message;
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `错误: ${errorMessage}`,
-        },
-      ],
-      isError: true,
-    };
+    return await callTool(name, (args || {}) as Record<string, unknown>);
+  } catch (error) {
+    return toErrorResult(error);
   }
 });
 
-// 启动服务器
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  
-  console.error('易经塔罗 MCP 服务已启动');
-  console.error(`后端地址: ${BACKEND_URL}`);
+
+  console.error('Yijing and tarot MCP server started.');
+  console.error(`Backend URL: ${BACKEND_URL}`);
 }
 
 main().catch((error) => {
-  console.error('服务启动失败:', error);
+  console.error('Failed to start MCP server:', error);
   process.exit(1);
 });

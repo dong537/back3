@@ -114,6 +114,17 @@ app:
   debug: ${APP_DEBUG:false}
   free-features: ${APP_FREE_FEATURES:true}
 
+agentpit:
+  oauth:
+    authorization-url: ${AGENTPIT_OAUTH_AUTHORIZATION_URL:https://go.second.me/oauth/}
+    token-url: ${AGENTPIT_OAUTH_TOKEN_URL:https://api.mindverse.com/gate/lab/api/oauth/token/code}
+    userinfo-url: ${AGENTPIT_OAUTH_USERINFO_URL:https://api.mindverse.com/gate/lab/api/secondme/user/info}
+    client-id: ${AGENTPIT_OAUTH_CLIENT_ID:}
+    client-secret: ${AGENTPIT_OAUTH_CLIENT_SECRET:}
+    callback-url: ${AGENTPIT_OAUTH_CALLBACK_URL:https://destiny.agentpit.io/api/auth/agentpit/callback}
+    scope: ${AGENTPIT_OAUTH_SCOPE:user.info}
+    use-pkce: ${AGENTPIT_OAUTH_USE_PKCE:false}
+
 logging:
   level:
     com.example.demo: DEBUG

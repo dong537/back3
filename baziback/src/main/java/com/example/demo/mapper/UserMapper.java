@@ -30,8 +30,8 @@ public interface UserMapper {
     /**
      * 插入新用户
      */
-    @Insert("INSERT INTO tb_user (username, password, email, phone, nickname, status) " +
-            "VALUES (#{username}, #{password}, #{email}, #{phone}, #{nickname}, #{status})")
+    @Insert("INSERT INTO tb_user (username, password, email, phone, nickname, avatar, status) " +
+            "VALUES (#{username}, #{password}, #{email}, #{phone}, #{nickname}, #{avatar}, #{status})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(User user);
     
@@ -47,6 +47,20 @@ public interface UserMapper {
      */
     @Select("SELECT * FROM tb_user WHERE id = #{id}")
     User findById(Long id);
+
+    @Update("""
+            <script>
+            UPDATE tb_user
+            <set>
+                <if test="email != null and email != ''">email = #{email},</if>
+                <if test="nickname != null and nickname != ''">nickname = #{nickname},</if>
+                <if test="avatar != null and avatar != ''">avatar = #{avatar},</if>
+                update_time = NOW()
+            </set>
+            WHERE id = #{id}
+            </script>
+            """)
+    int updateProfile(User user);
     
     /**
      * 更新用户积分（同时更新current_points和total_points）

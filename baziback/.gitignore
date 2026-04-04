@@ -65,3 +65,12 @@ coverage/
 # 其他
 *.orig
 .cache/
+%TEMP%/
+.agents/
+mcp-dist/
+release/
+deploy/__pycache__/
+deploy/.last_package_timestamp
+deploy/temp/
+deploy/docker-server-package-*/
+deploy/docker-server-package-*.tar.gz

@@ -8,7 +8,6 @@ import com.example.demo.dto.response.gemini.GeminiFailureDetails;
 import com.example.demo.dto.response.gemini.GeminiFaceResponseMapper;
 import com.example.demo.dto.response.yijing.YijingSceneImageResponse;
 import com.example.demo.exception.BusinessException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +22,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,39 +37,10 @@ public class GeminiService {
             "image/webp"
     );
 
-    private static final Set<String> ONE_API_CHAT_IMAGE_MODELS = Set.of(
-            "gemini-2.0-flash-exp",
-            "gemini-3-pro-image-preview"
-    );
-
-    private static final Set<String> ONE_API_CHAT_IMAGE_UNSUPPORTED_MODELS = Set.of(
-            "gemini-2.0-pro-exp-02-05",
-            "gemini-3-flash-preview",
-            "gemini-3-pro-preview",
-            "gemini-3.1-pro-preview"
-    );
-
     private static final String DEFAULT_FACE_CULTURAL_PROMPT = """
-            你是精通东方相理、人伦气象的传统玄学相学顾问，兼具古典文化底蕴与现代审美，分析风格清雅玄奥，充满东方神秘气韵。
-            请对本次面相进行【传统文化娱乐赏析】。
-            分析结构严格遵循：
-            一、形神总论
-            以古典相理词汇，论面格局、气脉、神姿，用词雅致玄幽。
-            二、五岳四渎品鉴
-            依额头、眉、眼、鼻、颧、口、颏之形，解析骨相气韵与心性禀赋。
-            三、精气神与心性投射
-            从神态、眉眼气场解读内在性情、才思、人缘格局。
-            四、流年气象与运势意象赏析
-            以文化意象描述运势氛围，不做绝对断语，只用“气韵”“兆象”“格局”等柔和表述。
-            五、相宜调和之法
-            给出符合玄学意境的穿搭、妆容、气场提升建议。
-            六、结语
-            清雅玄意收尾。
-
-            输出要求：
-            文风古朴典雅，气韵神秘东方，措辞含蓄优美，结构工整，字数600字左右。
-            文末必须标注：本分析为传统文化趣味赏析，仅供娱乐参考。
-            """;
+            濠电姷鏁搁崑鐘诲箵椤忓棗绶ら柟绋垮閸欏繘姊婚崼鐔峰幏闁挎繂顦导鐘绘煏婢跺牆鍔氶柣蹇擄攻娣囧﹪濡惰箛鏇炲煂闂佸摜鍠撴繛鈧€规洘鍨块獮姗€骞囨担鐟板厞婵＄偑鍊栭崝鎴﹀磹閵堝纾婚柕濞炬櫆閳锋垿鏌涘┑鍡楊仼闁逞屽墰椤牓鏁冮姀銈呯闁诲繑妲掗～澶婎嚗閸曨垰绠涙い鎾跺仒閸濇姊绘担铏广€婇柛鎾寸箞瀹曟繆绠涘☉妯硷紱闂佽鍎抽悺銊﹀垔閹绢喗鈷戦柛顭戝櫘閸庢垶绻濊鐎氼厾鎹㈠☉姘ｅ亾閸偅鍋犻柍褜鍓欓澶婎潖娴犲绀嬫い鏍ㄧ☉閸擃參姊哄Ч鍥х仼闁诲繑姘ㄩ埀顒侇問閸撶喖寮婚妸銉㈡婵☆垯璀︽禒楣冩⒑娴兼瑧鍒扮€规洦鍓熷﹢渚€姊洪崗鑲┿偞闁哄懏绋戦弳鈺冪磽閸屾瑧璐伴柛鐘愁殔椤啯绂掔€ｎ亞鐣洪梺瑙勫劶濡嫮绮堢€ｎ偁浜滈柟浼存涧娴滄粌鈹戦埄鍐ㄢ枙婵﹥妞介幃婊堝煛閸屾稓褰囨俊鐐€ら崢濂告偋閹炬眹鈧礁螖閸涱喖浜滈梺纭呭亹閸嬫鑺辩紒妯圭箚闁靛牆绻掗崚浼存煕閻曚礁鐏﹂柡浣哥Ч瀵粙顢橀悢鍝勫汲婵犵數鍋為崹鍫曗€﹂崼鈶╁亾濮橆偄宓嗛柡灞剧☉椤繈顢楁径濠傚闁诲氦顫夊ú姗€銆冮崨瀛樺仼闁跨喓濮寸痪褔鎮归幁鎺戝闁崇粯娲熷缁樻媴娓氼垳鍔哥紓浣虹帛閸旀瑩鐛径鎰櫢闁绘ɑ褰冮崵鎴︽⒑閸涘﹤濮﹂柛鐘崇墱缁牆鐣濋崟顒傚幐閻庤鎼╅崰鏍箠瀹ュ棛顩查柕蹇嬪€栭埛鎴︽煠閹帒鍔氶柣蹇婃櫇缁辨帞绱掑Ο鑲╃暭缂備緡鍣崢濂告偩濠靛绀嬫い鎺嗗亾濞寸姰鍨烘穱濠囶敃閿旂粯娈ョ紓浣插亾濞撴埃鍋撶€殿噮鍋婇崺锟犲川椤斿皷鍋撻悽鍛婄厽鐟滃秹骞楀鍛棜閻犳亽鍔庣壕濂告椤掍礁绲诲┑顔煎€块弻鈩冩媴閸濄儛銈吤归悪鍛暤闁圭锕ュ鍕沪缁嬪じ澹曟繝鐢靛У绾板秹鎮″☉銏″€甸柨婵嗛娴滄粌鈹戦鑲┬ｉ柕鍥у婵＄兘鏁傞挊澶岋紦闁诲孩顔栭崰鏇犲垝濞嗗繒鏆︽俊銈呮噺閸ゅ啴鏌嶉崫鍕舵缂佹墎鏅犲濠氬磼濮橆兘鍋撶粙璇炬稑螖閸涱厾鐤囬梺褰掑亰閸擄箓宕崨瀛樺仭婵炲棗绻愰顐︽⒒閸曨偄顏柡灞炬礃瀵板嫬螣閾忛€涘寲缂傚倷璁查崑鎾愁熆閼搁潧濮堥柣鎾存礋閻擃偊宕堕妸锕€闉嶉梺闈╃秬濞咃綁鍩€椤掍緡鍟忛柛鐕佸亰瀹曠喖顢樺☉娆戜簷濠电姷鏁告慨鎾晝閵堝洠鍋撳鐓庡籍闁诡喒鈧枼鏋庨柟瀵稿Х閿涙粍绻涙潏鍓у埌闁圭⒈鍋呯粋鎺曨槼闁靛洤瀚伴、鏇㈡晲閸モ晝鏆ゆ俊鐐€ら崑鍛崲閸繍鍤曟い鏇楀亾鐎规洖銈告慨鈧柣妯哄暱閳ь剚娲熷?            闂傚倷娴囧畷鍨叏閺夋嚚娲Χ婢跺﹤绨ラ梺鍝勮閸庢椽寮€ｎ偁浜滈柡鍥殔娴滈箖鎮楀▓鍨灓闁轰礁顭烽妴浣肝旀担铏规嚌闂佹悶鍎滈崒婵堢闂傚倸鍊搁崐鎼佸磹閹间焦鍋嬮柛鏇ㄥ灠閸ㄥ倿鎮归崶顏嶆⒖閻熸瑥瀚欢鐐烘倵閿濆骸浜楁慨姗堢畱閳规垿鎮欓弶鎴犱桓缂備緡鍠氭繛鈧€殿喓鍔嶇粋鎺斺偓锝庡亞閸橆亪姊虹化鏇炲⒉闁挎艾鈹戦鐓庢殶缂佽鲸甯″畷锟犳倷瀹割喗娈虹紓鍌欐祰妞村摜鏁敓鐘茬畺闁靛繈鍊曞婵嗏攽閻樻彃顏ら柛瀣崌椤㈡岸鍩€椤掑嫬钃熸繛鎴欏灩閸愨偓闂侀潧臎閸愶絽鎮呭┑鐘绘涧閸婄懓顭囧▎鎾崇叀濠㈣埖鍔曠猾宥夋煃瑜滈崜鐔风暦濠靛柈鐔兼嚃閳哄啰鍔稿┑鐘垫暩婵敻鎳濇ィ鍐ㄧ闁绘绮悡娆撴煙娴ｅ啯鐝柡澶婄秺閺屾稓鈧綆鍋呭畷灞绢殽閻愬樊鍎忛柍璇叉捣娴狅箓骞嬮幒鎴?            闂傚倸鍊风粈渚€骞夐敍鍕殰闁圭儤鍤﹀☉妯锋瀻闁圭偓娼欓埀顒傛暬閺岋綁鏁愰崨顖滀紘缂佺偓鍎抽妶鎼佸蓟閻旂厧绠氱憸婊堝吹閻斿吋鐓冪憸婊堝礈閿曞倸鍨傞弶鍫氭櫇閻瑥顭块懜闈涘閸烆垶姊洪幐搴⑩拹闁稿孩濞婅棢闁哄洢鍨洪埛鎺戙€掑顒佹悙濠⒀冪摠缁绘稒鎷呴崘鍙夋悙缂佺姵鑹鹃埞鎴︽偐閸欏顦╅梺?            濠电姷鏁搁崑鐐哄垂閸洖绠伴柟缁㈠枛绾惧鏌熼崜褏甯涢柣鎾崇箻閺屾盯鍩勯崘鈺冾槶濡炪倧璁ｇ粻鎾诲蓟閵堝宸濆┑鐘插亞濡棛绱撴笟鍥ф灈闁挎洦浜獮鍐ㄢ枎閹存繂鐏婇梺鑽ゅ枛椤ｏ附绔熼弴銏♀拺闁告繂瀚鈺傜箾鐎涙ê鍝虹€?
+            濠电姷鏁搁崑娑㈩敋椤撶喐鍙忓ù鍏兼綑绾惧潡寮堕崼顐簴濞存粏顫夌换婵囩節閸屾粌顣虹紓浣插亾闁稿瞼鍋為悡鏇熺節闂堟稑顏╅柛鏃€绮庣槐鎺撴媴閸︻厼寮ㄩ梺鍝勭焿缂嶄線骞冨▎鎾崇煑濠㈣埖蓱閿涘懘姊绘担椋庝覆闂傚嫬瀚幑銏ゅ磼濞戞瑦鐝￠梻鍌欑劍閹爼宕曢悽鏉嗗骞橀崜浣虹劶婵犮垼鍩栭崝鏍磻閿濆悿褰掓晲閸偅缍堥梺闈涙处缁诲啰鎹㈠☉銏♀拻闁哄鍨电粊顕€鎮楀▓鍨灆缂侇喗鐟╅獮鍐焺閸愨晛鍔呴梺鎸庣箓濡瑧鈧碍濞婂缁樼瑹閳ь剙顭囪铻為柡鍐ㄧ墛閸婂潡鏌ㄩ弴鐐测偓褰掑磿瀹ュ鐓熼柕蹇曞У閸熺偤鏌涢妶鍛悙妞ゎ叀娉曢幑鍕惞閻熼偊鏆ら梻浣侯焾椤戝棝骞愭繝姘闁告侗鍠氶悷瑙勩亜閺嶃劋绶遍柛鐔奉儏閳规垿鎮╅幇浣告櫛闂佸摜濮甸悧婊勭閹间礁宸濇い鏍ㄤ緱濞肩喎鈹戦悩缁樻锭妞ゆ垵妫濆畷鎴﹀Ω閳哄倻鍘繝鐢靛仜閻忔繃淇婇幐搴濈箚閻忕偛鍊搁埀顒佺箓椤繑绻濆顒€鑰垮┑掳鍊撶粈浣糕枔瀹€鍕拺闁硅偐鍋樼槐姗€鏌涢妷锝呭濞寸姰鍨藉娲川婵犲啫顦╅梺绋款儏椤︻垶顢氶敐澶婄妞ゆ梻鏅崢?            濠电姷鏁搁崑娑㈡偤閵娧冨灊鐎光偓閳ь剟骞冮鈧、鏇㈡晝閳ь剟鎮為崹顐犱簻闁瑰鍋涢婊勩亜閿曞偆妫戠紒杈ㄥ浮婵℃悂鏁冮埀顒傚緤婵犳碍鐓熼柨婵嗘缁犵偟鈧娲橀敃銏犵暦閿濆棗绶炵€光偓鐎ｎ剟妫锋繝鐢靛Х閺佹悂宕戦悙鍝勭闁告稑顭▓浠嬫煙闂傚顦︾紒鐘叉贡閹叉悂寮崼婵婃憰?            濠电姷鏁搁崑鐐哄箰閼姐倕鏋堢€广儱娲﹀畷鏌ユ煕椤愮姴鍓柣鎴ｆ绾惧吋绻涢幋鐑嗙劷缂佹劗鍋涢埞鎴︽倻閸モ晝校闂佺绻戦敃銏犵暦閹达箑绠婚悗娑櫭鎾绘⒑缂佹ê鐏︽い顓炴喘閹箖骞庨懞銉㈡嫼闂傚倸鐗婄粙鎺椝夊▎鎾寸厾閻庡湱濮电涵楣冩煃閻熸澘鏆ｇ€规洘甯￠幃娆撳矗閸屾ê鍔氶柕鍡樺笒椤繈鏁愰崨顒€顥氶梻鍌欐祰濡嫰宕导鏉戠獥闁哄秲鍔嬬换鍡涙倵濞戞瑯鐒介柣鐔风秺閺屽秷顧侀柛鎾跺枛瀹曟椽宕ㄩ弶鎴﹀敹闂佸搫娲ㄩ崐锝夊Ψ閵夊啫缍婇弫鎰板炊閸撲礁濮肩紓鍌氬€哥粔鐢稿箲閸ヮ剙钃熼柡鍥ュ灩楠炪垽鏌￠崶鈺佇ラ柣娑栧灩椤啴濡惰箛鏇炲煂闂佸鏉垮缂侇喗鐟︾换婵嬪礋閵娿儰澹曢梺鎸庣箓缁ㄧ厧霉閻戣姤鐓曢柍杞拌兌閻掓悂鏌＄仦璇插闁宠棄顦灒闁兼祴鏅涙慨浼存煟閻愬顣查柣鐔叉櫊瀵鏁嶉崟銊ヤ壕闁挎繂楠告禍婊冣攽椤旇偐校闁靛洤瀚幆鏃堝焺閸愩劍鐏庨梻浣筋嚃閸ㄦ壆鈧碍婢橀悾鐑藉Ω閿斿墽鐦堥梺鍛婃处閸撴稑螣閸℃稒鈷掗柛灞捐壘閳ь剚鎮傞弫鍐Χ婢跺﹨袝闂侀€炲苯澧扮紒杈ㄥ笒铻栭柍褜鍓熼幆灞炬媴閾忛€涚瑝濠电偞鍨崹鍦矆閸愵喗鐓冮悷娆忓閸斻倕霉濠婂啫鈷旈柟鍙夌摃缁犳稑鈽夐弽銈呬壕闁告稒娼欏敮閻熸粌娴锋禍鍛婃償閵婏箑鈧敻鏌ㄥ┑鍡楁殭濠碉紕鍏橀弻?            濠电姷鏁搁崑鐐哄垂閸洖绠伴柟闂寸蹈閸ヮ剦鏁囬柕蹇曞Х閸旓箑顪冮妶鍡楃伇闁稿骸顭峰畷妤€鐣濋埀顒傛閹烘惟闁靛／鍌濇婵＄偑鍊ら崑鍛崲閸繍鍤曟い鏇楀亾鐎规洘甯℃俊鍫曞幢閳轰焦娅斿┑鐘垫暩閸嬬偤宕归崼鏇炵闁告稑顭▓浠嬫煕濠靛嫬鍔ょ紒鎲嬬畱铻栭柨婵嗘噹閺嗘瑧绱掗悩鍐茬仼闁规彃鎲￠幆鏃堝閳ュ啿浼庨梻浣规偠閸庮噣寮插▎鎾村€?            濠电姷鏁搁崑娑㈩敋椤撶喐鍙忛柡澶嬪殮瑜版帗鍊诲┑顔藉姀閸嬫捇宕橀鑺ユ珳婵犮垼娉涢敃锕傛偩鏉堛劎绠鹃弶鍫濆⒔閹吋銇勯敐鍕煓鐎规洘鍨块獮妯尖偓娑櫭鎾绘⒑缂佹ê鐏︽い顓炴喘閹箖骞庨懞銉㈡嫼濠电偠灏濠勮姳婵犳碍鐓曟慨姗嗗墻閸庢棃鏌熼姘殻闁诡喚鏅划娆撳箰鎼达紕銈舵繝寰锋澘鈧呯不閹达箑鐤炬繝闈涱儏缁犳娊鏌￠崘锝呬壕闁诲孩纰嶅畝鎼佸箖瑜版帒鐐婇柕濞垮劤缁佺兘姊烘潪鎵槮闁绘牕銈稿璇测槈閵忊剝娅嗛梺鍛婄箓鐎氼剟鈥栨径鎰拺闂侇偆鍋涢懟顖炲礉椤栫偞鐓曢柡鍥ュ妼娴滄粌顭块悷鎵ⅵ婵﹥妞藉Λ鍐ㄢ槈濞嗘ɑ顥犻梻浣虹帛鐢亪姊介崟顖氱柧闁割偅娲橀崑鎰版偣閸ヮ亜鐨洪柣锝呭船閳规垿鎮╃紒妯婚敪闁诲孩鐨滈崶褏锛涢梺瑙勫劤閻°劍鍒婇幘顔解拺闁割煈鍣崕鎴炵節瑜嶇€氼喚妲愰幘璇茬＜婵﹩鍏橀崑鎾舵兜閸涱喗鍣烽梻鍌欒兌缁垶銆冮崨鏉戠婵犲﹤瀚々鐑芥煥閺囩偛鈧悂鎮為崹顐犱簻闁圭儤鍨甸鈺傛交?            闂傚倸鍊烽悞锕傚箖閸洖纾块柤纰卞墰閻瑩鐓崶銊р槈闁绘帒鐏氶妵鍕箣閿濆棛銆婇梺鍛婃煥缁夊墎妲愰幒鎾剁懝濠电姴瀚弳銈夋⒑缂佹ü绶遍柛鐘冲哺閸┾偓妞ゆ帊鑳堕埊鏇熴亜椤撶偞鎼愮悮娆愮節婵犲倻澧涢柛瀣剁秮閺岋綁骞囬妸锔芥緬闂佺顑嗛幑鍥箠閻樻椿鏁嗛柛灞剧☉閺嬶箓姊绘担鍛婃儓妞わ富鍋婂鎻掝煥閸繄顦梺鍝勬川閸犳挾绮婚崜褉鍋撻獮鍨姎妞わ富鍨崇划璇测槈閵忋垹褰勯梺鎼炲劘閸斿绂嶉姀銈嗙厸濠㈣泛顦遍惌娆撴煙椤旂虎鏀版い锕佸皺缁辨帞绱掑Ο铏逛紝闂?            濠电姷鏁搁崑娑㈩敋椤撶喐鍙忓ù鍏兼綑绾惧潡鏌＄仦璇插姎闁告垹濞€閺屾盯骞囬棃娑欑亪缂備讲鍋撶€光偓閸曨剛鍘搁悗骞垮劚閸燁偅淇婇悡搴唵闁荤喐澹嗘晶锕傛煙椤旇偐绉洪柟顔界懇閸┾剝鎷呯化鏇熷珶闂佽瀛╅鏍窗濡ゅ啠鍋撶粭娑樺枤閻掕棄鈹戦悩瀹犲缂佺媭鍨抽埀顒€鍘滈崑鎾绘煃瑜滈崜娑氬垝婵犳艾唯闁冲搫鍊婚崢閬嶆⒑閸濆嫬鏆婇柛瀣崌閹绮☉妯诲闁稿骸绉撮埞鎴﹀磼濠婂海鍔搁梺缁樺姇閿曨亜顕ｉ崼鏇為唶婵犻潧妫岄幐鍐磽娴ｆ彃浜炬繝銏ｆ硾鑹屾俊鎻掔墦閺岀喖骞嗚閿涘秶鈧稒绻冪换娑氣偓鐢殿焾鏍＄紓浣割儐閹告儳危閹版澘绠抽柟瀛樻⒐閺傗偓闂備胶纭跺褔寮插☉妯锋灁闁归棿鐒﹂埛鎴︽煕濠靛棗顏╁ù婊呭仱閺屾稑鈻庣仦鎴掑濠碉紕鍋戦崐鏍鸿箛娑樺瀭濞寸姴顑呴弸浣衡偓骞垮劚濞诧絽鈻介鍫熺參婵☆垯璀﹀Σ褰掓⒑濞嗘儳寮慨濠傛惈鐓ょ紓浣姑埢蹇涙⒑閸涘﹥鐓ユい锔炬暬瀹曟椽鍩€椤掍降浜滈柟鍝勭Х閸忓矂鏌ｉ鐑嗗剶闁哄矉缍佹俊姝岊槼闁哄棭鍓氭穱濠囶敃閵忊€虫闂佸摜濮撮敃銈堢亽閻庣懓瀚伴。锔界珶閺囩偐鏀介柣妯肩帛濞懷囨煕閻斿搫鈻堢€规洘鍨块獮姗€骞囨担鍝勫汲闂備礁鎲￠崝鎴﹀礉鐏炵煫褰掝敋閳ь剟寮婚敐澶嬪亹闂傚牊绋愬Ч妤€鈹戦敍鍕彙闁搞儜鍛Е婵＄偑鍊栫敮濠囨嚄閼稿吀绻嗛柛銉墯閻撳啰鎲稿鍫濈婵ê宕崹婵堚偓骞垮劚椤︿即宕戠€ｎ喗鐓曟繝闈涘閸旀瑦绻涘畝濠侀偗闁哄苯绉烽¨渚€鏌涢幘璺烘灈鐎规洖缍婇獮鍡氼槷闁衡偓娴犲鐓曟い鎰Т閻忣亪鏌熼銈囩М婵﹥妞藉畷顐﹀礋椤掍焦瀚抽梻浣告惈鐞氼偊宕濋幋锔惧祦闊洦绋戠粻銉︺亜閺冨洦顥夊ù鐘冲浮濮婃椽妫冨☉杈╁姼闂佸憡鏌ㄩ惌鍌炲箖瑜嶉～婵嬫嚋閻㈤潧甯?            濠电姷鏁搁崑娑㈡偤閵娧冨灊鐎广儱顦拑鐔兼煥濠靛棭妲搁柣鎺戠仛閵囧嫰骞嬮敐鍛Х闂佺绻愰張顒傛崲濞戙垹绾ч柟鎼幗妤旈梻渚€鈧偛鑻晶鍙夈亜椤愩埄妲洪柛鎺撳笩缁犳稑鈽夊▎蹇撳闂備胶绮濠氬储瑜嶉—鍐╃鐎ｎ偄鈧爼鏌ｉ幇顖涚【濞存粏顫夐妵鍕箻鐠哄搫濡虹紓?            缂傚倸鍊搁崐鎼佸磹閻戣姤鍊块柨鏇炲€归崑锟犳煏婢跺棙娅呴柛姘愁潐閵囧嫰骞樼捄鐩掋儳绱掗悩铏棃闁哄被鍔戝鏉懳旈埀顒佺妤ｅ啯鈷戦悹鍥ｂ偓铏亪闂備礁搴滅紞渚€鐛崘顔肩闁芥ê顦遍ˇ鏉款渻閵堝棗濮﹂柛瀣娣囧﹪骞庨懞銉㈡嫼闁荤喐鐟ョ€氼厾娆㈤懠顒傜＜缂備焦锚婵秹鏌曢崱妤€鈧寧淇婇幖浣哥厸闁稿本鑹炬竟鍕⒒娴ｅ憡鍟炴繛璇х畵瀹曘垽骞栨担鍛婄€悗骞垮劚椤︿即鎮″▎鎴犳／闁哄鐏濋懜瑙勵殽閻愭潙鐏撮柡灞界Х椤т線鏌涜箛鏃傘€掔紒顔肩墛缁楃喖鍩€椤掑嫬违闁告稒鎯岄弫鍐煏閸繂鈧憡绂嶆ィ鍐╃厽闁绘梻顭堥ˉ瀣煟閿濆骸寮柡灞界Х椤т線鏌涜箛鏃傛创闁诡喚鍋ら弫鍐磼濞戞ê澹勯梻浣圭湽閸ㄥ鈥﹂崼銉ョ闁割偅娲橀悡鐔兼煙鐎甸晲绱虫い蹇撴缁躲倗鎲搁悧鍫濈瑲闁绘挻娲樻穱濠囧Χ閸屾矮澹曟繝鐢靛仜閻即宕愬Δ鍐╊潟闁规崘顕х粻濠氭煠閹间焦娑фい搴㈢☉椤啴濡堕崱姗嗘⒖闂侀潧妫岄崑鎾绘⒑?            闂傚倸鍊烽懗鍫曗€﹂崼婢濈懓顫濈捄鍝勫亶閻熸粎澧楃敮鎺楁倿閸偁浜滈柟杈剧到閸旂敻鏌涜箛鎾剁伇缂佽鲸甯￠、娆撳传閸曨偒鐎烽梻?            婵犵數濮烽弫鎼佸磻閻愬搫绠伴柟闂寸缁犵姵淇婇婵勨偓鈧柡瀣墵閺屾洟宕煎┑鎰ч梺绋款儐缁诲牓寮诲☉銏犲嵆闁靛鍎遍～鈺傜節閵忋垺鍤€闁绘鎹囧濠氭晸閻樿尙鍔﹀銈嗗笒閸婄懓鐣锋径鎰叄闊洦娲橀崵鈧梺鍝勬４缁绘繂顫?
+            闂傚倷绀侀幖顐λ囬鐐村亱濠电姴娲ょ粻浼存煙闂傚顦﹂柛姘愁潐閵囧嫰骞樼捄鐩掞綁鏌涢悢閿嬫儓闂囧鏌ㄥ┑鍡樺櫤閻犳劏鍓濈换婵嬪焵椤掑嫬绠绘い鏃傛櫕閸?            闂傚倸鍊风粈渚€骞栭锕€纾圭紒瀣紩濞差亶鏁囬柍璺烘惈椤︾敻鐛Ο鍏煎珰闁肩⒈鍓涢崢顒勬⒒娓氣偓濞佳囨偋閸℃あ娑樷枎閹惧啿鐎梺闈涚箞閸婃牠鎮￠弴銏㈠彄闁搞儯鍔嶉埛鎰版煕婵犲啫濮堢紒缁樼⊕瀵板嫰宕煎┑鍐ㄤ壕婵犻潧顑呴弸浣衡偓骞垮劚濞诧絽鈻介鍫熺厱闁圭偓顨呯€氼喖螣閸℃稒鈷掗柛灞捐壘閳ь剚鎮傞弫鍐晝閸屾碍鐎梺褰掓？闂勫秹鍩€椤掆偓閸熸挳寮幇鏉跨倞闁冲搫鍟伴崢鐘崇節绾版ɑ顫婇柛銊︽緲閿曘垽鏌嗗搴㈡櫇婵炲濮撮鍡涙偂濞戙垺鐓曢悘鐐插⒔閻銇勮箛鏇炴灁缂佽鲸甯楀蹇涘Ω瑜忛悿鍕旈悩闈涗沪閻㈩垽绻濋妴渚€寮崼婵堝€為梺鍐叉惈閸燁偉鈪搁梻鍌氬€风粈渚€骞夐敓鐘茬鐟滅増甯掔壕璇差熆閼搁潧濮囩紒鐘侯潐閵囧嫰骞囬崜浣稿煂濡炪倖娲濇ご鍛婄┍婵犲浂鏁嶆繝闈涙濮规鈹戦悙宸Ч婵炶尙鍠栧濠氬Ω閵夈垺顫嶅┑鈽嗗灥閸嬫劖瀵奸崶鈺冪＝濞撴艾娲ら弸鏃堟煕閺冣偓閸ㄧ敻顢氶敐澶婄濞达絽鎽滈ˇ鏉款渻閵堝棗濮х紒杈ㄦ礋閹苯螖閸涱喒鎷洪柡澶屽仧婢ф绮婃导瀛樼厵婵炶尪顔婄花鑺ヤ繆閸欏濮囬柍瑙勫灴瀹曠厧顫濋鍨棜婵犵數鍋為崹鍫曟偡椤栨埃鏋旈柡鍥ュ灪閻?00闂傚倷娴囬褏鈧稈鏅濈划娆撳箳濡炲皷鍋撻崘顔煎窛妞ゆ棃鏁弸娆撴椤愩垺澶勭紒瀣灴閹苯螖閸涱喚鍘介梺褰掑亰閸ㄥ秹骞掑Δ鈧壕?            闂傚倸鍊风粈渚€骞栭锕€纾圭紒瀣紩濞差亝鏅濋柍褜鍓熼弫鍐閵堝孩鏅┑鐘绘涧閻楀繘寮堕幖浣光拺闁告稑锕﹂埊鏇㈡煟閿濆簼閭柛鈹惧亾濡炪倖宸婚崑鎾剁磼缂佹◤顏堫敋閿濆棛顩烽悗锝庝簽閸婄偤姊洪棃娑辩叚闂傚嫬瀚埢鎾愁潨閳ь剙顫忓ú顏勭閹艰揪绲烘慨鍥╃磼閻愵剚绶茬紒澶嬫尦閺佸啴濮€閳ユ剚鍤ら梺鍝勵槹閸ㄥ綊藝椤愶附鈷戠紒顖涙礀婢у弶銇勯鐐村枠闁糕斁鍋撳銈嗗笒閸燁偉顣跨紓鍌欑椤戝懘藝閺夋鐒芥い蹇撶墕缁犮儲銇勯弮鈧崕鎶藉焵椤掑倸浠х紒杈ㄦ崌瀹曟帒鈻庨幒鎴濆腐闂備礁鎽滄慨鐢稿礉濞嗗浚鍤曢柟闂寸缁€鍐┿亜閺冨洤浜规い锕備憾濮婃椽宕崟顓涙瀱闂佸憡鎸婚悷銊╁Φ閹伴偊鏁嶉柣鎰嚟閸樺崬鈹戦悙鏉戠仸妞ゎ厼娲鎼佸礃椤忓棛锛滄繛杈剧到婢瑰﹪鎮￠懖鈹惧亾濞堝灝鏋熼柟顔煎€块悰顕€宕堕鈧粈鍫澝归敐鍕劅婵℃彃鍢查埞鎴︽倷瀹割喖娈舵繝娈垮枟閹告娊鐛繝鍌ゅ悑闁搞儺鐓堥崑銊╂⒑閸撹尙鍘涢柛瀣缁粯銈ｉ崘鈺冨幈濠电偛妫欓崝锕傛倿閼恒儯浜滈柡鍌涘閸犳﹢鏌＄仦鍓р槈闁宠姘︾粻娑㈠箻椤栨矮澹曟繛瀵稿Т椤戝懘鎮為崹顐犱簻闁瑰搫妫楁禍楣冩⒑閸濄儱鏋傞柛鏃€鍨垮畷娲焵?            """;
 
     @Value("${gemini.api.key:}")
     private String apiKey;
@@ -139,10 +108,72 @@ public class GeminiService {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
-    public YijingSceneImageResponse generateYijingSceneImage(YijingSceneImageRequest request) throws Exception {
-        validateSceneImageGenerationConfiguration();
+    private GeminiSceneImageSupport sceneImageSupport() {
+        return new GeminiSceneImageSupport(
+                imageModel,
+                imageModels,
+                visionModel,
+                visionModels,
+                sceneImageModel,
+                sceneImageModels,
+                sceneImageProtocol,
+                sceneImageResponseFormat,
+                sceneImageSize,
+                sceneImageCount,
+                sceneImageChatMaxTokens,
+                temperature
+        );
+    }
 
-        String prompt = buildYijingSceneImagePrompt(request);
+    private GeminiSceneImageGatewaySupport sceneImageGatewaySupport() {
+        return new GeminiSceneImageGatewaySupport(
+                sceneImageSupport(),
+                sceneImageProvider,
+                sceneImageApiKey,
+                sceneImageApiBaseUrl,
+                apiKey,
+                apiBaseUrl
+        );
+    }
+
+    private GeminiOneApiRequestSupport oneApiRequestSupport() {
+        return new GeminiOneApiRequestSupport(
+                apiKey,
+                apiBaseUrl,
+                textModel,
+                visionModel,
+                temperature,
+                maxTokens
+        );
+    }
+
+    private GeminiPromptSupport promptSupport() {
+        return new GeminiPromptSupport(DEFAULT_FACE_CULTURAL_PROMPT);
+    }
+
+    private GeminiResponseParser responseParser() {
+        return new GeminiResponseParser(objectMapper, sceneImageGatewaySupport().resolveSceneImageProviderName());
+    }
+
+    private GeminiFallbackSupport fallbackSupport() {
+        return new GeminiFallbackSupport();
+    }
+
+    private GeminiSceneImageExecutor sceneImageExecutor() {
+        return new GeminiSceneImageExecutor(
+                httpClient,
+                objectMapper,
+                responseParser(),
+                fallbackSupport(),
+                sceneImageGatewaySupport().resolveSceneImageProviderName()
+        );
+    }
+
+    public YijingSceneImageResponse generateYijingSceneImage(YijingSceneImageRequest request) throws Exception {
+        sceneImageGatewaySupport().validateSceneImageGenerationConfiguration();
+        GeminiPromptSupport promptSupport = promptSupport();
+
+        String prompt = promptSupport.buildYijingSceneImagePrompt(request);
         SceneImageExecutionResult executionResult = executeSceneImageGenerationRequest(prompt);
         boolean hasImage = StringUtils.hasText(executionResult.imageBase64())
                 || StringUtils.hasText(executionResult.imageUrl());
@@ -152,7 +183,7 @@ public class GeminiService {
                     "Scene image request finished without image payload | provider={}, model={}, sceneCategory={}, generationMode={}, uri={}, revisedPromptLength={}, visualSummaryLength={}, displayText={}",
                     executionResult.provider(),
                     executionResult.model(),
-                    resolveSceneCategory(request.getQuestion(), request.getInterpretation()),
+                    promptSupport.resolveSceneCategory(request.getQuestion(), request.getInterpretation()),
                     executionResult.generationMode(),
                     executionResult.uri(),
                     executionResult.revisedPrompt() == null ? 0 : executionResult.revisedPrompt().length(),
@@ -160,7 +191,7 @@ public class GeminiService {
                     abbreviate(executionResult.displayText())
             );
             throw new BusinessException(
-                    "场景图生成失败：模型没有返回任何图片内容，请查看服务端日志中的上游响应详情",
+                    "Scene image provider returned no usable image payload",
                     HttpStatus.BAD_GATEWAY
             );
         }
@@ -168,7 +199,7 @@ public class GeminiService {
         YijingSceneImageResponse response = YijingSceneImageResponse.builder()
                 .provider(executionResult.provider())
                 .model(executionResult.model())
-                .sceneCategory(resolveSceneCategory(request.getQuestion(), request.getInterpretation()))
+                .sceneCategory(promptSupport.resolveSceneCategory(request.getQuestion(), request.getInterpretation()))
                 .prompt(prompt)
                 .revisedPrompt(executionResult.revisedPrompt())
                 .imageBase64(executionResult.imageBase64())
@@ -198,66 +229,68 @@ public class GeminiService {
     }
 
     public GeminiFaceAnalysisResponse analyzeFace(GeminiFaceAnalysisRequest request) throws Exception {
-        validateOneApiConfiguration();
+        oneApiRequestSupport().validateOneApiConfiguration();
 
         String mimeType = normalizeMimeType(request.getMimeType());
         if (!SUPPORTED_IMAGE_TYPES.contains(mimeType)) {
-            throw new BusinessException("仅支持 JPG、PNG、WEBP 图片");
+            throw new BusinessException("Only JPG, PNG, and WEBP images are supported");
         }
 
         String imageBase64 = sanitizeBase64(request.getImageBase64());
         if (!StringUtils.hasText(imageBase64)) {
-            throw new BusinessException("图片数据无效");
+            throw new BusinessException("Image data is invalid");
         }
 
         long imageBytes = estimateDecodedBytes(imageBase64);
         if (imageBytes <= 0) {
-            throw new BusinessException("图片数据无效");
+            throw new BusinessException("Image data is invalid");
         }
         if (imageBytes > maxImageBytes) {
-            throw new BusinessException("图片不能超过 5MB");
+            throw new BusinessException("闂傚倸鍊烽悞锕傚箖閸洖纾块弶鍫涘妽濞呯娀鏌ら幁鎺戝姕婵炲懐濞€閺屸€愁吋閸愩劌顬嬮梺宕囩帛濮婂鍩€椤掆偓缁犲秹宕曢柆宥嗗亱闁糕剝绋戦崒銊╂煙缂併垹鏋熼柛瀣ㄥ€濋弻鐔兼倻濡櫣浠搁梺鎼炲€愰崑鎾剁磽?5MB");
         }
 
         VisionExecutionResult executionResult = executeVisionRequest(
                 imageBase64,
                 mimeType,
-                buildEnhancedPrompt(request.getPrompt()),
+                promptSupport().buildEnhancedPrompt(request.getPrompt()),
                 maxTokens,
                 "face analysis"
         );
-        return GeminiFaceResponseMapper.fromMap(parseResponse(executionResult.responseBody(), executionResult.model()));
+        return GeminiFaceResponseMapper.fromMap(
+                responseParser().parseResponse(executionResult.responseBody(), executionResult.model())
+        );
     }
 
     public GeminiProbeResponse probeText(String prompt) throws Exception {
-        validateOneApiConfiguration();
+        oneApiRequestSupport().validateOneApiConfiguration();
 
         String effectivePrompt = StringUtils.hasText(prompt)
                 ? prompt.trim()
                 : "Reply with exactly OK.";
 
-        Map<String, Object> requestBody = buildTextProbeRequestBody(effectivePrompt);
+        Map<String, Object> requestBody = oneApiRequestSupport().buildTextProbeRequestBody(effectivePrompt);
         return executeProbe(textModel, requestBody, "text");
     }
 
     public GeminiProbeResponse probeVision(GeminiFaceAnalysisRequest request) throws Exception {
-        validateOneApiConfiguration();
+        oneApiRequestSupport().validateOneApiConfiguration();
 
         String mimeType = normalizeMimeType(request.getMimeType());
         if (!SUPPORTED_IMAGE_TYPES.contains(mimeType)) {
-            throw new BusinessException("仅支持 JPG、PNG、WEBP 图片");
+            throw new BusinessException("Only JPG, PNG, and WEBP images are supported");
         }
 
         String imageBase64 = sanitizeBase64(request.getImageBase64());
         if (!StringUtils.hasText(imageBase64)) {
-            throw new BusinessException("图片数据无效");
+            throw new BusinessException("Image data is invalid");
         }
 
         long imageBytes = estimateDecodedBytes(imageBase64);
         if (imageBytes <= 0) {
-            throw new BusinessException("图片数据无效");
+            throw new BusinessException("Image data is invalid");
         }
         if (imageBytes > maxImageBytes) {
-            throw new BusinessException("图片不能超过 5MB");
+            throw new BusinessException("闂傚倸鍊烽悞锕傚箖閸洖纾块弶鍫涘妽濞呯娀鏌ら幁鎺戝姕婵炲懐濞€閺屸€愁吋閸愩劌顬嬮梺宕囩帛濮婂鍩€椤掆偓缁犲秹宕曢柆宥嗗亱闁糕剝绋戦崒銊╂煙缂併垹鏋熼柛瀣ㄥ€濋弻鐔兼倻濡櫣浠搁梺鎼炲€愰崑鎾剁磽?5MB");
         }
 
         String effectivePrompt = StringUtils.hasText(request.getPrompt())
@@ -271,7 +304,7 @@ public class GeminiService {
                 Math.min(maxTokens, 300),
                 "vision probe"
         );
-        String content = parseRawResponseText(executionResult.responseBody());
+        String content = responseParser().parseRawResponseText(executionResult.responseBody());
         return GeminiProbeResponse.builder()
                 .model(executionResult.model())
                 .uri(executionResult.uri().toString())
@@ -280,113 +313,24 @@ public class GeminiService {
                 .build();
     }
 
-    private void validateOneApiConfiguration() {
-        if (!StringUtils.hasText(apiKey)) {
-            throw new BusinessException("Gemini API Key 未配置，请先设置 ONE_API_KEY 或 GEMINI_API_KEY");
-        }
-        if (!apiKey.startsWith("sk-")) {
-            throw new BusinessException("One-API key 格式错误，必须以 sk- 开头");
-        }
-        if (!StringUtils.hasText(visionModel)) {
-            throw new BusinessException("Vision model 未配置，请先设置 ONE_API_GEMINI_VISION_MODEL 或 GEMINI_VISION_MODEL");
-        }
-        if (!StringUtils.hasText(apiBaseUrl)) {
-            throw new BusinessException("One-API base URL 未配置，请先设置 ONE_API_BASE_URL");
-        }
-    }
-
-    private void validateSceneImageGenerationConfiguration() {
-        if (isGoogleSceneImageProvider()) {
-            validateGoogleOfficialSceneImageConfiguration();
-            return;
-        }
-
-        String resolvedApiKey = resolveSceneImageApiKey();
-        String resolvedApiBaseUrl = resolveSceneImageApiBaseUrl();
-
-        if (!StringUtils.hasText(resolvedApiKey)) {
-            throw new BusinessException("场景图功能现在统一走 OneAPI 的 chat/completions 图片通道，请先配置 SCENE_IMAGE_API_KEY 或 ONE_API_KEY");
-        }
-        if (!resolvedApiKey.startsWith("sk-")) {
-            throw new BusinessException("OneAPI 场景图 token 格式错误，必须以 sk- 开头");
-        }
-        if (!StringUtils.hasText(resolvedApiBaseUrl)) {
-            throw new BusinessException("场景图功能现在统一走 OneAPI 的 chat/completions 图片通道，请先配置 SCENE_IMAGE_API_BASE_URL 或 ONE_API_BASE_URL");
-        }
-        if (resolveSceneImageModelsToTry().isEmpty()) {
-            throw new BusinessException("场景图功能缺少可用模型，请先配置支持图片生成的 SCENE_IMAGE_MODEL");
-        }
-    }
-
-    private URI buildRequestUri() {
-        return URI.create(normalizeBaseUrl(apiBaseUrl) + "/chat/completions");
-    }
-
-    private URI buildImagesRequestUri() {
-        return URI.create(normalizeBaseUrl(apiBaseUrl) + "/images/generations");
-    }
-
-    private URI buildSceneImageRequestUri() {
-        String protocol = resolveSceneImageProtocol();
-        String baseUrl = normalizeSceneImageBaseUrl(resolveSceneImageApiBaseUrl(), protocol);
-        String suffix = "images-generations".equals(protocol)
-                ? "/images/generations"
-                : "/chat/completions";
-        return URI.create(baseUrl + suffix);
-    }
-
-    private String[] buildAuthorizationHeaders() {
-        return new String[]{"Authorization", "Bearer " + apiKey};
-    }
-
-    private String[] buildSceneImageAuthorizationHeaders() {
-        return new String[]{"Authorization", "Bearer " + resolveSceneImageApiKey()};
-    }
-
-    private String[] buildSecondStageAuthorizationHeaders() {
-        return new String[]{"Authorization", "Bearer " + resolveSecondStageApiKey()};
-    }
-
-    private String resolveSecondStageApiKey() {
-        if (StringUtils.hasText(sceneImageApiKey)) {
-            return sceneImageApiKey.trim();
-        }
-        return apiKey;
-    }
-
-    private URI buildSecondStageSceneImageRequestUri(String protocol) {
-        String baseUrl = normalizeSceneImageBaseUrl(resolveSecondStageApiBaseUrl(), protocol);
-        String suffix = "images-generations".equals(protocol)
-                ? "/images/generations"
-                : "/chat/completions";
-        return URI.create(baseUrl + suffix);
-    }
-
-    private String resolveSecondStageApiBaseUrl() {
-        if (StringUtils.hasText(sceneImageApiBaseUrl)) {
-            return sceneImageApiBaseUrl.trim();
-        }
-        return apiBaseUrl;
-    }
-
     private VisionExecutionResult executeVisionRequest(String imageBase64,
                                                        String mimeType,
                                                        String prompt,
                                                        int tokenLimit,
                                                        String scenario) throws Exception {
+        GeminiOneApiRequestSupport requestSupport = oneApiRequestSupport();
         List<String> modelsToTry = resolveVisionModelsToTry();
         List<String> payloadFormatsToTry = resolveVisionPayloadFormatsToTry();
         List<String> attemptedModels = new ArrayList<>();
         BusinessException lastBusinessException = null;
-        String protocol = resolveSceneImageProtocol();
-        URI requestUri = buildSceneImageRequestUri();
+        URI requestUri = requestSupport.buildRequestUri();
 
         for (int modelIndex = 0; modelIndex < modelsToTry.size(); modelIndex++) {
             String candidateModel = modelsToTry.get(modelIndex);
             attemptedModels.add(candidateModel);
             for (int formatIndex = 0; formatIndex < payloadFormatsToTry.size(); formatIndex++) {
                 String payloadFormat = payloadFormatsToTry.get(formatIndex);
-                Map<String, Object> requestBody = buildVisionRequestBody(
+                Map<String, Object> requestBody = requestSupport.buildVisionRequestBody(
                         imageBase64,
                         mimeType,
                         prompt,
@@ -399,7 +343,7 @@ public class GeminiService {
                 HttpRequest httpRequest = HttpRequest.newBuilder()
                         .uri(requestUri)
                         .header("Content-Type", "application/json")
-                        .headers(buildAuthorizationHeaders())
+                        .headers(requestSupport.buildAuthorizationHeaders())
                         .timeout(Duration.ofSeconds(100))
                         .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
                         .build();
@@ -465,219 +409,118 @@ public class GeminiService {
     }
 
     private SceneImageExecutionResult executeSceneImageGenerationRequest(String prompt) throws Exception {
-        List<String> modelsToTry = resolveSceneImageModelsToTry();
-        List<String> attemptedModels = new ArrayList<>();
-        BusinessException lastBusinessException = null;
-        String protocol = resolveSceneImageProtocol();
-        URI requestUri = buildSceneImageRequestUri();
+        GeminiSceneImageGatewaySupport gatewaySupport = sceneImageGatewaySupport();
+        String protocol = gatewaySupport.resolveSceneImageProtocol();
+        URI requestUri = gatewaySupport.buildSceneImageRequestUri();
+        GeminiResponseParser.SceneImageExecutionPayload payload = sceneImageExecutor().executeFirstStage(
+                new GeminiSceneImageExecutor.FirstStageRequest(
+                        resolveSceneImageModelsToTry(),
+                        prompt,
+                        protocol,
+                        requestUri,
+                        gatewaySupport.buildSceneImageAuthorizationHeaders(),
+                        this::buildSceneImageGenerationRequestBody
+                )
+        );
 
-        for (String candidateModel : modelsToTry) {
-            attemptedModels.add(candidateModel);
-            Map<String, Object> requestBody = buildSceneImageGenerationRequestBody(candidateModel, prompt);
-            String requestBodyJson = objectMapper.writeValueAsString(requestBody);
+        SceneImageExecutionResult executionResult = new SceneImageExecutionResult(
+                payload.provider(),
+                payload.model(),
+                payload.uri(),
+                payload.imageBase64(),
+                payload.imageUrl(),
+                payload.revisedPrompt(),
+                payload.visualSummary(),
+                payload.negativePrompt(),
+                payload.displayText(),
+                payload.generationMode()
+        );
 
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(requestUri)
-                    .header("Content-Type", "application/json")
-                    .headers(buildSceneImageAuthorizationHeaders())
-                    .timeout(Duration.ofSeconds(120))
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
-                    .build();
-
-            log.info("Calling scene image generation | provider={}, protocol={}, model={}, uri={}",
-                    resolveSceneImageProviderName(), protocol, candidateModel, requestUri);
-
-            HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                try {
-                    SceneImageExecutionResult executionResult = parseSceneImageResponseResult(response.body(), candidateModel, requestUri, protocol);
-                    if ("prompt_only".equals(executionResult.generationMode())) {
-                        log.warn(
-                                "Scene image first-stage returned plan instead of image | model={}, uri={}, revisedPromptLength={}, visualSummaryLength={}, displayText={}, rawBody={}",
-                                candidateModel,
-                                requestUri,
-                                executionResult.revisedPrompt() == null ? 0 : executionResult.revisedPrompt().length(),
-                                executionResult.visualSummary() == null ? 0 : executionResult.visualSummary().length(),
-                                abbreviate(executionResult.displayText()),
-                                abbreviate(response.body())
-                        );
-                        SceneImageExecutionResult secondStageResult = executeSecondStageImageGeneration(executionResult, prompt);
-                        if (secondStageResult != null) {
-                            return secondStageResult;
-                        }
-                        throw new BusinessException(
-                                "场景图模型仅返回了场景方案文本，二次绘图也没有拿到图片结果",
-                                HttpStatus.BAD_GATEWAY,
-                                buildFailureDetails(attemptedModels, candidateModel, 200, "scene-image:" + protocol + ":prompt-only", requestUri)
-                        );
-                    }
-                    return executionResult;
-                } catch (BusinessException parseException) {
-                    boolean hasNextModel = attemptedModels.size() < modelsToTry.size();
-                    log.warn(
-                            "Scene image generation returned 200 but no usable content | model={}, uri={}, reason={}, hasNextModel={}, rawBody={}",
-                            candidateModel,
-                            requestUri,
-                            parseException.getMessage(),
-                            hasNextModel,
-                            abbreviate(response.body())
-                    );
-                    lastBusinessException = new BusinessException(
-                            appendAttemptedModels(parseException.getMessage(), attemptedModels, hasNextModel),
-                            parseException.getStatus(),
-                            buildFailureDetails(attemptedModels, candidateModel, 200, "scene-image:" + protocol + ":parse", requestUri)
-                    );
-                    if (!hasNextModel) {
-                        throw lastBusinessException;
-                    }
-                    continue;
-                }
-            }
-
-            String responseBody = response.body();
-            log.error("Scene image generation failed | protocol={}, model={}, uri={}, status={}, body={}",
-                    protocol,
-                    candidateModel,
-                    requestUri,
-                    response.statusCode(),
-                    abbreviate(responseBody));
-
-            boolean hasNextModel = attemptedModels.size() < modelsToTry.size();
-            lastBusinessException = new BusinessException(
-                    appendAttemptedModels(
-                            buildSceneImageFailureMessage(response.statusCode(), responseBody, candidateModel, requestUri),
-                            attemptedModels,
-                            hasNextModel
-                    ),
-                    mapUpstreamFailureStatus(response.statusCode(), responseBody),
-                    buildFailureDetails(attemptedModels, candidateModel, response.statusCode(), "scene-image:" + protocol, requestUri)
+        if ("prompt_only".equals(executionResult.generationMode())) {
+            log.warn(
+                    "Scene image first-stage returned plan instead of image | model={}, uri={}, revisedPromptLength={}, visualSummaryLength={}, displayText={}",
+                    executionResult.model(),
+                    executionResult.uri(),
+                    executionResult.revisedPrompt() == null ? 0 : executionResult.revisedPrompt().length(),
+                    executionResult.visualSummary() == null ? 0 : executionResult.visualSummary().length(),
+                    abbreviate(executionResult.displayText())
             );
-
-            if (!hasNextModel || !shouldTryNextSceneImageModel(response.statusCode(), responseBody)) {
-                throw lastBusinessException;
+            SceneImageExecutionResult secondStageResult = executeSecondStageImageGeneration(executionResult, prompt);
+            if (secondStageResult != null) {
+                return secondStageResult;
             }
+            throw new BusinessException(
+                    "Scene image planning returned text only, but second-stage image generation did not produce an image",
+                    HttpStatus.BAD_GATEWAY,
+                    buildFailureDetails(
+                            List.of(executionResult.model()),
+                            executionResult.model(),
+                            200,
+                            "scene-image:" + protocol + ":prompt-only",
+                            requestUri
+                    )
+            );
         }
 
-        throw lastBusinessException != null
-                ? lastBusinessException
-                : new BusinessException(
-                appendAttemptedModels("图片生成失败", attemptedModels, false),
-                HttpStatus.BAD_GATEWAY,
-                buildFailureDetails(attemptedModels, null, null, "scene-image:" + protocol, requestUri)
-        );
+        return executionResult;
     }
 
     private SceneImageExecutionResult executeSecondStageImageGeneration(SceneImageExecutionResult planningResult,
                                                                        String originalPrompt) throws Exception {
-        List<String> protocolsToTry = resolveSecondStageProtocolsToTry();
-        List<String> modelsToTry = resolveSecondStageImageModelsToTry();
-        List<String> attemptedModels = new ArrayList<>();
-        BusinessException lastBusinessException = null;
-
-        String drawingPrompt = buildSecondStageDrawingPrompt(
+        GeminiSceneImageGatewaySupport gatewaySupport = sceneImageGatewaySupport();
+        String drawingPrompt = promptSupport().buildSecondStageDrawingPrompt(
                 planningResult.revisedPrompt(),
                 planningResult.negativePrompt(),
                 originalPrompt
         );
+        GeminiSceneImageExecutor.SecondStageExecutionResult executionResult = sceneImageExecutor().executeSecondStage(
+                new GeminiSceneImageExecutor.SecondStageRequest(
+                        resolveSecondStageProtocolsToTry(),
+                        resolveSecondStageImageModelsToTry(),
+                        drawingPrompt,
+                        gatewaySupport::buildSecondStageSceneImageRequestUri,
+                        gatewaySupport.buildSecondStageAuthorizationHeaders(),
+                        this::buildSecondStageSceneImageRequestBody
+                )
+        );
 
-        for (String protocol : protocolsToTry) {
-            URI requestUri = buildSecondStageSceneImageRequestUri(protocol);
-            for (String candidateModel : modelsToTry) {
-                attemptedModels.add(protocol + ":" + candidateModel);
-                Map<String, Object> requestBody = buildSecondStageSceneImageRequestBody(candidateModel, drawingPrompt, protocol);
-                String requestBodyJson = objectMapper.writeValueAsString(requestBody);
-
-                HttpRequest httpRequest = HttpRequest.newBuilder()
-                        .uri(requestUri)
-                        .header("Content-Type", "application/json")
-                        .headers(buildSecondStageAuthorizationHeaders())
-                        .timeout(Duration.ofSeconds(120))
-                        .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
-                        .build();
-
-                log.info(
-                        "Calling second-stage image generation | provider={}, protocol={}, model={}, uri={}",
-                        resolveSceneImageProviderName(),
-                        protocol,
-                        candidateModel,
-                        requestUri
-                );
-
-                HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200) {
-                    try {
-                        GeneratedImagePayload payload = parseSceneImageResponse(response.body(), protocol);
-                        if (StringUtils.hasText(payload.imageBase64()) || StringUtils.hasText(payload.imageUrl())) {
-                            return new SceneImageExecutionResult(
-                                    resolveSceneImageProviderName(),
-                                    candidateModel,
-                                    requestUri,
-                                    payload.imageBase64(),
-                                    payload.imageUrl(),
-                                    StringUtils.hasText(payload.revisedPrompt()) ? payload.revisedPrompt() : planningResult.revisedPrompt(),
-                                    planningResult.visualSummary(),
-                                    planningResult.negativePrompt(),
-                                    "已自动串联第二绘图接口并生成真实场景图。",
-                                    "second_stage_image"
-                            );
-                        }
-                    } catch (BusinessException parseException) {
-                        log.warn(
-                                "Second-stage image generation returned no usable image | protocol={}, model={}, uri={}, reason={}, rawBody={}",
-                                protocol,
-                                candidateModel,
-                                requestUri,
-                                parseException.getMessage(),
-                                abbreviate(response.body())
-                        );
-                        lastBusinessException = parseException;
-                        continue;
-                    }
-                }
-
-                String responseBody = response.body();
-                log.warn(
-                        "Second-stage image generation failed | provider={}, protocol={}, model={}, uri={}, status={}, body={}",
-                        resolveSceneImageProviderName(),
-                        protocol,
-                        candidateModel,
-                        requestUri,
-                        response.statusCode(),
-                        abbreviate(responseBody)
-                );
-
-                boolean hasMoreCandidates = hasMoreSecondStageCandidates(protocolsToTry, modelsToTry, protocol, candidateModel);
-                lastBusinessException = new BusinessException(
-                        appendAttemptedModels(
-                                buildSecondStageSceneImageFailureMessage(response.statusCode(), responseBody, candidateModel, requestUri, protocol),
-                                attemptedModels,
-                                hasMoreCandidates
-                        ),
-                        mapUpstreamFailureStatus(response.statusCode(), responseBody),
-                        buildFailureDetails(attemptedModels, candidateModel, response.statusCode(), "second-stage:" + protocol, requestUri)
-                );
-            }
+        if (executionResult.imageResult() != null) {
+            GeminiSceneImageExecutor.SecondStageImageResult imageResult = executionResult.imageResult();
+            GeminiResponseParser.GeneratedImagePayloadData payload = imageResult.payload();
+            return new SceneImageExecutionResult(
+                    gatewaySupport.resolveSceneImageProviderName(),
+                    imageResult.model(),
+                    imageResult.uri(),
+                    payload.imageBase64(),
+                    payload.imageUrl(),
+                    StringUtils.hasText(payload.revisedPrompt()) ? payload.revisedPrompt() : planningResult.revisedPrompt(),
+                    planningResult.visualSummary(),
+                    planningResult.negativePrompt(),
+                    "Auto-generated via second-stage scene image endpoint",
+                    "second_stage_image"
+            );
         }
 
         log.warn(
                 "Second-stage image generation exhausted all models, returning prompt-only result | attemptedModels={}, fallbackMode={}",
-                String.join(",", attemptedModels),
+                String.join(",", executionResult.attemptedModels()),
                 planningResult.generationMode()
         );
-        if (lastBusinessException != null) {
-            log.warn("Second-stage final failure reason: {}", lastBusinessException.getMessage());
+        if (executionResult.lastBusinessException() != null) {
+            log.warn("Second-stage final failure reason: {}", executionResult.lastBusinessException().getMessage());
         }
         return null;
     }
 
     private GeminiProbeResponse executeProbe(String model, Map<String, Object> requestBody, String probeType) throws Exception {
+        GeminiOneApiRequestSupport requestSupport = oneApiRequestSupport();
         String requestBodyJson = objectMapper.writeValueAsString(requestBody);
-        URI requestUri = buildRequestUri();
+        URI requestUri = requestSupport.buildRequestUri();
 
         HttpRequest httpRequest = HttpRequest.newBuilder()
                 .uri(requestUri)
                 .header("Content-Type", "application/json")
-                .headers(buildAuthorizationHeaders())
+                .headers(requestSupport.buildAuthorizationHeaders())
                 .timeout(Duration.ofSeconds(60))
                 .POST(HttpRequest.BodyPublishers.ofString(requestBodyJson))
                 .build();
@@ -695,7 +538,7 @@ public class GeminiService {
             );
         }
 
-        String content = parseRawResponseText(response.body());
+        String content = responseParser().parseRawResponseText(response.body());
         return GeminiProbeResponse.builder()
                 .model(model)
                 .uri(requestUri.toString())
@@ -719,146 +562,19 @@ public class GeminiService {
     }
 
     private List<String> resolveImageModelsToTry() {
-        List<String> models = new ArrayList<>();
-        appendImageGenerationModel(models, imageModel);
-        appendImageGenerationModel(models, visionModel);
-        if (StringUtils.hasText(imageModels)) {
-            for (String candidate : imageModels.split(",")) {
-                appendImageGenerationModel(models, candidate);
-            }
-        }
-        if (StringUtils.hasText(visionModels)) {
-            for (String candidate : visionModels.split(",")) {
-                appendImageGenerationModel(models, candidate);
-            }
-        }
-        if (models.isEmpty()) {
-            models.add("gemini-3-pro-image-preview");
-        }
-        return models;
+        return sceneImageSupport().resolveImageModelsToTry();
     }
 
     private List<String> resolveSceneImageModelsToTry() {
-        List<String> models = new ArrayList<>();
-        appendSceneImageModel(models, sceneImageModel);
-        if (StringUtils.hasText(sceneImageModels)) {
-            for (String candidate : sceneImageModels.split(",")) {
-                appendSceneImageModel(models, candidate);
-            }
-        }
-        appendSceneImageModel(models, imageModel);
-        for (String candidate : resolveImageModelsToTry()) {
-            appendSceneImageModel(models, candidate);
-        }
-        if (models.isEmpty()) {
-            models.add("gemini-3-pro-image-preview");
-        }
-        return models;
+        return sceneImageSupport().resolveSceneImageModelsToTry();
     }
 
     private List<String> resolveSecondStageImageModelsToTry() {
-        List<String> models = new ArrayList<>();
-        appendSceneImageModel(models, sceneImageModel);
-        if (StringUtils.hasText(sceneImageModels)) {
-            for (String candidate : sceneImageModels.split(",")) {
-                appendSceneImageModel(models, candidate);
-            }
-        }
-        appendSceneImageModel(models, imageModel);
-        if (StringUtils.hasText(imageModels)) {
-            for (String candidate : imageModels.split(",")) {
-                appendSceneImageModel(models, candidate);
-            }
-        }
-        appendSceneImageModel(models, visionModel);
-        if (StringUtils.hasText(visionModels)) {
-            for (String candidate : visionModels.split(",")) {
-                appendSceneImageModel(models, candidate);
-            }
-        }
-        if (models.isEmpty()) {
-            models.add("gemini-3-pro-image-preview");
-        }
-        return models;
+        return sceneImageSupport().resolveSecondStageImageModelsToTry();
     }
 
     private List<String> resolveSecondStageProtocolsToTry() {
-        List<String> protocols = new ArrayList<>();
-        appendProtocol(protocols, resolveSceneImageProtocol());
-        appendProtocol(protocols, "images-generations");
-        appendProtocol(protocols, "chat-completions");
-        return protocols;
-    }
-
-    private void appendProtocol(List<String> protocols, String candidate) {
-        if (!StringUtils.hasText(candidate)) {
-            return;
-        }
-        if ("disabled".equals(candidate)) {
-            return;
-        }
-        if (!protocols.contains(candidate)) {
-            protocols.add(candidate);
-        }
-    }
-
-    private void appendAnyModel(List<String> models, String candidate) {
-        String normalized = candidate == null ? "" : candidate.trim();
-        if (!StringUtils.hasText(normalized)) {
-            return;
-        }
-        if (!models.contains(normalized)) {
-            models.add(normalized);
-        }
-    }
-
-    private void appendImageGenerationModel(List<String> models, String candidate) {
-        String normalized = candidate == null ? "" : candidate.trim();
-        if (!StringUtils.hasText(normalized)) {
-            return;
-        }
-        if (!isLikelyImageGenerationModel(normalized.toLowerCase())) {
-            return;
-        }
-        if (!models.contains(normalized)) {
-            models.add(normalized);
-        }
-    }
-
-    private void appendSceneImageModel(List<String> models, String candidate) {
-        String normalized = candidate == null ? "" : candidate.trim();
-        if (!StringUtils.hasText(normalized)) {
-            return;
-        }
-        if (!isSupportedSceneImageModel(normalized)) {
-            return;
-        }
-        if (!models.contains(normalized)) {
-            models.add(normalized);
-        }
-    }
-
-    private boolean isLikelyImageGenerationModel(String normalizedModelName) {
-        if (ONE_API_CHAT_IMAGE_MODELS.contains(normalizedModelName)) {
-            return true;
-        }
-        if (ONE_API_CHAT_IMAGE_UNSUPPORTED_MODELS.contains(normalizedModelName)) {
-            return false;
-        }
-        return normalizedModelName.contains("image")
-                || normalizedModelName.contains("imagen")
-                || normalizedModelName.contains("generate");
-    }
-
-    private boolean isSupportedSceneImageModel(String modelName) {
-        String normalized = modelName == null ? "" : modelName.trim().toLowerCase();
-        if (!StringUtils.hasText(normalized)) {
-            return false;
-        }
-        if (ONE_API_CHAT_IMAGE_UNSUPPORTED_MODELS.contains(normalized)) {
-            return false;
-        }
-        return isLikelyImageGenerationModel(normalized);
+        return sceneImageSupport().resolveSecondStageProtocolsToTry();
     }
 
     private List<String> resolveVisionPayloadFormatsToTry() {
@@ -902,39 +618,15 @@ public class GeminiService {
     }
 
     private boolean shouldTryNextVisionModel(int statusCode, String responseBody) {
-        String body = responseBody == null ? "" : responseBody.toLowerCase();
-        if (statusCode == 401) {
-            return false;
-        }
-        return statusCode == 400
-                || statusCode == 404
-                || statusCode == 429
-                || statusCode >= 500
-                || body.contains("unsupported")
-                || body.contains("invalid model")
-                || body.contains("model_not_found")
-                || body.contains("no available channel")
-                || body.contains("upstream")
-                || body.contains("bad gateway")
-                || body.contains("internal server error");
+        return fallbackSupport().shouldTryNextVisionModel(statusCode, responseBody);
     }
 
     private boolean shouldTryNextSceneImageModel(int statusCode, String responseBody) {
-        String body = responseBody == null ? "" : responseBody.toLowerCase();
-        if (body.contains("no candidates returned")) {
-            return false;
-        }
-        return shouldTryNextVisionModel(statusCode, responseBody);
+        return fallbackSupport().shouldTryNextSceneImageModel(statusCode, responseBody);
     }
 
     private String appendAttemptedModels(String message, List<String> attemptedModels, boolean hasNextModel) {
-        if (attemptedModels == null || attemptedModels.isEmpty()) {
-            return message;
-        }
-        if (hasNextModel) {
-            return message;
-        }
-        return message + " | attemptedModels=" + String.join(",", attemptedModels);
+        return fallbackSupport().appendAttemptedModels(message, attemptedModels, hasNextModel);
     }
 
     private GeminiFailureDetails buildFailureDetails(List<String> attemptedModels,
@@ -942,718 +634,33 @@ public class GeminiService {
                                                      Integer lastStatus,
                                                      String lastPayloadFormat,
                                                      URI requestUri) {
-        return GeminiFailureDetails.builder()
-                .attemptedModels(attemptedModels == null ? List.of() : List.copyOf(attemptedModels))
-                .lastModel(lastModel)
-                .lastStatus(lastStatus)
-                .lastPayloadFormat(lastPayloadFormat)
-                .uri(requestUri == null ? null : requestUri.toString())
-                .build();
-    }
-
-    private Map<String, Object> buildTextProbeRequestBody(String prompt) {
-        Map<String, Object> message = new LinkedHashMap<>();
-        message.put("role", "user");
-        message.put("content", prompt);
-
-        Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("model", textModel.trim());
-        requestBody.put("messages", List.of(message));
-        requestBody.put("temperature", temperature);
-        requestBody.put("max_tokens", Math.min(maxTokens, 200));
-        return requestBody;
-    }
-
-    private Map<String, Object> buildImageGenerationRequestBody(String modelName, String prompt) {
-        Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("model", modelName.trim());
-        requestBody.put("prompt", prompt);
-        requestBody.put("response_format", "b64_json");
-        return requestBody;
+        return fallbackSupport().buildFailureDetails(
+                attemptedModels == null ? List.of() : List.copyOf(attemptedModels),
+                lastModel,
+                lastStatus,
+                lastPayloadFormat,
+                requestUri
+        );
     }
 
     private Map<String, Object> buildSceneImageGenerationRequestBody(String modelName, String prompt) {
-        if ("images-generations".equals(resolveSceneImageProtocol())) {
-            return buildSceneImageImagesRequestBody(modelName, prompt);
-        }
-        return buildSceneImageChatRequestBody(modelName, prompt);
+        return sceneImageSupport().buildSceneImageGenerationRequestBody(modelName, prompt);
     }
 
     private Map<String, Object> buildSceneImageImagesRequestBody(String modelName, String prompt) {
-        Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("model", modelName.trim());
-        requestBody.put("prompt", prompt);
-        requestBody.put("response_format", StringUtils.hasText(sceneImageResponseFormat) ? sceneImageResponseFormat.trim() : "b64_json");
-        requestBody.put("n", Math.max(sceneImageCount, 1));
-        if (StringUtils.hasText(sceneImageSize)) {
-            requestBody.put("size", sceneImageSize.trim());
-        }
-        return requestBody;
+        return sceneImageSupport().buildSceneImageImagesRequestBody(modelName, prompt);
     }
 
     private Map<String, Object> buildSceneImageChatRequestBody(String modelName, String prompt) {
-        Map<String, Object> message = new LinkedHashMap<>();
-        message.put("role", "user");
-        message.put("content", prompt);
-
-        Map<String, Object> generationConfig = new LinkedHashMap<>();
-        generationConfig.put("responseModalities", List.of("TEXT", "IMAGE"));
-
-        Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("model", modelName.trim());
-        requestBody.put("messages", List.of(message));
-        requestBody.put("generationConfig", generationConfig);
-        requestBody.put("modalities", List.of("text", "image"));
-        requestBody.put("temperature", temperature);
-        requestBody.put("max_tokens", Math.max(2000, sceneImageChatMaxTokens));
-        return requestBody;
+        return sceneImageSupport().buildSceneImageChatRequestBody(modelName, prompt);
     }
 
     private Map<String, Object> buildSecondStageSceneImageRequestBody(String modelName, String prompt, String protocol) {
-        if ("images-generations".equals(protocol)) {
-            return buildSceneImageImagesRequestBody(modelName, prompt);
-        }
-        return buildSceneImageChatRequestBody(modelName, prompt);
-    }
-
-    private Map<String, Object> buildVisionProbeRequestBody(String imageBase64, String mimeType, String prompt) {
-        return buildVisionRequestBody(
-                imageBase64,
-                mimeType,
-                prompt,
-                Math.min(maxTokens, 300),
-                visionModel,
-                resolveVisionPayloadFormatsToTry().get(0)
-        );
-    }
-
-    private Map<String, Object> buildVisionRequestBody(String imageBase64,
-                                                       String mimeType,
-                                                       String prompt,
-                                                       int tokenLimit,
-                                                       String modelName) {
-        return buildVisionRequestBody(
-                imageBase64,
-                mimeType,
-                prompt,
-                tokenLimit,
-                modelName,
-                resolveVisionPayloadFormatsToTry().get(0)
-        );
-    }
-
-    private Map<String, Object> buildVisionRequestBody(String imageBase64,
-                                                       String mimeType,
-                                                       String prompt,
-                                                       int tokenLimit,
-                                                       String modelName,
-                                                       String payloadFormat) {
-        String dataUrl = "data:" + mimeType + ";base64," + imageBase64;
-
-        Map<String, Object> textPart = new LinkedHashMap<>();
-        textPart.put("type", "text");
-        textPart.put("text", prompt);
-
-        Map<String, Object> imagePart = new LinkedHashMap<>();
-        imagePart.put("type", "image_url");
-        if ("openai-image-url-string".equalsIgnoreCase(payloadFormat)) {
-            imagePart.put("image_url", dataUrl);
-        } else {
-            imagePart.put("image_url", Map.of("url", dataUrl));
-        }
-
-        Map<String, Object> message = new LinkedHashMap<>();
-        message.put("role", "user");
-        message.put("content", List.of(textPart, imagePart));
-
-        Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("model", modelName.trim());
-        requestBody.put("messages", List.of(message));
-        requestBody.put("temperature", temperature);
-        requestBody.put("max_tokens", tokenLimit);
-        return requestBody;
-    }
-
-    private Map<String, Object> buildRequestBody(String imageBase64, String mimeType, String prompt) {
-        return buildVisionRequestBody(
-                imageBase64,
-                mimeType,
-                buildEnhancedPrompt(prompt),
-                maxTokens,
-                visionModel,
-                resolveVisionPayloadFormatsToTry().get(0)
-        );
-    }
-
-    private String buildPrompt(String userPrompt) {
-        String safePrompt = StringUtils.hasText(userPrompt)
-                ? userPrompt.trim()
-                : "请结合传统面相学的文化表达方式，先描述可见五官特征，再给出娱乐性的文化解读和一份报告。";
-
-        return """
-                你是一个“传统面相学文化说明”助手。
-                你只能根据图片中可见的五官与脸部轮廓，输出文化娱乐性的说明报告。
-                你不能进行身份识别，严禁猜测具体人物姓名、背景或与任何数据库做比对。
-                你不能断言此人的真实性格、命运、财富、婚恋结果、智力、信用、健康、精神状态或其他敏感属性。
-                你可以介绍“在传统面相学语境中，这类外貌常被怎样解读”，但必须明确这只是传统文化视角，不是事实判断。
-                如果图中没有清晰可见的人脸，请明确说明。
-                请严格输出 JSON，对象结构如下：
-                {
-                  "hasFace": true,
-                  "faceCount": 1,
-                  "visualSummary": "先总结图片中可见的人脸与五官特征",
-                  "observedFeatures": [
-                    {
-                      "region": "额头",
-                      "observation": "看到的客观外观特征",
-                      "clarity": "清晰/一般/不清晰"
-                    }
-                  ],
-                  "physiognomyReport": {
-                    "forehead": "介绍传统相学里对额头区域的常见文化说法，使用“常被视为/常被联想到”措辞",
-                    "eyesAndBrows": "介绍眉眼区域的传统文化说法",
-                    "nose": "介绍鼻部区域的传统文化说法",
-                    "mouthAndChin": "介绍口唇与下巴区域的传统文化说法",
-                    "overallImpression": "给出整体的文化风格总结，但不要断言事实或命运"
-                  },
-                  "imageQuality": "对清晰度、光线、角度的简短判断",
-                  "reportSummary": "输出一段完整总结，语气克制，强调仅供文化娱乐参考",
-                  "suggestions": ["拍摄建议1", "拍摄建议2"],
-                  "disclaimer": "本报告为基于可见外观生成的传统文化娱乐性说明，不构成对性格、命运、能力、健康或身份的事实判断。"
-                }
-
-                用户补充要求：
-                """ + safePrompt;
-    }
-
-    private String buildEnhancedPrompt(String userPrompt) {
-        String safePrompt = StringUtils.hasText(userPrompt)
-                ? userPrompt.trim()
-                : DEFAULT_FACE_CULTURAL_PROMPT;
-
-        return """
-                你是一个“传统面相学文化说明”助手。
-                你只能根据图片中可见的五官与脸部轮廓，输出文化娱乐性的说明报告。
-                你不能进行身份识别，严禁猜测具体人物姓名、背景，或与任何数据库做比对。
-                你不能断言此人的真实性格、命运、财富、婚恋结果、智力、信用、健康、精神状态或其他敏感属性。
-                你可以介绍“在传统面相学语境中，这类外貌常被怎样解读”，但必须明确这只是传统文化视角，不是事实判断。
-                如果图中没有清晰可见的人脸，请明确说明。
-                请严格输出 JSON，对象结构如下：
-                {
-                  "hasFace": true,
-                  "faceCount": 1,
-                  "visualSummary": "先总结图片中可见的面部特征与神态，为后续赏析铺垫",
-                  "observedFeatures": [
-                    {
-                      "region": "额头",
-                      "observation": "看到的客观外观特征",
-                      "clarity": "清晰/一般/不清晰"
-                    }
-                  ],
-                  "physiognomyReport": {
-                    "forehead": "聚焦额头与上庭的传统文化赏析",
-                    "eyesAndBrows": "聚焦眉眼与神采的传统文化赏析",
-                    "nose": "聚焦鼻梁、鼻头、颧势相关的传统文化赏析",
-                    "mouthAndChin": "聚焦口唇、下颏与收势的传统文化赏析",
-                    "overallImpression": "以古典相理语汇概括整体气韵与神姿，但不要断言事实或命运"
-                  },
-                  "imageQuality": "对清晰度、光线、角度的简短判断",
-                  "reportSummary": "请将用户要求的六个部分尽量完整落实在这里，采用古朴典雅、含蓄优美、带有东方神秘气韵的文风，约600字，并以“本分析为传统文化趣味赏析，仅供娱乐参考。”收尾",
-                  "suggestions": ["穿搭或妆容建议1", "气场提升建议2"],
-                  "disclaimer": "本报告为基于可见外观生成的传统文化娱乐性说明，不构成对性格、命运、能力、健康或身份的事实判断。"
-                }
-
-                用户补充要求：
-                %s
-                """.formatted(safePrompt);
-    }
-
-    private String buildYijingSceneImagePrompt(YijingSceneImageRequest request) {
-        String sceneCategory = resolveSceneCategory(request.getQuestion(), request.getInterpretation());
-        String sceneSuggestion = resolveSceneSuggestion(sceneCategory);
-        String originalName = resolveHexagramName(request.getOriginal());
-        String changedName = request.getChanged() == null ? "" : resolveHexagramName(request.getChanged());
-        String keywords = request.getOriginal() == null || request.getOriginal().getKeywords() == null
-                ? ""
-                : String.join("、", request.getOriginal().getKeywords());
-        String changingLines = request.getChangingLines() == null || request.getChangingLines().isEmpty()
-                ? "无明显动爻，整体气机偏稳。"
-                : "动爻为第 " + request.getChangingLines().stream().map(String::valueOf).reduce((a, b) -> a + "、" + b).orElse("") + " 爻，画面要带有局势流转、将变未变的张力。";
-
-        String changedClause = StringUtils.hasText(changedName)
-                ? "变卦参考：" + changedName + "，让画面在主体情绪与环境走势中体现从本卦向变卦过渡的感觉。"
-                : "没有变卦时，画面更强调当下处境本身的气场与停顿感。";
-
-        return """
-                你正在通过 YMAPI/One-API 的 OpenAI 兼容 chat.completions 接口工作。
-                请优先尝试直接返回一张适合“易经占卜结果页”的东方玄学场景图。
-                如果当前代理通道不能直接输出图片，请不要报错，也不要解释限制，改为严格输出一个 JSON 对象，供前端展示和后续二次绘图使用。
-
-                用户问题：%s
-                场景类别：%s
-                本卦：%s
-                卦意参考：%s
-                卦象意境：%s
-                关键词：%s
-                解读摘要：%s
-                简要提示：%s
-                %s
-                %s
-
-                画面要求：
-                1. 采用东方神秘美学，电影级光影，氛围浓郁，细节丰富。
-                2. 主体是与问题相关的当代场景人物或背影，处于“%s”这类真实处境中。
-                3. 场景可融入卦盘、铜钱、香雾、烛火、月色、流动光纹、八卦纹理等元素，但要克制自然，不要堆满道具。
-                4. 要体现求测者此刻的处境、心理张力与转机感，让人一眼看出这幅图与占卜结果高度相关。
-                5. 构图完整，适合手机端竖版展示，视觉中心明确。
-                6. 不要出现任何文字、水印、UI、边框、二维码、logo。
-                7. 不要低幼卡通，不要夸张宗教符号，不要惊悚恐怖，不要肢体畸形，不要多余手指。
-
-                风格建议：
-                %s
-
-                如果返回的是文本而不是图片，必须严格输出 JSON，不要使用 Markdown，不要输出额外说明，格式如下：
-                {
-                  "visual_summary": "用 2-3 句话概括这张画面的核心意境、人物处境和视觉焦点",
-                  "revised_prompt": "一段可以直接交给图像模型继续绘制的完整中文提示词",
-                  "negative_prompt": "需要规避的元素，使用中文短语，以逗号分隔",
-                  "display_text": "一句给前端用户看的说明，明确表示当前已生成场景方案，可继续用于绘图"
-                }
-                """.formatted(
-                normalizePromptText(request.getQuestion(), 100),
-                sceneCategory,
-                normalizePromptText(originalName, 40),
-                normalizePromptText(extractHexagramMeaning(request.getOriginal()), 180),
-                normalizePromptText(extractHexagramImage(request.getOriginal()), 160),
-                normalizePromptText(keywords, 80),
-                normalizePromptText(request.getInterpretation(), 360),
-                normalizePromptText(request.getInterpretationHint(), 120),
-                changingLines,
-                changedClause,
-                normalizePromptText(sceneSuggestion, 60),
-                normalizePromptText(resolveStyleSuggestion(sceneCategory), 180)
-        );
-    }
-
-    private Map<String, Object> parseResponse(String responseBody, String actualModel) throws Exception {
-        Map<String, Object> responseMap = objectMapper.readValue(responseBody, new TypeReference<Map<String, Object>>() {});
-        List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
-        if (choices == null || choices.isEmpty()) {
-            throw new BusinessException("Gemini 返回内容为空");
-        }
-
-        Map<String, Object> firstChoice = choices.get(0);
-        Map<String, Object> message = (Map<String, Object>) firstChoice.get("message");
-        if (message == null) {
-            throw new BusinessException("Gemini 返回内容格式错误");
-        }
-
-        String text = extractMessageText(message.get("content"));
-        if (!StringUtils.hasText(text)) {
-            throw new BusinessException("Gemini 返回内容为空");
-        }
-
-        Map<String, Object> parsedResult = tryParseJson(text);
-        parsedResult.put("provider", "gemini");
-        parsedResult.put("model", actualModel);
-        parsedResult.put("rawText", text);
-        return parsedResult;
-    }
-
-    private String parseRawResponseText(String responseBody) throws Exception {
-        Map<String, Object> responseMap = objectMapper.readValue(responseBody, new TypeReference<Map<String, Object>>() {});
-        List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
-        if (choices == null || choices.isEmpty()) {
-            throw new BusinessException("Gemini 返回内容为空");
-        }
-
-        Map<String, Object> firstChoice = choices.get(0);
-        Map<String, Object> message = (Map<String, Object>) firstChoice.get("message");
-        if (message == null) {
-            throw new BusinessException("Gemini 返回内容格式错误");
-        }
-
-        String text = extractMessageText(message.get("content"));
-        if (!StringUtils.hasText(text)) {
-            throw new BusinessException("Gemini 返回内容为空");
-        }
-        return text;
-    }
-
-    @SuppressWarnings("unchecked")
-    private SceneImageExecutionResult parseSceneImageChatResponse(String responseBody,
-                                                                  String actualModel,
-                                                                  URI requestUri) throws Exception {
-        Map<String, Object> responseMap = objectMapper.readValue(responseBody, new TypeReference<Map<String, Object>>() {});
-        List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
-        if (choices == null || choices.isEmpty()) {
-            throw new BusinessException("场景图通道未返回可用结果");
-        }
-
-        Map<String, Object> firstChoice = choices.get(0);
-        String finishReason = trimToNull(objectToString(firstChoice.get("finish_reason")));
-        Map<String, Object> message = firstChoice.get("message") instanceof Map<?, ?> map
-                ? (Map<String, Object>) map
-                : null;
-        if (message == null || message.isEmpty()) {
-            throw new BusinessException("场景图通道返回内容格式错误");
-        }
-
-        GeneratedImagePayload imagePayload = extractImagePayloadFromChatMessage(message);
-        String text = extractMessageText(message.get("content"));
-        SceneImagePlanPayload planPayload = StringUtils.hasText(text)
-                ? parseSceneImagePlanPayload(text)
-                : null;
-
-        log.info(
-                "Scene image chat response parsed | model={}, uri={}, finishReason={}, hasImagePayload={}, textLength={}, hasPlanPayload={}, contentType={}, rawBody={}",
-                actualModel,
-                requestUri,
-                finishReason,
-                imagePayload != null,
-                text == null ? 0 : text.length(),
-                planPayload != null,
-                message.get("content") == null ? "null" : message.get("content").getClass().getSimpleName(),
-                abbreviate(responseBody)
-        );
-
-        if (imagePayload != null) {
-            String revisedPrompt = StringUtils.hasText(imagePayload.revisedPrompt())
-                    ? imagePayload.revisedPrompt()
-                    : (planPayload == null ? null : planPayload.revisedPrompt());
-            String visualSummary = planPayload == null ? null : planPayload.visualSummary();
-            String negativePrompt = planPayload == null ? null : planPayload.negativePrompt();
-            String displayText = planPayload == null
-                    ? "已通过 YMAPI chat.completions 返回场景图。"
-                    : planPayload.displayText();
-
-            return new SceneImageExecutionResult(
-                    resolveSceneImageProviderName(),
-                    actualModel,
-                    requestUri,
-                    imagePayload.imageBase64(),
-                    imagePayload.imageUrl(),
-                    revisedPrompt,
-                    visualSummary,
-                    negativePrompt,
-                    displayText,
-                    "direct_image"
-            );
-        }
-
-        if (planPayload != null) {
-            return new SceneImageExecutionResult(
-                    resolveSceneImageProviderName(),
-                    actualModel,
-                    requestUri,
-                    null,
-                    null,
-                    planPayload.revisedPrompt(),
-                    planPayload.visualSummary(),
-                    planPayload.negativePrompt(),
-                    planPayload.displayText(),
-                    "prompt_only"
-            );
-        }
-
-        if (StringUtils.hasText(finishReason) && "max_tokens".equalsIgnoreCase(finishReason)) {
-            throw new BusinessException("当前 OneAPI 已返回 200，但输出在图片落地前被 max_tokens 截断了；请提高 SCENE_IMAGE_CHAT_MAX_TOKENS，建议至少 2000");
-        }
-
-        throw new BusinessException("当前 YMAPI 通道既没有返回图片，也没有返回可用的场景方案");
-    }
-
-    private SceneImagePlanPayload parseSceneImagePlanPayload(String rawText) {
-        String normalizedText = stripMarkdownCodeFence(rawText);
-        Map<String, Object> parsed = parseJsonObject(normalizedText);
-        if (parsed == null) {
-            parsed = extractStructuredJsonObject(normalizedText);
-        }
-
-        if (parsed == null || parsed.isEmpty()) {
-            String fallbackText = trimToNull(normalizedText);
-            return new SceneImagePlanPayload(
-                    fallbackText,
-                    fallbackText,
-                    null,
-                    "当前 YMAPI 通道未直接返回图片，已改为返回可继续绘图的场景方案。"
-            );
-        }
-
-        String visualSummary = trimToNull(firstNonBlank(
-                objectToString(parsed.get("visual_summary")),
-                objectToString(parsed.get("scene_summary")),
-                objectToString(parsed.get("summary"))
-        ));
-        String revisedPrompt = trimToNull(firstNonBlank(
-                objectToString(parsed.get("revised_prompt")),
-                objectToString(parsed.get("image_prompt")),
-                objectToString(parsed.get("prompt"))
-        ));
-        String negativePrompt = trimToNull(firstNonBlank(
-                objectToString(parsed.get("negative_prompt")),
-                objectToString(parsed.get("avoid")),
-                objectToString(parsed.get("negative"))
-        ));
-        String displayText = trimToNull(firstNonBlank(
-                objectToString(parsed.get("display_text")),
-                objectToString(parsed.get("message"))
-        ));
-
-        if (!StringUtils.hasText(visualSummary)) {
-            visualSummary = revisedPrompt;
-        }
-        if (!StringUtils.hasText(revisedPrompt)) {
-            revisedPrompt = visualSummary;
-        }
-        if (!StringUtils.hasText(displayText)) {
-            displayText = "当前 YMAPI 通道未直接返回图片，已改为返回可继续绘图的场景方案。";
-        }
-
-        return new SceneImagePlanPayload(
-                visualSummary,
-                revisedPrompt,
-                negativePrompt,
-                displayText
-        );
-    }
-
-    private GeneratedImagePayload parseSceneImageResponse(String responseBody, String protocol) throws Exception {
-        if ("images-generations".equals(protocol)) {
-            return parseImageGenerationResponse(responseBody);
-        }
-        return parseChatImageResponse(responseBody);
-    }
-
-    private SceneImageExecutionResult parseSceneImageResponseResult(String responseBody,
-                                                                    String actualModel,
-                                                                    URI requestUri,
-                                                                    String protocol) throws Exception {
-        if ("images-generations".equals(protocol)) {
-            GeneratedImagePayload payload = parseImageGenerationResponse(responseBody);
-            return new SceneImageExecutionResult(
-                    resolveSceneImageProviderName(),
-                    actualModel,
-                    requestUri,
-                    payload.imageBase64(),
-                    payload.imageUrl(),
-                    payload.revisedPrompt(),
-                    null,
-                    null,
-                    "已通过图片生成接口返回场景图。",
-                    "direct_image"
-            );
-        }
-        return parseSceneImageChatResponse(responseBody, actualModel, requestUri);
-    }
-
-    private GeneratedImagePayload parseImageGenerationResponse(String responseBody) throws Exception {
-        Map<String, Object> responseMap = objectMapper.readValue(responseBody, new TypeReference<Map<String, Object>>() {});
-        List<Map<String, Object>> data = (List<Map<String, Object>>) responseMap.get("data");
-        if (data == null || data.isEmpty()) {
-            throw new BusinessException("Gemini 返回图片内容为空");
-        }
-
-        Map<String, Object> firstData = data.get(0);
-        String imageBase64 = objectToString(firstData.get("b64_json"));
-        String imageUrl = objectToString(firstData.get("url"));
-        String revisedPrompt = objectToString(firstData.get("revised_prompt"));
-
-        if (!StringUtils.hasText(imageBase64) && !StringUtils.hasText(imageUrl)) {
-            throw new BusinessException("Gemini 返回图片内容为空");
-        }
-
-        return new GeneratedImagePayload(
-                sanitizeBase64(imageBase64),
-                StringUtils.hasText(imageUrl) ? imageUrl.trim() : null,
-                StringUtils.hasText(revisedPrompt) ? revisedPrompt.trim() : null
-        );
-    }
-
-    @SuppressWarnings("unchecked")
-    private GeneratedImagePayload parseChatImageResponse(String responseBody) throws Exception {
-        Map<String, Object> responseMap = objectMapper.readValue(responseBody, new TypeReference<Map<String, Object>>() {});
-        List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
-        if (choices == null || choices.isEmpty()) {
-            throw new BusinessException("聊天协议未返回可用结果");
-        }
-
-        Map<String, Object> firstChoice = choices.get(0);
-        Map<String, Object> message = firstChoice.get("message") instanceof Map<?, ?> map
-                ? (Map<String, Object>) map
-                : null;
-        if (message == null || message.isEmpty()) {
-            throw new BusinessException("聊天协议返回内容格式错误");
-        }
-
-        GeneratedImagePayload payload = extractImagePayloadFromChatMessage(message);
-        if (payload != null) {
-            return payload;
-        }
-
-        String text = extractMessageText(message.get("content"));
-        if (StringUtils.hasText(text)) {
-            throw new BusinessException("当前 OneAPI /chat/completions 只返回了文本，没有图片内容；请检查 OneAPI 是否已按文档为该模型注入 generationConfig.responseModalities，并正确把 inlineData 转成 image_url");
-        }
-
-        throw new BusinessException("当前 OneAPI /chat/completions 返回为空，未携带任何图片内容；请检查 OneAPI 网关是否正确透传 Gemini 图片响应");
-    }
-
-    @SuppressWarnings("unchecked")
-    private GeneratedImagePayload extractImagePayloadFromChatMessage(Map<String, Object> message) {
-        String directImageBase64 = sanitizeBase64(objectToString(message.get("b64_json")));
-        String directImageUrl = normalizeImageUrl(objectToString(message.get("image_url")));
-        String directRevisedPrompt = trimToNull(objectToString(message.get("revised_prompt")));
-        if (StringUtils.hasText(directImageBase64) || StringUtils.hasText(directImageUrl)) {
-            return new GeneratedImagePayload(directImageBase64, directImageUrl, directRevisedPrompt);
-        }
-
-        Object images = message.get("images");
-        if (images instanceof List<?> list) {
-            for (Object item : list) {
-                GeneratedImagePayload payload = extractImagePayloadFromUnknownItem(item);
-                if (payload != null) {
-                    return payload;
-                }
-            }
-        }
-
-        Object content = message.get("content");
-        if (content instanceof List<?> list) {
-            return extractImagePayloadFromContentItems(list);
-        }
-        if (content instanceof Map<?, ?> contentMap) {
-            Object parts = contentMap.get("parts");
-            if (parts instanceof List<?> list) {
-                return extractImagePayloadFromContentItems(list);
-            }
-        }
-
-        return null;
-    }
-
-    private GeneratedImagePayload extractImagePayloadFromContentItems(List<?> items) {
-        String revisedPrompt = null;
-        for (Object item : items) {
-            if (item instanceof Map<?, ?> map) {
-                String type = objectToString(map.get("type")).trim().toLowerCase();
-                if (!StringUtils.hasText(revisedPrompt) && ("text".equals(type) || "output_text".equals(type))) {
-                    revisedPrompt = trimToNull(objectToString(map.get("text")));
-                }
-            }
-            GeneratedImagePayload payload = extractImagePayloadFromUnknownItem(item);
-            if (payload != null) {
-                return new GeneratedImagePayload(
-                        payload.imageBase64(),
-                        payload.imageUrl(),
-                        payload.revisedPrompt() != null ? payload.revisedPrompt() : revisedPrompt
-                );
-            }
-        }
-        return null;
-    }
-
-    @SuppressWarnings("unchecked")
-    private GeneratedImagePayload extractImagePayloadFromUnknownItem(Object item) {
-        if (item == null) {
-            return null;
-        }
-        if (item instanceof String text) {
-            String normalizedText = text.trim();
-            if (normalizedText.startsWith("data:image/")) {
-                return new GeneratedImagePayload(extractBase64FromDataUrl(normalizedText), normalizedText, null);
-            }
-            if (normalizedText.startsWith("http://") || normalizedText.startsWith("https://")) {
-                return new GeneratedImagePayload(null, normalizedText, null);
-            }
-            return null;
-        }
-        if (!(item instanceof Map<?, ?> rawMap)) {
-            return null;
-        }
-
-        Map<String, Object> map = (Map<String, Object>) rawMap;
-        String imageBase64 = sanitizeBase64(objectToString(map.get("b64_json")));
-        if (!StringUtils.hasText(imageBase64)) {
-            imageBase64 = sanitizeBase64(objectToString(map.get("image_base64")));
-        }
-        if (!StringUtils.hasText(imageBase64)) {
-            Object inlineData = map.get("inline_data");
-            if (inlineData instanceof Map<?, ?> inlineMap) {
-                imageBase64 = sanitizeBase64(objectToString(inlineMap.get("data")));
-            }
-        }
-        if (!StringUtils.hasText(imageBase64)) {
-            Object inlineData = map.get("inlineData");
-            if (inlineData instanceof Map<?, ?> inlineMap) {
-                imageBase64 = sanitizeBase64(objectToString(inlineMap.get("data")));
-            }
-        }
-
-        String imageUrl = normalizeImageUrl(objectToString(map.get("url")));
-        if (!StringUtils.hasText(imageUrl)) {
-            Object imageUrlValue = map.get("image_url");
-            if (imageUrlValue instanceof Map<?, ?> imageUrlMap) {
-                imageUrl = normalizeImageUrl(objectToString(imageUrlMap.get("url")));
-            } else {
-                imageUrl = normalizeImageUrl(objectToString(imageUrlValue));
-            }
-        }
-
-        if (!StringUtils.hasText(imageBase64) && !StringUtils.hasText(imageUrl)) {
-            return null;
-        }
-
-        String revisedPrompt = trimToNull(objectToString(map.get("revised_prompt")));
-        return new GeneratedImagePayload(imageBase64, imageUrl, revisedPrompt);
-    }
-
-    private String extractMessageText(Object contentObj) {
-        if (contentObj == null) {
-            return "";
-        }
-        if (contentObj instanceof String content) {
-            return content.trim();
-        }
-        if (contentObj instanceof List<?> items) {
-            StringBuilder builder = new StringBuilder();
-            for (Object item : items) {
-                if (item instanceof Map<?, ?> map) {
-                    Object text = map.get("text");
-                    if (text != null) {
-                        if (!builder.isEmpty()) {
-                            builder.append('\n');
-                        }
-                        builder.append(text);
-                    }
-                }
-            }
-            return builder.toString().trim();
-        }
-        if (contentObj instanceof Map<?, ?> map) {
-            Object parts = map.get("parts");
-            if (parts instanceof List<?> items) {
-                return extractMessageText(items);
-            }
-        }
-        return String.valueOf(contentObj).trim();
+        return sceneImageSupport().buildSecondStageSceneImageRequestBody(modelName, prompt, protocol);
     }
 
     private String buildFailureMessage(int statusCode, String responseBody, String targetModel, URI requestUri) {
-        String body = responseBody == null ? "" : responseBody.toLowerCase();
-        if (body.contains("invalid url")) {
-            return "One-API base URL 配置无效（model=" + targetModel + ", uri=" + requestUri + "），请检查 ONE_API_BASE_URL";
-        }
-        if (body.contains("invalid token") || body.contains("无效的令牌") || statusCode == 401) {
-            return "One-API key 无效或已过期，请检查 ONE_API_KEY";
-        }
-        if (statusCode == 429) {
-            return "One-API 触发限流（model=" + targetModel + "），请稍后重试";
-        }
-        if (statusCode >= 500) {
-            return "One-API / Gemini 上游服务暂时异常（model=" + targetModel + ", HTTP " + statusCode + "），请稍后重试";
-        }
-        return "Gemini 服务调用失败（model=" + targetModel + ", HTTP " + statusCode + "）";
+        return fallbackSupport().buildFailureMessage(statusCode, responseBody, targetModel, requestUri);
     }
 
     private String buildSecondStageSceneImageFailureMessage(int statusCode,
@@ -1661,435 +668,31 @@ public class GeminiService {
                                                             String targetModel,
                                                             URI requestUri,
                                                             String protocol) {
-        String body = responseBody == null ? "" : responseBody.toLowerCase();
-        if (body.contains("invalid url")) {
-            return "第二绘图接口 base URL 配置无效（protocol=" + protocol + ", model=" + targetModel + ", uri=" + requestUri + "），请检查 SCENE_IMAGE_API_BASE_URL";
-        }
-        if (body.contains("invalid token") || body.contains("无效的令牌") || statusCode == 401) {
-            return "第二绘图接口 key 无效或已过期，请检查 SCENE_IMAGE_API_KEY";
-        }
-        if (body.contains("model_not_found") || body.contains("model not found")) {
-            return "第二绘图接口模型不存在（protocol=" + protocol + ", model=" + targetModel + "）";
-        }
-        if (body.contains("no candidates returned")) {
-            return "第二绘图接口没有返回可用图片结果（protocol=" + protocol + ", model=" + targetModel + "）";
-        }
-        if (statusCode == 429) {
-            return "第二绘图接口触发限流，请稍后重试";
-        }
-        if (statusCode >= 500) {
-            return "第二绘图接口上游服务暂时异常（protocol=" + protocol + ", model=" + targetModel + ", HTTP " + statusCode + "）";
-        }
-        return "第二绘图接口调用失败（protocol=" + protocol + ", model=" + targetModel + ", HTTP " + statusCode + "）";
+        return fallbackSupport().buildSecondStageSceneImageFailureMessage(
+                statusCode,
+                responseBody,
+                targetModel,
+                requestUri,
+                protocol
+        );
     }
 
     private String buildSceneImageFailureMessage(int statusCode, String responseBody, String targetModel, URI requestUri) {
-        String body = responseBody == null ? "" : responseBody.toLowerCase();
-        if (body.contains("invalid url")) {
-            return "YMAPI/One-API base URL 配置无效（model=" + targetModel + ", uri=" + requestUri + "），请检查 ONE_API_BASE_URL";
-        }
-        if (body.contains("invalid token") || body.contains("无效的令牌") || statusCode == 401) {
-            return "YMAPI/One-API key 无效或已过期，请检查 ONE_API_KEY";
-        }
-        if (body.contains("model_not_found") || body.contains("model not found")) {
-            return "场景图模型不存在，请检查 SCENE_IMAGE_MODEL 或 ONE_API_GEMINI_MODEL 是否为该 YMAPI 通道支持的 chat/completions 模型别名";
-        }
-        if (body.contains("no candidates returned")) {
-            return "当前 YMAPI 通道没有返回图片或场景方案，请检查所选模型是否支持通过 chat/completions 输出图像内容";
-        }
-        if (statusCode == 429) {
-            return "场景图通道触发限流，请稍后重试";
-        }
-        if (statusCode >= 500) {
-            return "场景图上游服务暂时异常（model=" + targetModel + ", HTTP " + statusCode + "），请稍后重试";
-        }
-        return "场景图生成失败（model=" + targetModel + ", HTTP " + statusCode + "）";
+        return fallbackSupport().buildSceneImageFailureMessage(statusCode, responseBody, targetModel, requestUri);
     }
-
-    private String resolveSceneImageProviderName() {
-        return StringUtils.hasText(sceneImageProvider) ? sceneImageProvider.trim() : "one-api-chat-completions";
-    }
-
-    private boolean isGoogleSceneImageProvider() {
-        String normalized = resolveSceneImageProviderName().trim().toLowerCase();
-        return "google-openai-compatible".equals(normalized)
-                || "google-openai".equals(normalized)
-                || "google-gemini".equals(normalized)
-                || "google".equals(normalized);
-    }
-
-    private String resolveSceneImageApiKey() {
-        if (StringUtils.hasText(sceneImageApiKey)) {
-            return sceneImageApiKey.trim();
-        }
-        if (StringUtils.hasText(apiKey)) {
-            return apiKey.trim();
-        }
-        return "";
-    }
-
-    private void validateGoogleOfficialSceneImageConfiguration() {
-        if (!StringUtils.hasText(sceneImageApiKey)) {
-            throw new BusinessException("Google 图片生成 API Key 未配置，请先设置 SCENE_IMAGE_API_KEY");
-        }
-        if (sceneImageApiKey.trim().startsWith("sk-")) {
-            throw new BusinessException("当前已切换为 Google 官方图片模型，但你提供的是 sk- 开头的 One-API token。Google 官方图片模型需要 Google Gemini API Key，不能继续使用这把 sk key。");
-        }
-        if (resolveSceneImageModelsToTry().isEmpty()) {
-            throw new BusinessException("Google 图片生成模型未配置，请先设置 SCENE_IMAGE_MODEL");
-        }
-    }
-
-    private String resolveSceneImageApiBaseUrl() {
-        if (StringUtils.hasText(sceneImageApiBaseUrl)) {
-            return sceneImageApiBaseUrl.trim();
-        }
-        if (isGoogleSceneImageProvider()) {
-            return "https://generativelanguage.googleapis.com/v1beta/openai";
-        }
-        return "";
-    }
-
-    private String normalizeSceneImageBaseUrl(String baseUrl, String protocol) {
-        String normalized = baseUrl == null ? "" : baseUrl.trim();
-        while (normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        if ("images-generations".equals(protocol) && normalized.endsWith("/images/generations")) {
-            normalized = normalized.substring(0, normalized.length() - "/images/generations".length());
-        }
-        if ("chat-completions".equals(protocol) && normalized.endsWith("/chat/completions")) {
-            normalized = normalized.substring(0, normalized.length() - "/chat/completions".length());
-        }
-        if (normalized.contains("generativelanguage.googleapis.com")) {
-            if (normalized.endsWith("/v1beta/openai")) {
-                return normalized;
-            }
-            if (normalized.endsWith("/openai")) {
-                return normalized;
-            }
-            if (normalized.endsWith("/v1beta")) {
-                return normalized + "/openai";
-            }
-            return normalized + "/v1beta/openai";
-        }
-        return normalizeBaseUrl(normalized);
-    }
-
-    private String resolveSceneImageProtocol() {
-        String normalized = sceneImageProtocol == null ? "" : sceneImageProtocol.trim().toLowerCase();
-        if ("disabled".equals(normalized) || "none".equals(normalized) || "doc-only".equals(normalized)) {
-            return "disabled";
-        }
-        if ("images".equals(normalized)
-                || "images.generate".equals(normalized)
-                || "images/generations".equals(normalized)
-                || "images-generations".equals(normalized)) {
-            return "images-generations";
-        }
-        return "chat-completions";
-    }
-
     private HttpStatus mapUpstreamFailureStatus(int statusCode, String responseBody) {
-        String body = responseBody == null ? "" : responseBody.toLowerCase();
-        if (body.contains("invalid token") || statusCode == 401) {
-            return HttpStatus.UNAUTHORIZED;
-        }
-        if (statusCode == 429) {
-            return HttpStatus.TOO_MANY_REQUESTS;
-        }
-        if (statusCode >= 500) {
-            return HttpStatus.BAD_GATEWAY;
-        }
-        return HttpStatus.BAD_REQUEST;
-    }
-
-    private Map<String, Object> tryParseJson(String text) {
-        String normalizedText = stripMarkdownCodeFence(text);
-        Map<String, Object> direct = parseJsonObject(normalizedText);
-        if (direct != null) {
-            return direct;
-        }
-
-        Map<String, Object> extracted = extractStructuredJsonObject(normalizedText);
-        if (extracted != null) {
-            return extracted;
-        }
-
-        log.warn("Gemini returned non-JSON content, using text fallback");
-        Map<String, Object> fallback = new LinkedHashMap<>();
-        fallback.put("hasFace", null);
-        fallback.put("faceCount", null);
-        fallback.put("visualSummary", normalizedText);
-        fallback.put("observedFeatures", List.of());
-        fallback.put("physiognomyReport", Map.of(
-                "forehead", "",
-                "eyesAndBrows", "",
-                "nose", "",
-                "mouthAndChin", "",
-                "overallImpression", ""
-        ));
-        fallback.put("imageQuality", "");
-        fallback.put("reportSummary", normalizedText);
-        fallback.put("suggestions", List.of());
-        fallback.put("disclaimer", "结果为文本回退模式，仅供文化娱乐参考，不包含身份识别，也不构成事实判断。");
-        return fallback;
-    }
-
-    private Map<String, Object> parseJsonObject(String text) {
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-        try {
-            return objectMapper.readValue(text, new TypeReference<Map<String, Object>>() {});
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private Map<String, Object> extractStructuredJsonObject(String text) {
-        List<String> candidates = extractJsonObjectCandidates(text);
-        Map<String, Object> best = null;
-        int bestScore = -1;
-
-        for (String candidate : candidates) {
-            Map<String, Object> parsed = parseJsonObject(candidate);
-            if (parsed == null || parsed.isEmpty()) {
-                continue;
-            }
-            int score = scoreFaceAnalysisPayload(parsed);
-            if (score > bestScore) {
-                best = parsed;
-                bestScore = score;
-            }
-        }
-
-        return bestScore > 0 ? best : null;
-    }
-
-    private List<String> extractJsonObjectCandidates(String text) {
-        if (!StringUtils.hasText(text)) {
-            return List.of();
-        }
-
-        List<String> candidates = new ArrayList<>();
-        boolean inString = false;
-        boolean escaped = false;
-        int depth = 0;
-        int startIndex = -1;
-
-        for (int index = 0; index < text.length(); index++) {
-            char current = text.charAt(index);
-
-            if (escaped) {
-                escaped = false;
-                continue;
-            }
-
-            if (current == '\\') {
-                escaped = true;
-                continue;
-            }
-
-            if (current == '"') {
-                inString = !inString;
-                continue;
-            }
-
-            if (inString) {
-                continue;
-            }
-
-            if (current == '{') {
-                if (depth == 0) {
-                    startIndex = index;
-                }
-                depth++;
-                continue;
-            }
-
-            if (current == '}') {
-                if (depth <= 0) {
-                    continue;
-                }
-                depth--;
-                if (depth == 0 && startIndex >= 0) {
-                    candidates.add(text.substring(startIndex, index + 1));
-                    startIndex = -1;
-                }
-            }
-        }
-
-        return candidates;
-    }
-
-    private int scoreFaceAnalysisPayload(Map<String, Object> payload) {
-        int score = 0;
-        if (payload.containsKey("hasFace")) score += 3;
-        if (payload.containsKey("faceCount")) score += 2;
-        if (payload.containsKey("visualSummary")) score += 4;
-        if (payload.containsKey("observedFeatures")) score += 4;
-        if (payload.containsKey("physiognomyReport")) score += 4;
-        if (payload.containsKey("imageQuality")) score += 2;
-        if (payload.containsKey("reportSummary")) score += 4;
-        if (payload.containsKey("suggestions")) score += 2;
-        if (payload.containsKey("disclaimer")) score += 2;
-        return score;
-    }
-
-    private String stripMarkdownCodeFence(String text) {
-        String stripped = text == null ? "" : text.trim();
-        if (!stripped.startsWith("```")) {
-            return stripped;
-        }
-
-        List<String> lines = stripped.lines().toList();
-        if (lines.size() >= 2 && lines.get(lines.size() - 1).trim().startsWith("```")) {
-            return String.join("\n", lines.subList(1, lines.size() - 1)).trim();
-        }
-        return stripped;
-    }
-
-    private String resolveSceneCategory(String question, String interpretation) {
-        String normalized = (objectToString(question) + " " + objectToString(interpretation)).toLowerCase();
-        if (normalized.contains("财") || normalized.contains("钱") || normalized.contains("投资") || normalized.contains("生意")) {
-            return "财运机遇";
-        }
-        if (normalized.contains("事业") || normalized.contains("工作") || normalized.contains("升职") || normalized.contains("求职") || normalized.contains("职场")) {
-            return "事业抉择";
-        }
-        if (normalized.contains("感情") || normalized.contains("恋爱") || normalized.contains("婚姻") || normalized.contains("复合") || normalized.contains("暧昧")) {
-            return "感情关系";
-        }
-        if (normalized.contains("考试") || normalized.contains("学习") || normalized.contains("学业") || normalized.contains("读书")) {
-            return "学业前路";
-        }
-        if (normalized.contains("健康") || normalized.contains("身体") || normalized.contains("病") || normalized.contains("恢复")) {
-            return "身心调养";
-        }
-        if (normalized.contains("出行") || normalized.contains("旅行") || normalized.contains("远行") || normalized.contains("搬家")) {
-            return "出行变动";
-        }
-        return "人生处境";
-    }
-
-    private String resolveSceneSuggestion(String sceneCategory) {
-        return switch (sceneCategory) {
-            case "财运机遇" -> "账册、商铺、夜色城市与微亮金光交织，表现机会与风险并存";
-            case "事业抉择" -> "办公室、会议室、楼宇天台或深夜案头，表现压力、选择与上升势能";
-            case "感情关系" -> "雨夜街头、窗边双人剪影或留白中的单人凝望，表现靠近与犹疑";
-            case "学业前路" -> "书桌、灯火、纸笔与清晨微光，表现专注、等待结果与突破";
-            case "身心调养" -> "晨雾、山石、静室、茶烟与柔和天光，表现恢复、沉淀与修整";
-            case "出行变动" -> "车站、长路、桥梁、风起云动的远景，表现行程与命运转折";
-            default -> "处在人生十字路口的当代人物，周遭环境映照内心变化与命运流向";
-        };
-    }
-
-    private String resolveStyleSuggestion(String sceneCategory) {
-        return switch (sceneCategory) {
-            case "财运机遇" -> "中式电影感写实插画，冷暖金青对比，细节精致，带流动财气与卦象微光";
-            case "事业抉择" -> "现代东方电影感，城市夜景与室内光影交错，克制而有压迫感";
-            case "感情关系" -> "诗意写实风，氤氲雾气与柔和侧光，情绪含蓄但张力明显";
-            case "学业前路" -> "安静、清透、带一点灵光降临的东方氛围，纸页与灯火细节明确";
-            case "身心调养" -> "东方疗愈感美学，空气通透，柔光、山水、香雾与静定气场";
-            case "出行变动" -> "电影分镜感，远景开阔，风与路的方向感强，玄学光纹隐约浮现";
-            default -> "东方神秘现实主义，古意与当代场景融合，色调克制、空灵且有命运感";
-        };
-    }
-
-    private String resolveHexagramName(YijingSceneImageRequest.HexagramSnapshot hexagram) {
-        if (hexagram == null) {
-            return "未知卦象";
-        }
-        String chinese = objectToString(hexagram.getChinese());
-        String name = objectToString(hexagram.getName());
-        if (StringUtils.hasText(chinese) && StringUtils.hasText(name) && !chinese.equals(name)) {
-            return chinese + "（" + name + "）";
-        }
-        return StringUtils.hasText(chinese) ? chinese : (StringUtils.hasText(name) ? name : "未知卦象");
-    }
-
-    private String extractHexagramMeaning(YijingSceneImageRequest.HexagramSnapshot hexagram) {
-        if (hexagram == null) {
-            return "";
-        }
-        StringBuilder builder = new StringBuilder();
-        if (StringUtils.hasText(hexagram.getMeaning())) {
-            builder.append(hexagram.getMeaning().trim());
-        }
-        if (StringUtils.hasText(hexagram.getJudgment())) {
-            if (!builder.isEmpty()) {
-                builder.append(" ");
-            }
-            builder.append("卦辞：").append(hexagram.getJudgment().trim());
-        }
-        return builder.toString();
-    }
-
-    private String extractHexagramImage(YijingSceneImageRequest.HexagramSnapshot hexagram) {
-        if (hexagram == null) {
-            return "";
-        }
-        StringBuilder builder = new StringBuilder();
-        if (StringUtils.hasText(hexagram.getImage())) {
-            builder.append(hexagram.getImage().trim());
-        }
-        if (StringUtils.hasText(hexagram.getSymbol())) {
-            if (!builder.isEmpty()) {
-                builder.append(" ");
-            }
-            builder.append("卦象符号：").append(hexagram.getSymbol().trim());
-        }
-        return builder.toString();
-    }
-
-    private String normalizePromptText(String value, int maxLength) {
-        String normalized = objectToString(value).replaceAll("\\s+", " ").trim();
-        if (!StringUtils.hasText(normalized)) {
-            return "";
-        }
-        return normalized.length() > maxLength ? normalized.substring(0, maxLength) + "..." : normalized;
-    }
-
-    private String objectToString(Object value) {
-        return value == null ? "" : String.valueOf(value);
+        return fallbackSupport().mapUpstreamFailureStatus(statusCode, responseBody);
     }
 
     private String normalizeMimeType(String mimeType) {
         return mimeType == null ? "" : mimeType.trim().toLowerCase();
     }
 
-    private String firstNonBlank(String... values) {
-        if (values == null) {
-            return "";
-        }
-        for (String value : values) {
-            if (StringUtils.hasText(value)) {
-                return value;
-            }
-        }
-        return "";
-    }
-
-    private String buildSecondStageDrawingPrompt(String revisedPrompt, String negativePrompt, String originalPrompt) {
-        String basePrompt = StringUtils.hasText(revisedPrompt) ? revisedPrompt.trim() : originalPrompt;
-        String avoidPrompt = trimToNull(negativePrompt);
-        if (!StringUtils.hasText(avoidPrompt)) {
-            return basePrompt;
-        }
-        return basePrompt + "\n\n避免元素：" + avoidPrompt;
-    }
-
     private boolean hasMoreSecondStageCandidates(List<String> protocols,
                                                  List<String> models,
                                                  String currentProtocol,
                                                  String currentModel) {
-        int protocolIndex = protocols.indexOf(currentProtocol);
-        int modelIndex = models.indexOf(currentModel);
-        if (protocolIndex < 0 || modelIndex < 0) {
-            return false;
-        }
-        return modelIndex < models.size() - 1 || protocolIndex < protocols.size() - 1;
+        return fallbackSupport().hasMoreSecondStageCandidates(protocols, models, currentProtocol, currentModel);
     }
 
     private String trimToNull(String value) {
@@ -2098,32 +701,6 @@ public class GeminiService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private String normalizeImageUrl(String value) {
-        String trimmed = trimToNull(value);
-        if (trimmed == null) {
-            return null;
-        }
-        if (trimmed.startsWith("data:image/")) {
-            return trimmed;
-        }
-        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-            return trimmed;
-        }
-        return null;
-    }
-
-    private String extractBase64FromDataUrl(String value) {
-        String trimmed = trimToNull(value);
-        if (trimmed == null || !trimmed.startsWith("data:image/")) {
-            return "";
-        }
-        int commaIndex = trimmed.indexOf(',');
-        if (commaIndex < 0 || commaIndex >= trimmed.length() - 1) {
-            return "";
-        }
-        return sanitizeBase64(trimmed.substring(commaIndex + 1));
     }
 
     private String sanitizeBase64(String rawBase64) {
@@ -2152,20 +729,6 @@ public class GeminiService {
         return (length * 3L) / 4L - padding;
     }
 
-    private String normalizeBaseUrl(String baseUrl) {
-        String normalized = baseUrl == null ? "" : baseUrl.trim();
-        while (normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        if (normalized.endsWith("/chat/completions")) {
-            normalized = normalized.substring(0, normalized.length() - "/chat/completions".length());
-        }
-        if (!normalized.endsWith("/v1")) {
-            normalized = normalized + "/v1";
-        }
-        return normalized;
-    }
-
     private String abbreviate(String value) {
         if (!StringUtils.hasText(value)) {
             return "";
@@ -2187,14 +750,5 @@ public class GeminiService {
                                              String negativePrompt,
                                              String displayText,
                                              String generationMode) {
-    }
-
-    private record SceneImagePlanPayload(String visualSummary,
-                                         String revisedPrompt,
-                                         String negativePrompt,
-                                         String displayText) {
-    }
-
-    private record GeneratedImagePayload(String imageBase64, String imageUrl, String revisedPrompt) {
     }
 }

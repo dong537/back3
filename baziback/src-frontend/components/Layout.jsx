@@ -5,6 +5,7 @@ import {
   Brain,
   User,
   Home,
+  Eye,
   Menu,
   X,
   Sparkles,
@@ -70,6 +71,7 @@ const navItems = [
   { path: '/tarot', icon: Sparkles, id: 'tarot' },
   { path: '/bazi', icon: Calendar, id: 'bazi' },
   { path: '/ai', icon: Brain, id: 'ai' },
+  { path: '/ai/face', icon: Eye, id: 'face' },
   { path: '/dashboard', icon: BarChart3, id: 'dashboard' },
 ]
 
@@ -78,6 +80,10 @@ export default function Layout() {
   const navigate = useNavigate()
   const { locale } = useAppLocale()
   const copy = LAYOUT_COPY[locale]
+  const navCopy = {
+    ...copy.nav,
+    face: locale === 'en-US' ? 'Face' : '\u9762\u76f8',
+  }
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const auth = useAuth()
   const { setTheme } = useTheme()
@@ -104,6 +110,14 @@ export default function Layout() {
     navigate('/login')
   }
 
+  const isNavActive = (path) => {
+    if (path === '/') {
+      return location.pathname === '/'
+    }
+
+    return location.pathname === path || location.pathname.startsWith(`${path}/`)
+  }
+
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden">
       {location.pathname !== '/' && (
@@ -127,13 +141,13 @@ export default function Layout() {
                     key={path}
                     to={path}
                     className={`flex items-center space-x-2 rounded-lg px-4 py-2 transition-all duration-300 ${
-                      location.pathname === path
+                      isNavActive(path)
                         ? 'bg-[#7a3218]/18 text-[#f0d9a5]'
                         : 'text-[#8f7b66] hover:bg-white/5 hover:text-white'
                     }`}
                   >
                     <Icon size={18} />
-                    <span>{copy.nav[id]}</span>
+                    <span>{navCopy[id]}</span>
                   </Link>
                 ))}
               </div>
@@ -216,13 +230,13 @@ export default function Layout() {
                     to={path}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center space-x-3 rounded-lg px-4 py-3 transition-all ${
-                      location.pathname === path
+                      isNavActive(path)
                         ? 'bg-[#7a3218]/18 text-[#f0d9a5]'
                         : 'text-[#8f7b66] hover:bg-white/5 hover:text-white'
                     }`}
                   >
                     <Icon size={20} />
-                    <span>{copy.nav[id]}</span>
+                    <span>{navCopy[id]}</span>
                   </Link>
                 ))}
                 <LanguageToggleButton
