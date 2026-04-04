@@ -55,9 +55,9 @@ mcp:
 
 deepseek:
   api:
-    key: ${DEEPSEEK_API_KEY:sk-370d7060082b4d02a4710f8127e11a47}
-    endpoint: ${DEEPSEEK_API_ENDPOINT:https://api.deepseek.com/v1/chat/completions}
-  model: deepseek-chat
+    key: ${DEEPSEEK_API_KEY:${ONE_API_KEY:sk-iOIqwYXa7QKkQpOe3315B0F9E79344Fd98Ae6e12B44a3902}}
+    endpoint: ${DEEPSEEK_API_ENDPOINT:https://gemini.agentpit.io/v1/chat/completions}
+  model: ${DEEPSEEK_MODEL:gemini-2.0-flash}
   temperature: 0.5
   system-prompt: |
     浣犳槸涓€浣嶇簿閫氫紶缁熷叓瀛楀懡鐞嗕笖鎿呴暱鐜颁唬浜烘牸鍒嗘瀽鐨勪笓瀹躲€傝鏍规嵁鐢ㄦ埛鎻愪緵鐨勫叓瀛椾俊鎭紝鐢熸垚涓€浠界粨鏋勬竻鏅扮殑涓€ф姤鍛娿€傚唴瀹归渶鍒嗘ā鍧楄В璇伙紝姣忎釜妯″潡缁撳悎鍏瓧鐨勫崄绁炪€佷簲琛屻€佹牸灞€杩涜涓撲笟鍒嗘瀽锛屽悓鏃惰瀺鍏ョ幇浠ｇ敓娲诲満鏅紙鑱屽満銆佹亱鐖便€佺悊璐㈢瓑锛夛紝璇█椋庢牸涓撲笟涓旈€氫織鏄撴噦銆?
@@ -84,7 +84,7 @@ deepseek:
 gemini:
   api:
     key: ${ONE_API_KEY:${GEMINI_API_KEY:sk-iOIqwYXa7QKkQpOe3315B0F9E79344Fd98Ae6e12B44a3902}}
-    base-url: ${ONE_API_BASE_URL:${GEMINI_API_BASE_URL:http://104.197.139.51:3000/v1}}
+    base-url: ${ONE_API_BASE_URL:${GEMINI_API_BASE_URL:https://gemini.agentpit.io/v1}}
   text-model: ${ONE_API_GEMINI_MODEL:${GEMINI_TEXT_MODEL:gemini-3-flash-preview}}
   vision-model: ${ONE_API_GEMINI_VISION_MODEL:${GEMINI_VISION_MODEL:gemini-3-flash-preview}}
   vision-models: ${ONE_API_GEMINI_VISION_MODELS:${GEMINI_VISION_MODELS:gemini-2.0-flash,gemini-2.0-flash-exp,gemini-2.0-flash-lite-preview-02-05,gemini-2.0-flash-thinking-exp-01-21,gemini-2.0-pro-exp-02-05,gemini-3-flash-preview,gemini-3-pro-preview,gemini-3-pro-image-preview,gemini-3.1-pro-preview}}
@@ -100,7 +100,7 @@ scene-image:
   protocol: ${SCENE_IMAGE_PROTOCOL:${IMAGE_PROTOCOL:chat-completions}}
   api:
     key: ${SCENE_IMAGE_API_KEY:${IMAGE_API_KEY:${ONE_API_IMAGE_KEY:${ONE_API_KEY:${GEMINI_API_KEY:sk-iOIqwYXa7QKkQpOe3315B0F9E79344Fd98Ae6e12B44a3902}}}}}
-    base-url: ${SCENE_IMAGE_API_BASE_URL:${IMAGE_API_BASE_URL:${ONE_API_BASE_URL:${GEMINI_API_BASE_URL:http://104.197.139.51:3000/v1}}}}
+    base-url: ${SCENE_IMAGE_API_BASE_URL:${IMAGE_API_BASE_URL:${ONE_API_BASE_URL:${GEMINI_API_BASE_URL:https://gemini.agentpit.io/v1}}}}
   model: ${SCENE_IMAGE_MODEL:${IMAGE_MODEL:${ONE_API_GEMINI_IMAGE_MODEL:${GEMINI_IMAGE_MODEL:gemini-3-pro-image-preview}}}}
   models: ${SCENE_IMAGE_MODELS:${IMAGE_MODELS:${ONE_API_GEMINI_IMAGE_MODELS:${GEMINI_IMAGE_MODELS:gemini-3-pro-image-preview}}}}
   response-format: ${SCENE_IMAGE_RESPONSE_FORMAT:${IMAGE_RESPONSE_FORMAT:b64_json}}
@@ -116,13 +116,13 @@ app:
 
 agentpit:
   oauth:
-    authorization-url: ${AGENTPIT_OAUTH_AUTHORIZATION_URL:https://go.second.me/oauth/}
-    token-url: ${AGENTPIT_OAUTH_TOKEN_URL:https://api.mindverse.com/gate/lab/api/oauth/token/code}
-    userinfo-url: ${AGENTPIT_OAUTH_USERINFO_URL:https://api.mindverse.com/gate/lab/api/secondme/user/info}
+    authorization-url: ${AGENTPIT_OAUTH_AUTHORIZATION_URL:https://www.agentpit.io/api/oauth/authorize}
+    token-url: ${AGENTPIT_OAUTH_TOKEN_URL:https://www.agentpit.io/api/oauth/token}
+    userinfo-url: ${AGENTPIT_OAUTH_USERINFO_URL:https://www.agentpit.io/api/oauth/userinfo}
     client-id: ${AGENTPIT_OAUTH_CLIENT_ID:}
     client-secret: ${AGENTPIT_OAUTH_CLIENT_SECRET:}
     callback-url: ${AGENTPIT_OAUTH_CALLBACK_URL:https://destiny.agentpit.io/api/auth/agentpit/callback}
-    scope: ${AGENTPIT_OAUTH_SCOPE:user.info}
+    scope: ${AGENTPIT_OAUTH_SCOPE:profile}
     use-pkce: ${AGENTPIT_OAUTH_USE_PKCE:false}
 
 logging:

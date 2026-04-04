@@ -11,6 +11,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,17 +28,20 @@ final class GeminiSceneImageExecutor {
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final TokenTracker tokenTracker;
     private final GeminiResponseParser responseParser;
     private final GeminiFallbackSupport fallbackSupport;
     private final String providerName;
 
     GeminiSceneImageExecutor(HttpClient httpClient,
                              ObjectMapper objectMapper,
+                             TokenTracker tokenTracker,
                              GeminiResponseParser responseParser,
                              GeminiFallbackSupport fallbackSupport,
                              String providerName) {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
+        this.tokenTracker = tokenTracker;
         this.responseParser = responseParser;
         this.fallbackSupport = fallbackSupport;
         this.providerName = providerName;
@@ -63,8 +67,10 @@ final class GeminiSceneImageExecutor {
             log.info("Calling scene image generation | provider={}, protocol={}, model={}, uri={}",
                     providerName, request.protocol(), candidateModel, request.requestUri());
 
+            LocalDateTime sceneCallStart = LocalDateTime.now();
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
+                tokenTracker.trackFromResponse(response.body(), candidateModel, "gemini-scene-image", sceneCallStart);
                 try {
                     return responseParser.parseSceneImageResponseResult(
                             response.body(),
@@ -181,8 +187,10 @@ final class GeminiSceneImageExecutor {
                         requestUri
                 );
 
+                LocalDateTime secondStageCallStart = LocalDateTime.now();
                 HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
+                    tokenTracker.trackFromResponse(response.body(), candidateModel, "gemini-scene-image-stage2", secondStageCallStart);
                     try {
                         GeminiResponseParser.GeneratedImagePayloadData payload =
                                 responseParser.parseSceneImageResponse(response.body(), protocol);

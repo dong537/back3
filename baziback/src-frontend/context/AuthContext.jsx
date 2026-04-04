@@ -18,6 +18,7 @@ import {
   migrateLegacyAuthToSession,
   storeSessionAuth,
 } from '../utils/authStorage'
+import { shouldAutoSso, markSsoAttempted, clearSsoAttempted } from '../utils/ssoHelper'
 
 const AuthContext = createContext(null)
 const FREE_DAILY_LIMIT = 2
@@ -148,6 +149,7 @@ export function AuthProvider({ children }) {
         }
 
         storeSessionAuth(userToken, normalizedUser)
+        clearSsoAttempted()
         setToken(() => userToken)
         setUser(() => normalizedUser)
         setCredits(
@@ -205,6 +207,7 @@ export function AuthProvider({ children }) {
               : undefined
 
           if (userFromApi) {
+            clearSsoAttempted()
             login(userFromApi, savedToken, {
               initialCredits,
               skipCreditRefresh: typeof initialCredits === 'number',
@@ -216,6 +219,12 @@ export function AuthProvider({ children }) {
           logger.error('Token validation failed:', error)
           logout()
         }
+      } else if (shouldAutoSso()) {
+        // 无本地 token 且未尝试过 SSO，自动触发 SSO 重定向
+        markSsoAttempted()
+        const returnUrl = window.location.pathname + window.location.search
+        window.location.href = '/api/auth/agentpit/sso?returnUrl=' + encodeURIComponent(returnUrl)
+        return // 不再继续初始化，页面即将跳转
       }
 
       const savedFreeCount = localStorage.getItem('freeInterpretCount')

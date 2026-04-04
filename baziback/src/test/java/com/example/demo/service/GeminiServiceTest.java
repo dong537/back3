@@ -23,6 +23,10 @@ import static org.mockito.Mockito.when;
 
 class GeminiServiceTest {
 
+    private GeminiService newService(HttpClient httpClient, ObjectMapper objectMapper) {
+        return new GeminiService(httpClient, objectMapper, new TokenTracker(null, objectMapper));
+    }
+
     @Test
     void probeVisionShouldUseOneApiChatCompletionsUriEvenWhenSceneImageChannelConfigured() throws Exception {
         HttpClient httpClient = mock(HttpClient.class);
@@ -42,7 +46,8 @@ class GeminiServiceTest {
                 """);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
 
-        GeminiService service = new GeminiService(httpClient, new ObjectMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        GeminiService service = newService(httpClient, objectMapper);
         ReflectionTestUtils.setField(service, "apiKey", "sk-main");
         ReflectionTestUtils.setField(service, "apiBaseUrl", "https://gemini.agentpit.io");
         ReflectionTestUtils.setField(service, "visionModel", "gemini-3-flash-preview");
@@ -66,7 +71,8 @@ class GeminiServiceTest {
 
     @Test
     void resolveVisionModelsToTryShouldSkipEmbeddingModelsAndDeduplicate() {
-        GeminiService service = new GeminiService(HttpClient.newHttpClient(), new ObjectMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        GeminiService service = newService(HttpClient.newHttpClient(), objectMapper);
         ReflectionTestUtils.setField(service, "visionModel", "gemini-3-flash-preview");
         ReflectionTestUtils.setField(
                 service,
@@ -81,7 +87,8 @@ class GeminiServiceTest {
 
     @Test
     void resolveVisionPayloadFormatsToTryShouldDeduplicateAndIgnoreUnsupportedValues() {
-        GeminiService service = new GeminiService(HttpClient.newHttpClient(), new ObjectMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        GeminiService service = newService(HttpClient.newHttpClient(), objectMapper);
         ReflectionTestUtils.setField(
                 service,
                 "visionPayloadFormats",
@@ -95,7 +102,8 @@ class GeminiServiceTest {
 
     @Test
     void appendAttemptedModelsShouldOnlyAppendOnFinalFailure() {
-        GeminiService service = new GeminiService(HttpClient.newHttpClient(), new ObjectMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        GeminiService service = newService(HttpClient.newHttpClient(), objectMapper);
 
         String finalMessage = ReflectionTestUtils.invokeMethod(
                 service,
@@ -118,7 +126,8 @@ class GeminiServiceTest {
 
     @Test
     void buildFailureDetailsShouldExposeStructuredAttemptContext() {
-        GeminiService service = new GeminiService(HttpClient.newHttpClient(), new ObjectMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        GeminiService service = newService(HttpClient.newHttpClient(), objectMapper);
 
         GeminiFailureDetails details = ReflectionTestUtils.invokeMethod(
                 service,
@@ -139,7 +148,8 @@ class GeminiServiceTest {
 
     @Test
     void resolveSceneImageModelsToTryShouldIgnoreUnsupportedFallbackModels() {
-        GeminiService service = new GeminiService(HttpClient.newHttpClient(), new ObjectMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        GeminiService service = newService(HttpClient.newHttpClient(), objectMapper);
         ReflectionTestUtils.setField(service, "sceneImageModel", "gemini-3-pro-image-preview");
         ReflectionTestUtils.setField(service, "sceneImageModels", "gemini-2.5-flash-image");
         ReflectionTestUtils.setField(service, "textModel", "gemini-3-flash-preview");
@@ -153,7 +163,8 @@ class GeminiServiceTest {
 
     @Test
     void buildSceneImageChatRequestBodyShouldClampTokensToProviderFloor() {
-        GeminiService service = new GeminiService(HttpClient.newHttpClient(), new ObjectMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        GeminiService service = newService(HttpClient.newHttpClient(), objectMapper);
         ReflectionTestUtils.setField(service, "temperature", 0.3d);
         ReflectionTestUtils.setField(service, "sceneImageChatMaxTokens", 640);
         ReflectionTestUtils.setField(service, "maxTokens", 1024);
@@ -176,7 +187,8 @@ class GeminiServiceTest {
 
     @Test
     void resolveSecondStageProtocolsToTryShouldPreferConfiguredProtocolThenFallback() {
-        GeminiService service = new GeminiService(HttpClient.newHttpClient(), new ObjectMapper());
+        ObjectMapper objectMapper = new ObjectMapper();
+        GeminiService service = newService(HttpClient.newHttpClient(), objectMapper);
         ReflectionTestUtils.setField(service, "sceneImageProtocol", "images-generations");
 
         List<String> protocols = ReflectionTestUtils.invokeMethod(service, "resolveSecondStageProtocolsToTry");

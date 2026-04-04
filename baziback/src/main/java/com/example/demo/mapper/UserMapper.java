@@ -63,6 +63,26 @@ public interface UserMapper {
     int updateProfile(User user);
     
     /**
+     * 根据OAuth提供商和OAuth用户ID查询用户
+     */
+    @Select("SELECT * FROM tb_user WHERE oauth_provider = #{oauthProvider} AND oauth_id = #{oauthId}")
+    User findByOauthId(@Param("oauthProvider") String oauthProvider, @Param("oauthId") String oauthId);
+
+    /**
+     * 插入OAuth用户（无密码）
+     */
+    @Insert("INSERT INTO tb_user (username, password, email, nickname, avatar, status, oauth_provider, oauth_id) " +
+            "VALUES (#{username}, #{password}, #{email}, #{nickname}, #{avatar}, #{status}, #{oauthProvider}, #{oauthId})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insertOauthUser(User user);
+
+    /**
+     * 更新OAuth用户信息（昵称、头像）
+     */
+    @Update("UPDATE tb_user SET nickname = #{nickname}, avatar = #{avatar}, last_login_time = #{lastLoginTime}, last_login_ip = #{lastLoginIp} WHERE id = #{id}")
+    int updateOauthUserInfo(User user);
+
+    /**
      * 更新用户积分（同时更新current_points和total_points）
      */
     @Update("UPDATE tb_user SET " +

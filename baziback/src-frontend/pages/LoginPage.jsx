@@ -117,6 +117,17 @@ export default function LoginPage() {
   const [justLoggedIn, setJustLoggedIn] = useState(false)
   const [oauthLoading, setOauthLoading] = useState(false)
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const ssoError = params.get('sso_error')
+    if (!ssoError) {
+      return
+    }
+
+    setError(ssoError)
+    window.history.replaceState(null, '', location.pathname)
+  }, [location.pathname, location.search])
+
   const [formData, setFormData] = useState({
     username: '',
     password: '',

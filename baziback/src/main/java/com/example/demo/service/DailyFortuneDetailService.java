@@ -49,10 +49,8 @@ public class DailyFortuneDetailService {
      */
     @Cacheable(
             cacheNames = "dailyFortuneDetail",
-            key = "'today:' + T(java.time.LocalDate).now() + ':' + #userId",
-            condition = "#userId != null",
-            unless = "#result == null",
-            sync = true
+            key = "'today:' + T(java.time.LocalDate).now() + ':' + (#userId != null ? #userId : 'guest')",
+            condition = "#userId != null"
     )
     public DailyFortuneDetail getTodayFortuneDetail(Long userId) {
         long total;

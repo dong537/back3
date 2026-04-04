@@ -21,6 +21,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -107,6 +108,7 @@ public class GeminiService {
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final TokenTracker tokenTracker;
 
     private GeminiSceneImageSupport sceneImageSupport() {
         return new GeminiSceneImageSupport(
@@ -163,6 +165,7 @@ public class GeminiService {
         return new GeminiSceneImageExecutor(
                 httpClient,
                 objectMapper,
+                tokenTracker,
                 responseParser(),
                 fallbackSupport(),
                 sceneImageGatewaySupport().resolveSceneImageProviderName()
@@ -358,8 +361,10 @@ public class GeminiService {
                         formatIndex + 1,
                         payloadFormatsToTry.size());
 
+                LocalDateTime visionCallStart = LocalDateTime.now();
                 HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() == 200) {
+                    tokenTracker.trackFromResponse(response.body(), candidateModel, "gemini-" + scenario, visionCallStart);
                     return new VisionExecutionResult(candidateModel, requestUri, response.body());
                 }
 
@@ -527,6 +532,7 @@ public class GeminiService {
 
         log.info("Calling Gemini {} probe via One-API | model={}, uri={}", probeType, model, requestUri);
 
+        LocalDateTime probeCallStart = LocalDateTime.now();
         HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
             String responseBody = response.body();
@@ -538,6 +544,7 @@ public class GeminiService {
             );
         }
 
+        tokenTracker.trackFromResponse(response.body(), model, "gemini-probe-" + probeType, probeCallStart);
         String content = responseParser().parseRawResponseText(response.body());
         return GeminiProbeResponse.builder()
                 .model(model)

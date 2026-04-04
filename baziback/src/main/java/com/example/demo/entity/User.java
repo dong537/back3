@@ -43,6 +43,9 @@ public class User {
 
     private String lastLoginIp;
 
+    private String oauthProvider;  // OAuth提供商：agentpit
+    private String oauthId;        // OAuth提供商用户ID
+
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
